@@ -1,8 +1,8 @@
 #!/bin/python3
 import hashlib
-import subprocess
+# import subprocess
 from time import time
-from os import path, walk, stat
+# from os import path, walk, stat
 from pathlib import Path
 import dbapi
 
@@ -22,7 +22,7 @@ def DFS_merkle (root_path: str, dir_path: str):
 
     # Dict object to hold changes and tree object to examine
     changes = {'Created': set(), 'Deleted': set(), 'Modified': set()}
-    tree_dict = get_walk(dir_path)
+    tree_dict = _get_walk(dir_path)
     dir_path_hash = _DFS_merkle(dir_path, changes, tree_dict)
     # Update the parent node(s) hash values based on the new local_root_hash
     if root_path != dir_path:
@@ -106,38 +106,33 @@ def recompute_root(root_path, dir_path, change_dict):
         _update_self_hash(hash_info, dir_path, change_dict)
 
 
-def get_walk(parent_path) -> dict[str, dict[str, list]]:
+def _get_walk(parent_path) -> dict[str, dict[str, list]]:
     """
     Takes a 'root node' and returns a dictionary with every child directory as keys and a
     dict as the value containing the 'dirs', 'files' and, 'links' contained in that directory
     :param parent_path:
     :return:
     """
-    files = walk(parent_path, topdown=True)
     tree_dict = {}
+    files = Path.walk(Path(parent_path))
     # Iterate over the list of directories and contents for item in files:
     for item in files:
         dir_path, item_dirs, item_files = item  # walk returns a 3-tuple for each dir
-        clean_dirs, clean_files, clean_links = [], [], []
-        # Re-sort the values from walk since links aren't separated, and pathlib struggles with hardlinks
-        for i in [item_dirs, item_files]:
-            for j in i:
-                if Path(f"{dir_path}/{j}").is_symlink():
-                    clean_links.append(j)
-                elif Path(f"{dir_path}/{j}").is_file():
-                    clean_files.append(j)
-                elif Path(f"{dir_path}/{j}").is_dir():
-                    clean_dirs.append(j)
-                else:
-                    clean_links.append(j)
-        tree_dict[dir_path] = {"dirs": sorted(clean_dirs),
+        # Re-sort the values from walk since links aren't separated
+        clean_files, clean_links = [], []
+        for i in item_files:
+            if (dir_path / i).is_file():
+                clean_files.append(i)
+            else:
+                clean_links.append(i)
+        tree_dict[str(dir_path)] = {"dirs": sorted([str(item) for item in item_dirs]),
                                "files": sorted(clean_files),
                                "links": sorted(clean_links)}
     return tree_dict
 
 
 def _update_self_hash(hash_info, dir_path, change_dict):
-    hash_info[dir_path]['current'] = perform_hash(get_dir_hashable(dir_path, hash_info))
+    hash_info[dir_path]['current_hash'] = perform_hash(get_dir_hashable(dir_path, hash_info))
     hash_info[dir_path]['current_dtg_latest'] = str(time())
 
     # Update the database and identify any changes
@@ -152,23 +147,17 @@ def get_link_hashable(link_path) -> str:
     """
     Returns a string containing link attributes that will uniquely identify 'link_path' for data integrity purposes.
     """
-    process = subprocess.Popen(['ls', '-lat', link_path], stdout=subprocess.PIPE, universal_newlines = True)
-    output_list = []
-    while True:
-        output = process.stdout.readline().strip()
-        if output and len(output) > 0: output_list.append(output)
-        if process.poll() is not None: break
-
-    return output_list[0]
+    return f"{link_path} -> {str(Path(link_path).readlink())}"
 
 
 def get_dir_hashable(dir_path, hash_info) -> str:
     hash_string = ''
-    for item in [sorted(hash_info[dir_path]['dirs']),
-                 sorted(hash_info[dir_path]['files']),
-                 sorted(hash_info[dir_path]['links'])]:
-        hash_string += hash_info[item]['current_hash']
-
+    for lists in ['dirs', 'files', 'links']:
+        if hash_info[dir_path].get(lists):
+            for item in sorted(hash_info[dir_path][lists]):
+                hash_string += hash_info[f"{dir_path}/{item}"]['current_hash']
+        else:
+            hash_string += f"{dir_path}/{lists}: EMPTY "
     return hash_string
 
 

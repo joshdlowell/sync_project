@@ -60,11 +60,11 @@ def add_db_entry(new_entry, request_dict, changes):
     for key, value in request_dict.items():
         new_entry[key] = value
     dirs = new_entry.get('dirs')
-    if dirs is not None: changes['Created'].extend(dirs)
+    if dirs is not None: changes['Created'].extend([f"{new_entry['path']}/{x}" for x in dirs])
     files = new_entry.get('files')
-    if files is not None: changes['Created'].extend(files)
+    if files is not None: changes['Created'].extend([f"{new_entry['path']}/{x}" for x in files])
     links = new_entry.get('links')
-    if links is not None: changes['Created'].extend(links)
+    if links is not None: changes['Created'].extend([f"{new_entry['path']}/{x}" for x in links])
 
 
 def update_db_entry(db_entry, request_dict, changes):
@@ -77,8 +77,8 @@ def update_db_entry(db_entry, request_dict, changes):
 
     for key in ['dirs', 'files', 'links']:
         if request_dict.get(key) and db_entry.get(key) != sorted(request_dict.get(key)):
-            changes['Created'].extend([x for x in request_dict.get(key) if x not in db_entry['dirs']])
-            changes['Deleted'].extend([x for x in db_entry.get(key) if x not in request_dict.get('dirs')])
+            changes['Created'].extend([f"{db_entry['path']}/{x}" for x in request_dict.get(key) if x not in db_entry['dirs']])
+            changes['Deleted'].extend([f"{db_entry['path']}/{x}" for x in db_entry.get(key) if x not in request_dict.get('dirs')])
             db_entry[key] = sorted(request_dict.get(key))
 
 
@@ -116,4 +116,4 @@ def update_db_entry(db_entry, request_dict, changes):
 #     return jsonify({"message": "Item deleted"}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

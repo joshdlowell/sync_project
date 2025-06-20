@@ -1,40 +1,41 @@
 import requests
-# import bootstrap
 from time import sleep
-import os
+from os import environ
 
 # TODO Add logging of errors
 # Load required bootstrap configs and fail if unsuccessful
-if not os.environ.get('REST_API_NAME'):
+if not environ.get('REST_API_NAME'):
     print("ERROR: Unable to bootstrap rest_connector, REST_API_NAME env variable does not exist")
     exit(78)  # 78: Configuration error.
-if not os.environ.get('REST_API_PORT'):
+if not environ.get('REST_API_PORT'):
     print("ERROR: Unable to bootstrap rest_connector, REST_API_PORT env variable does not exist")
     exit(78)  # 78: Configuration error.
 
-REST_API = f"http://{os.environ['REST_API_NAME']}:{os.environ['REST_API_PORT']}"
+REST_API = f"http://{environ['REST_API_NAME']}:{environ['REST_API_PORT']}"
+
 
 def put_hashtable(hash_info) -> dict[str, set]:
     valid_keys = ['path', 'current_hash', 'current_dtg_latest', 'dirs', 'files', 'links']
-    # Path is hash_info's keys, no need to verify it is present
+    # hash_info's keys are the path, no need to verify it is present
     required_keys = ['current_hash', 'current_dtg_latest']
     changes = []
     # Reformat hash_info into db API format
     for item in hash_info.keys():
-        # Validate candidate hash entry
+        # Validate and sanitize candidate hash entry
         missing_keys = False
         for key in hash_info[item].keys():
             if key not in valid_keys:
-                print(f"Includes invalid key: '{key}'  in dbapi.put_hashtable.")
+                print(f"Includes invalid key: '{key}'  in rest_connector.put_hashtable.")
                 missing_keys = True
         for key in required_keys:
             if key not in hash_info[item].keys():
-                print(f"Does not include required key: '{key}'  in dbapi.put_hashtable.")
+                print(f"Does not include required key: '{key}'  in rest_connector.put_hashtable.")
                 missing_keys = True
         if missing_keys:
-            print(f"ERROR: Malformed request in dbapi.put_hashtable, skipping.\n")
+            print(f"ERROR: Malformed request in rest_connector.put_hashtable, skipping.\n")
             continue
-        code, update = _db_put("hashes",
+
+        code, update = _db_put("hashtable",
                                     {'path': item,
                                         'current_hash': hash_info[item]['current_hash'],
                                         'current_dtg_latest': hash_info[item]['current_dtg_latest'],
@@ -43,7 +44,7 @@ def put_hashtable(hash_info) -> dict[str, set]:
                                         'links': hash_info[item].get('links')
                                     })
         if code != 200:
-            print(f"ERROR: DB API returned {code}: {update}.")
+            print(f"ERROR: REST API returned {code}: {update}.")
             continue
 
         changes.append(update)
@@ -57,17 +58,13 @@ def put_hashtable(hash_info) -> dict[str, set]:
 
 
 def get_single_hash(path) -> str | None:
-    code, content = _db_get("hash", path)
-    if code == 200:
-        return content
-    return None
+    response = _db_get("hash", path)
+    return _db_process_response(response)
 
 
 def get_hashtable(path) -> dict | None:
-    code, content = _db_get("hashes", path)
-    if code == 200:
-        return content
-    return None
+    response = _db_get("hashtable", path)
+    return _db_process_response(response)
 
 
 def get_oldest_updates(root_path, percent=10):
@@ -99,14 +96,17 @@ def get_oldest_updates(root_path, percent=10):
 
 
 def get_single_timestamp(path) -> float | None:
-    code, content = _db_get("timestamp", path)
-    if code == 200:
-        return float(content)
-    return None
+    response = _db_get("timestamp", path)
+    return _db_process_response(response)
 
 
 def get_priority_updates() -> str | None:
-    code, content = _db_get('priority')
+    response = _db_get('priority')
+    return _db_process_response(response)
+
+
+def _db_process_response(response):
+    code, content = response
     if code == 200:
         return content
     return None

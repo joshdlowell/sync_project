@@ -1,4 +1,5 @@
 import unittest
+import yaml
 import bootstrap
 import dbapi
 import integritycheck
@@ -7,23 +8,28 @@ import integritycheck
 class BootStrapTests(unittest.TestCase):
     def setUp(self):
 
-        # ADD reading yaml verification
-        self.values = {'local_db': 'http://restapi:5000',
-                       'root_path': '/squishy/tests'}
-        self.db = {'local_db': 'http://restapi:5000'}
+        # Read in yaml values for comparison
+        with open('boot.yaml', 'r') as stream:
+            self.values = yaml.safe_load(stream)
+
+        self.required_keys = ['local_db', 'root_path']
+        self.local_db = {self.required_keys[0]: self.values[self.required_keys[0]]}
 
     def test_init_bootstrap_all(self):
-        self.assertEqual(bootstrap.init_bootstrap(['local_db', 'root_path']), self.values, "Return values didn't match")  # add assertion here
+        print("Testing Bootstrap correctly returns all keys in the yaml file")
+        self.assertEqual(bootstrap.init_bootstrap(self.required_keys), self.values, "Return values didn't match")  # add assertion here
 
     def test_init_bootstrap_one(self):
-        self.assertEqual(bootstrap.init_bootstrap(['local_db']), self.db, "Return values didn't match")  # add assertion here
+        print("Testing Bootstrap correctly returns individual keys in the yaml file")
+        self.assertEqual(bootstrap.init_bootstrap([self.required_keys[0]]), self.local_db, "Return values didn't match")  # add assertion here
 
     def test_init_bootstrap_with_invalid(self):
-        test_dict = self.db.copy()
-        test_dict['other_db'] = None
-        self.assertEqual(bootstrap.init_bootstrap(['local_db', 'other_db']), test_dict, "Return values didn't match")  # add assertion here
+        print("Testing Bootstrap correctly returns 'None' for requested keys that aren't present in the yaml file")
+        test_dict = {self.required_keys[0]: self.values[self.required_keys[0]], 'other_db': None}
+        self.assertEqual(bootstrap.init_bootstrap(test_dict.keys()), test_dict, "Return values didn't match")  # add assertion here
 
     def test_init_bootstrap_only_invalid(self):
+        print("Testing Bootstrap correctly returns when none of the requested keys are present in the yaml file")
         test_dict = {'other_db': None, "other_path": None}
         self.assertEqual(bootstrap.init_bootstrap(test_dict.keys()), test_dict)  # add assertion here
 

@@ -304,7 +304,7 @@ def _update_self_hash(hash_info: dict, dir_path: str, change_dict: dict) -> None
 
 def get_link_hashable(link_path: str) -> str:
     """
-    Generate a hashable string representation of a symbolic or hard link.
+    Generate a hashable string representation of a symbolic link.
 
     Creates a string that uniquely identifies the link by combining the link path
     with its target destination. This ensures that changes to either the link name

@@ -1,0 +1,27 @@
+class HashTable(Base):
+    __tablename__ = 'hashtable'
+    path = Column(String, primary_key=True)
+    current_hash: Column(String, default='None')
+    current_dtg_latest: Column(Float, default=time())
+    current_dtg_first: Column(Float, default=time())
+    target_hash: Column(String, default='None')
+    prev_hash: Column(String, default='None')
+    prev_dtg_latest: Column(Float, default=time())
+    dirs': (Column(String, default='None')
+    files': (Column(String, default='None')
+    links': (Column(String, default='None')
+
+```sql
+CREATE TABLE IF NOT EXISTS hashtable (
+    path VARCHAR PRIMARY KEY,
+    current_hash VARCHAR DEFAULT 'None',
+    current_dtg_latest REAL DEFAULT (strftime('%s', 'now')),
+    current_dtg_first REAL DEFAULT (strftime('%s', 'now')),
+    target_hash VARCHAR DEFAULT 'None',
+    prev_hash VARCHAR DEFAULT 'None',
+    prev_dtg_latest REAL DEFAULT (strftime('%s', 'now')),
+    dirs VARCHAR DEFAULT 'None',
+    files VARCHAR DEFAULT 'None',
+    links VARCHAR DEFAULT 'None'
+);
+```

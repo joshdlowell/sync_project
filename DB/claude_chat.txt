@@ -1,0 +1,106 @@
+Here are several ways to add the SQL initialization script to your MySQL Docker container at runtime:
+
+## Option 1: Using Docker Volume Mount (Recommended)
+
+1. **Create your SQL file locally:**
+```bash
+# Create the SQL file
+cat > init.sql << 'EOF'
+CREATE TABLE IF NOT EXISTS hashtable (
+    path VARCHAR PRIMARY KEY,
+    current_hash VARCHAR DEFAULT 'None',
+    current_dtg_latest REAL DEFAULT (strftime('%s', 'now')),
+    current_dtg_first REAL DEFAULT (strftime('%s', 'now')),
+    target_hash VARCHAR DEFAULT 'None',
+    prev_hash VARCHAR DEFAULT 'None',
+    prev_dtg_latest REAL DEFAULT (strftime('%s', 'now')),
+    dirs VARCHAR DEFAULT 'None',
+    files VARCHAR DEFAULT 'None',
+    links VARCHAR DEFAULT 'None'
+);
+EOF
+```
+
+2. **Mount and run the container:**
+```bash
+docker run -d \
+  --name mysql-container \
+  -e MYSQL_ROOT_PASSWORD=your_password \
+  -e MYSQL_DATABASE=your_database \
+  -v /path/to/your/init.sql:/docker-entrypoint-initdb.d/init.sql \
+  -p 3306:3306 \
+  mysql:8.0
+```
+
+## Option 2: Using Docker Compose
+
+```yaml
+version: '3.8'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: your_password
+      MYSQL_DATABASE: your_database
+      MYSQL_USER: your_user
+      MYSQL_PASSWORD: your_user_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+```
+
+## Option 3: Execute SQL After Container Startup
+
+```bash
+# Start the container first
+docker run -d \
+  --name mysql-container \
+  -e MYSQL_ROOT_PASSWORD=your_password \
+  -e MYSQL_DATABASE=your_database \
+  -p 3306:3306 \
+  mysql:8.0
+
+# Wait for MySQL to be ready, then execute the SQL
+sleep 30
+docker exec -i mysql-container mysql -uroot -pyour_password your_database < init.sql
+```
+
+## Option 4: Using Docker Exec with Inline SQL
+
+```bash
+# After container is running
+docker exec -i mysql-container mysql -uroot -pyour_password your_database << 'EOF'
+CREATE TABLE IF NOT EXISTS hashtable (
+    path VARCHAR(255) PRIMARY KEY,
+    current_hash VARCHAR(255) DEFAULT 'None',
+    current_dtg_latest DOUBLE DEFAULT (UNIX_TIMESTAMP()),
+    current_dtg_first DOUBLE DEFAULT (UNIX_TIMESTAMP()),
+    target_hash VARCHAR(255) DEFAULT 'None',
+    prev_hash VARCHAR(255) DEFAULT 'None',
+    prev_dtg_latest DOUBLE DEFAULT (UNIX_TIMESTAMP()),
+    dirs TEXT DEFAULT 'None',
+    files TEXT DEFAULT 'None',
+    links TEXT DEFAULT 'None'
+);
+EOF
+```
+
+## MySQL-Specific Adjustments Made:
+
+1. **Data Types:**
+   - `VARCHAR` → `VARCHAR(255)` (MySQL requires length specification)
+   - `TEXT` for potentially longer string fields
+   - `REAL` → `DOUBLE` (MySQL equivalent)
+
+2. **Timestamp Function:**
+   - `strftime('%s', 'now')` → `UNIX_TIMESTAMP()` (MySQL function)
+
+3. **File Location:**
+   - `/docker-entrypoint-initdb.d/` is the special directory where MySQL Docker image automatically executes `.sql` files on first startup

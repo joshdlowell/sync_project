@@ -53,6 +53,11 @@ def get_priority():
         return jsonify({"message": "Success", "data": priority}), 200
 
 
+@app.route('/lifecheck', methods=['GET'])
+def get_liveness():
+    return jsonify({"message": "Success"}), 200
+
+
 # Helper functions
 def add_db_entry(new_entry, request_dict, changes):
     changes['Created'].append(new_entry['path'])

@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any, List, Tuple
 import mysql.connector
 from mysql.connector import Error
 from contextlib import contextmanager
-from local_DB_interface import DBConnection
+from squishy_REST_API.DB_connections.local_DB_interface import DBConnection
 from squishy_REST_API.logging_config import logger
 
 
@@ -117,7 +117,7 @@ class MYSQLConnection(DBConnection):
                 ('links', existing_links, record.get('links', []))
             ]:
                 existing_list = parse_existing(existing_str)
-                created.update(f"{path}/{x}" for x in set(request_list) - set(existing_list))
+                # created.update(f"{path}/{x}" for x in set(request_list) - set(existing_list))
                 deleted.update(f"{path}/{x}" for x in set(existing_list) - set(request_list))
 
         logger.debug(f"Prepared data for path {path}: hash={current_hash}, "
@@ -168,11 +168,15 @@ class MYSQLConnection(DBConnection):
             with self._get_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(query, query_params)
+                    if cursor.rowcount == 1:
+                        logger.info(f"Successfully updated database for path: {path}")
+                    if cursor.rowcount > 1:
+                        logger.info(f"Caution, multiple records were updated for a single record operation for path: {path}")
         except Error as e:
             logger.error(f"Error inserting/updating record: {e}")
             return None
 
-        logger.info(f"Successfully updated database for path: {path}")
+
 
         # Prune deleted paths from the database
         for del_path in deleted:
@@ -277,7 +281,7 @@ class MYSQLConnection(DBConnection):
         Returns:
             timestamp value as int or None if not found or an error occurred
         """
-        query = "SELECT current_hash FROM hashtable WHERE path = %s"
+        query = "SELECT current_dtg_latest FROM hashtable WHERE path = %s"
 
         try:
             with self._get_connection() as conn:
@@ -375,19 +379,19 @@ class MYSQLConnection(DBConnection):
 
         return priority
 
-    def put_log(self, args_dict: dict) -> bool:
+    def put_log(self, args_dict: dict) -> int | None:
         """
         Put log entry into database.
 
         This method inserts log entries into the local_database.
 
         Returns:
-            True if log entry was inserted, False if an error occurred
+            log_id number (int) if the log entry was inserted, None if an error occurred
         """
         # Check for required parameters
         if not args_dict.get('summary_message'):
             logger.debug("No summary message provided, skipping log entry")
-            return False
+            return None
 
         # Extract parameters with defaults
         params = {
@@ -399,23 +403,27 @@ class MYSQLConnection(DBConnection):
 
         query = """INSERT INTO logs (site_id, log_level, summary_message, detailed_message)
                    VALUES (%(site_id)s, %(log_level)s, %(summary_message)s, %(detailed_message)s)"""
+        print(f"**************** log entry: {args_dict}")
+        print(f"****************    params: {params}")
 
         try:
             with self._get_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(query, params)
-                    result = cursor.fetchone()
+                    print(f"**************** rowcount: {cursor.rowcount}")
+                    if cursor.rowcount == 0:
+                        logger.info("Log entry failed to insert")
+                        return None
+                    if cursor.rowcount > 1:
+                        logger.warning("Multiple records were updated for a single log entry operation")
 
-                    if result:
-                        logger.debug(f"Entry inserted into logs table: {result[0]}")
-                        return result[0]
-                    else:
-                        logger.error("Error: log entry was not inserted")
-                        return False
-
+                    # Get the auto-generated log_id
+                    log_id = cursor.lastrowid
+                    logger.info(f"Successfully inserted log entry with ID: {log_id}")
+                    return log_id
         except Error as e:
             logger.error(f"Error inserting log entry: {e}")
-            return False
+            return None
 
     def get_logs(self, limit: Optional[int] = None, offset: int = 0,
                  order_by: str = "timestamp", order_direction: str = "DESC") -> List[Dict[str, Any]]:
@@ -538,6 +546,7 @@ class MYSQLConnection(DBConnection):
             with self._get_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("SELECT 1;")
+                    _ = cursor.fetchall()  # Consume the result
                     # If the query executes without an exception, the database is responsive
                     logger.info("MySQL database is responsive.")
                     return True

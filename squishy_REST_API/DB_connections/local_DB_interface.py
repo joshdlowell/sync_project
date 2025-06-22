@@ -97,14 +97,14 @@ class DBConnection(ABC):
         pass
 
     @abstractmethod
-    def put_log(self, args_dict: dict) -> bool:
+    def put_log(self, args_dict: dict) -> int | None:
         """
         Put log entry into database.
 
         This method inserts log entries into the local_database.
 
         Returns:
-            True if log entry was inserted, False if an error occurred
+            log_id number (int) if the log entry was inserted, None if an error occurred
         """
         pass
 

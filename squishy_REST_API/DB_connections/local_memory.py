@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any, List, Tuple
 import time
 import hashlib
 from collections import defaultdict
-from local_DB_interface import DBConnection
+from squishy_REST_API.DB_connections.local_DB_interface import DBConnection
 from squishy_REST_API.logging_config import logger
 
 
@@ -53,100 +53,95 @@ class LocalMemoryConnection(DBConnection):
         Raises:
             ValueError: If required parameters are not provided
         """
-        try:
-            # Validate required keys
-            if missing_keys := {'path', 'current_hash'} - record.keys():
-                logger.debug(f"Received update request missing keys: {missing_keys}")
-                raise ValueError(f"{missing_keys} value(s) must be provided")
+        # Validate required keys
+        if missing_keys := {'path', 'current_hash'} - set(record.keys()):
+            logger.debug(f"Received update request missing keys: {missing_keys}")
+            raise ValueError(f"{missing_keys} value(s) must be provided")
 
-            path = record['path'].strip()
-            current_hash = record['current_hash'].strip()
-            logger.debug(f"Inserting or updating hash for path: {path}")
+        path = record['path'].strip()
+        current_hash = record['current_hash'].strip()
+        logger.debug(f"Inserting or updating hash for path: {path}")
 
-            # Get existing record
-            existing_record = self.hashtable.get(path)
-            current_time = int(time.time())
+        # Get existing record
+        existing_record = self.hashtable.get(path)
+        current_time = int(time.time())
 
-            # Format list fields
-            format_list = lambda field_list: ','.join(x.strip() for x in field_list) if field_list else None
-            dirs = format_list(record.get('dirs'))
-            links = format_list(record.get('links'))
-            files = format_list(record.get('files'))
+        # Format list fields
+        format_list = lambda field_list: ','.join(x.strip() for x in field_list) if field_list else None
+        dirs = format_list(record.get('dirs'))
+        links = format_list(record.get('links'))
+        files = format_list(record.get('files'))
 
-            # Initialize change tracking
-            modified, created, deleted = set(), set(), set()
+        # Initialize change tracking
+        modified, created, deleted = set(), set(), set()
 
-            # Calculate changes for existing records
-            if existing_record:
-                parse_existing = lambda field: [x.strip() for x in field.split(",")] if field else []
+        # Calculate changes for existing records
+        if existing_record:
+            parse_existing = lambda field: [x.strip() for x in field.split(",")] if field else []
 
-                # Calculate additions and deletions for all field types
-                for field_name, existing_str, request_list in [
-                    ('dirs', existing_record.get('dirs'), record.get('dirs', [])),
-                    ('files', existing_record.get('files'), record.get('files', [])),
-                    ('links', existing_record.get('links'), record.get('links', []))
-                ]:
-                    existing_list = parse_existing(existing_str)
-                    created.update(f"{path}/{x}" for x in set(request_list) - set(existing_list))
-                    deleted.update(f"{path}/{x}" for x in set(existing_list) - set(existing_list))
+            # Calculate additions and deletions for all field types
+            for field_name, existing_str, request_list in [
+                ('dirs', existing_record.get('dirs'), record.get('dirs', [])),
+                ('files', existing_record.get('files'), record.get('files', [])),
+                ('links', existing_record.get('links'), record.get('links', []))
+            ]:
+                existing_list = parse_existing(existing_str)
+                # created.update(f"{path}/{x}" for x in set(request_list) - set(existing_list))
+                deleted.update(f"{path}/{x}" for x in set(existing_list) - set(existing_list))
 
-            logger.debug(f"Prepared data for path {path}: hash={current_hash}, "
-                         f"dirs={len(record.get('dirs', []))}, files={len(record.get('files', []))}, "
-                         f"links={len(record.get('links', []))}")
+        logger.debug(f"Prepared data for path {path}: hash={current_hash}, "
+                     f"dirs={len(record.get('dirs', []))}, files={len(record.get('files', []))}, "
+                     f"links={len(record.get('links', []))}")
 
-            if not existing_record:  # New record
-                logger.info(f"Inserting new record into database for path: {path}")
-                created.add(path)
+        if not existing_record:  # New record
+            logger.info(f"Inserting new record into database for path: {path}")
+            created.add(path)
 
-                self.hashtable[path] = {
-                    'path': path,
-                    'hashed_path': self._generate_hashed_path(path),
-                    'current_hash': current_hash,
-                    'current_dtg_latest': current_time,
-                    'current_dtg_first': current_time,
-                    'target_hash': record.get('target_hash'),
-                    'prev_hash': None,
-                    'prev_dtg_latest': None,
-                    'dirs': dirs,
-                    'files': files,
-                    'links': links
-                }
+            self.hashtable[path] = {
+                'path': path,
+                'hashed_path': self._generate_hashed_path(path),
+                'current_hash': current_hash,
+                'current_dtg_latest': current_time,
+                'current_dtg_first': current_time,
+                'target_hash': record.get('target_hash'),
+                'prev_hash': None,
+                'prev_dtg_latest': None,
+                'dirs': dirs,
+                'files': files,
+                'links': links
+            }
 
-            elif existing_record['current_hash'] == current_hash:  # Hash unchanged
-                logger.info(f"Found existing record for path, hash unchanged: {path}")
-                existing_record['current_dtg_latest'] = current_time
+        elif existing_record['current_hash'] == current_hash:  # Hash unchanged
+            logger.info(f"Found existing record for path, hash unchanged: {path}")
+            existing_record['current_dtg_latest'] = current_time
 
-            else:  # Hash changed
-                logger.info(f"Found existing record for path, hash has changed: {path}")
-                modified.add(path)
+        else:  # Hash changed
+            logger.info(f"Found existing record for path, hash has changed: {path}")
+            modified.add(path)
 
-                # Move current to previous
-                existing_record['prev_hash'] = existing_record['current_hash']
-                existing_record['prev_dtg_latest'] = existing_record['current_dtg_latest']
+            # Move current to previous
+            existing_record['prev_hash'] = existing_record['current_hash']
+            existing_record['prev_dtg_latest'] = existing_record['current_dtg_latest']
 
-                # Update current
-                existing_record['current_hash'] = current_hash
-                existing_record['current_dtg_latest'] = current_time
-                existing_record['current_dtg_first'] = current_time
-                existing_record['dirs'] = dirs
-                existing_record['files'] = files
-                existing_record['links'] = links
+            # Update current
+            existing_record['current_hash'] = current_hash
+            existing_record['current_dtg_latest'] = current_time
+            existing_record['current_dtg_first'] = current_time
+            existing_record['dirs'] = dirs
+            existing_record['files'] = files
+            existing_record['links'] = links
 
-            logger.info(f"Successfully updated database for path: {path}")
+        logger.info(f"Successfully updated database for path: {path}")
 
-            # Prune deleted paths from the database
-            for del_path in deleted:
-                self._delete_hash_entry(del_path)
+        # Prune deleted paths from the database
+        for del_path in deleted:
+            self._delete_hash_entry(del_path)
 
-            changes = {field: sorted(paths) for field, paths in
-                       [('modified', modified), ('created', created), ('deleted', deleted)]}
+        changes = {field: sorted(paths) for field, paths in
+                   [('modified', modified), ('created', created), ('deleted', deleted)]}
 
-            logger.debug(f"Changes: modified={len(modified)}, created={len(created)}, deleted={len(deleted)}")
-            return changes
-
-        except Exception as e:
-            logger.error(f"Error inserting/updating record: {e}")
-            return None
+        logger.debug(f"Changes: modified={len(modified)}, created={len(created)}, deleted={len(deleted)}")
+        return changes
 
     def _delete_hash_entry(self, path: str) -> bool:
         """
@@ -322,20 +317,24 @@ class LocalMemoryConnection(DBConnection):
             logger.error(f"Error fetching priority updates: {e}")
             return []
 
-    def put_log(self, args_dict: dict) -> bool:
+    def put_log(self, args_dict: dict) -> int | None:
         """
         Put log entry into database.
 
         This method inserts log entries into the local_database.
 
         Returns:
-            True if log entry was inserted, False if an error occurred
+            log_id number (int) if the log entry was inserted, None if an error occurred
         """
         try:
             # Check for required parameters
             if not args_dict.get('summary_message'):
                 logger.debug("No summary message provided, skipping log entry")
-                return False
+                return None
+            # Check site_id length requirement (if included)
+            if args_dict.get('site_id') and len(args_dict.get('site_id')) > 5 :
+                logger.debug("site_id must be less than 5 characters, skipping log entry")
+                return None
 
             # Create log entry
             log_entry = {
@@ -357,7 +356,7 @@ class LocalMemoryConnection(DBConnection):
 
         except Exception as e:
             logger.error(f"Error inserting log entry: {e}")
-            return False
+            return None
 
     def get_logs(self, limit: Optional[int] = None, offset: int = 0,
                  order_by: str = "timestamp", order_direction: str = "DESC") -> List[Dict[str, Any]]:

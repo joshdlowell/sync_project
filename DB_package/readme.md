@@ -60,11 +60,11 @@ CREATE TABLE IF NOT EXISTS hashtable (
     path TEXT NOT NULL,
     hashed_path VARCHAR(64) AS (SHA2(path, 256)) STORED PRIMARY KEY,
     current_hash VARCHAR(40) NOT NULL,
-    current_dtg_latest DOUBLE DEFAULT (UNIX_TIMESTAMP()),
-    current_dtg_first DOUBLE DEFAULT (`current_dtg_latest`),
+    current_dtg_latest INT UNSIGNED DEFAULT (UNIX_TIMESTAMP()),
+    current_dtg_first INT UNSIGNED DEFAULT (`current_dtg_latest`),
     target_hash VARCHAR(40),
     prev_hash VARCHAR(40),
-    prev_dtg_latest DOUBLE,
+    prev_dtg_latest INT UNSIGNED,
     dirs TEXT,
     files TEXT,
     links TEXT
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS logs (
     log_entry INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     site_id VARCHAR(5) DEFAULT ('Local'),
     log_level ENUM('ERROR', 'STATUS', 'WARNING', 'INFO') DEFAULT ('INFO'),
-    timestamp DOUBLE DEFAULT (UNIX_TIMESTAMP()),
+    timestamp INT UNSIGNED DEFAULT (UNIX_TIMESTAMP()),
     summary_message TEXT NOT NULL,
     detailed_message TEXT
 );
@@ -117,12 +117,12 @@ This container enforces the DB schema(s) it is initialized with
 2. For new rows, `current_dtg_latest` and `current_dtg_first` are set to the current
 time automatically.
 3. A column `hashed_path` is generated automatically to enforce uniqueness and act as
-primary key.
+primary key (Uniqueness can't be enforced directly on the path column because it is a TEXT column with no defined length limit).
 
 `logs`:
 1. Minimum required values are `summary_message`
 2. `site_id` must be five or fewer characters, and is set to `local` by default
-2. `log_level` is `INFO` by default. If this value is included in an insert or update 
+3. `log_level` is `INFO` by default. If this value is included in an insert or update 
 operation it must be one of `ERROR`, `STATUS`, `WARNING`, or `INFO`
 
 

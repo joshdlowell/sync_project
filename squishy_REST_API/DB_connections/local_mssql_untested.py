@@ -1,8 +1,8 @@
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, List
 import pyodbc
 from contextlib import contextmanager
-from local_DB_interface import DBConnection
-from squishy_REST_API.logging_config import logger
+from squishy_REST_API.DB_connections.local_DB_interface import DBConnection
+from squishy_REST_API.app_factory.logging_config import logger
 
 
 class MSSQLConnection(DBConnection):
@@ -123,7 +123,7 @@ class MSSQLConnection(DBConnection):
                 ('links', existing_links, record.get('links', []))
             ]:
                 existing_list = parse_existing(existing_str)
-                created.update(f"{path}/{x}" for x in set(request_list) - set(existing_list))
+                # created.update(f"{path}/{x}" for x in set(request_list) - set(existing_list))
                 deleted.update(f"{path}/{x}" for x in set(existing_list) - set(request_list))
 
         logger.debug(f"Prepared data for path {path}: hash={current_hash}, "
@@ -203,6 +203,7 @@ class MSSQLConnection(DBConnection):
             return rows_affected > 0
 
         except Exception as e:
+            # Log the error
             logger.error(f"Error deleting hash entry for path {path}: {e}")
             return False
 
@@ -372,7 +373,7 @@ class MSSQLConnection(DBConnection):
 
         return priority
 
-    def put_log(self, args_dict: dict) -> bool:
+    def put_log(self, args_dict: dict) -> int | None:
         """
         Put log entry into database.
 
@@ -384,7 +385,7 @@ class MSSQLConnection(DBConnection):
         # Check for required parameters
         if not args_dict.get('summary_message'):
             logger.debug("No summary message provided, skipping log entry")
-            return False
+            return None
 
         # Extract parameters with defaults
         params = {
@@ -412,11 +413,11 @@ class MSSQLConnection(DBConnection):
                     return result[0]
                 else:
                     logger.error("Error: log entry was not inserted")
-                    return False
+                    return None
 
         except Exception as e:
             logger.error(f"Error inserting log entry: {e}")
-            return False
+            return None
 
     def get_logs(self, limit: Optional[int] = None, offset: int = 0,
                  order_by: str = "timestamp", order_direction: str = "DESC") -> List[Dict[str, Any]]:
@@ -450,7 +451,7 @@ class MSSQLConnection(DBConnection):
             raise ValueError("Order direction must be 'ASC' or 'DESC'")
 
         # Validate order_by column (whitelist approach for security)
-        allowed_columns = {'log_id', 'site_id', 'log_level', 'timestamp'}
+        allowed_columns = {'log_id', 'site_id', 'log_level', 'timestamp'}  # Adjust based on schema changes
         if order_by not in allowed_columns:
             raise ValueError(f"Invalid order_by column. Allowed: {allowed_columns}")
 
@@ -489,7 +490,7 @@ class MSSQLConnection(DBConnection):
                 record_count = len(result)
                 logger.debug(f"Retrieved {record_count} log records from database")
 
-                return result
+                return result or []  # Ensure we always return a list
 
         except Exception as e:
             logger.error(f"MSSQL error fetching log records: {e}")
@@ -519,6 +520,7 @@ class MSSQLConnection(DBConnection):
             return rows_affected > 0
 
         except Exception as e:
+            # Log the error
             logger.error(f"Error deleting log entry #{log_id}: {e}")
             return False
 

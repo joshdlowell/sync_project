@@ -1,9 +1,8 @@
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, List
 import time
 import hashlib
-from collections import defaultdict
 from squishy_REST_API.DB_connections.local_DB_interface import DBConnection
-from squishy_REST_API.logging_config import logger
+from squishy_REST_API.app_factory.logging_config import logger
 
 
 class LocalMemoryConnection(DBConnection):

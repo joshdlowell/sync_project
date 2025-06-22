@@ -1,9 +1,9 @@
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, List
 import mysql.connector
 from mysql.connector import Error
 from contextlib import contextmanager
 from squishy_REST_API.DB_connections.local_DB_interface import DBConnection
-from squishy_REST_API.logging_config import logger
+from squishy_REST_API.app_factory.logging_config import logger
 
 
 class MYSQLConnection(DBConnection):
@@ -176,8 +176,6 @@ class MYSQLConnection(DBConnection):
             logger.error(f"Error inserting/updating record: {e}")
             return None
 
-
-
         # Prune deleted paths from the database
         for del_path in deleted:
             self._delete_hash_entry(del_path)
@@ -187,8 +185,6 @@ class MYSQLConnection(DBConnection):
 
         logger.debug(f"Changes: modified={len(modified)}, created={len(created)}, deleted={len(deleted)}")
         return changes
-
-
 
     def _delete_hash_entry(self, path: str) -> bool:
         """

@@ -1,0 +1,42 @@
+apiVersion: v1 # This specifies the API version.
+kind: ConfigMap # The object type is ConfigMap.
+metadata:
+  name: squishy-config # Name of the ConfigMap.
+  namespace: default # Namespace where the ConfigMap will reside.
+data:
+  # Add your environment variables as key-value pairs here:
+  DATABASE_HOST: "db.example.com"
+  DATABASE_PORT: "5432"
+  APP_ENV: "production"
+  LOG_LEVEL: "INFO"
+
+  # MYSQL container env variables
+  MYSQL_DATABASE:
+  MYSQL_USER:
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: squishy-secret # Name of your Secret
+type: Opaque # Default type for generic Secrets
+data:
+  # MYSQL container env variables
+  MYSQL_ROOT_PASSWORD:
+  MYSQL_PASSWORD:
+
+---
+# How to apply DB
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app-pod
+spec:
+  containers:
+    - name: my-app-container
+      image: my-app-image:latest
+      envFrom:
+        - configMapRef:
+            name: squishy-config
+        - secretRef:
+            name: squishy-secret

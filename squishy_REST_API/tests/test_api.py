@@ -6,8 +6,32 @@ This module contains tests for the REST API endpoints.
 import json
 import unittest
 from unittest.mock import patch, MagicMock
+from squishy_REST_API.app_factory.app_factory import create_app
+from squishy_REST_API.DB_connections.local_memory import LocalMemoryConnection
 
-from squishy_REST_API.tests.conftest import BaseTestCase
+# from squishy_REST_API.tests.conftest import BaseTestCase
+class BaseTestCase(unittest.TestCase):
+    """Base test case for all tests."""
+
+    def create_app(self):
+        """Create and configure a Flask application for testing."""
+        # Create test configuration
+        test_config = {
+            'TESTING': True,
+            'DEBUG': False,
+        }
+
+        # Create application with test configuration
+        return create_app(test_config)
+
+    def create_test_client(self, app):
+        """Create a test client for the Flask application."""
+        return app.test_client()
+
+    def create_mock_db(self):
+        """Create a mock database for testing."""
+        # Create an in-memory database or mock
+        return LocalMemoryConnection()
 
 
 class APITestCase(BaseTestCase):
@@ -41,7 +65,7 @@ class HashEndpointTestCase(APITestCase):
     def test_get_hash_success(self):
         """Test GET /hash endpoint with a path that exists."""
         # Mock the database response
-        with patch('REST_API_package.routes.db_instance') as mock_db:
+        with patch('squishy_REST_API.app_factory.api_routes.db_instance') as mock_db:
             # Configure mock to return a hash value
             mock_db.get_single_hash_record.return_value = 'test_hash_value'
 
@@ -78,7 +102,7 @@ class HashtableEndpointTestCase(APITestCase):
     def test_post_hashtable_success(self):
         """Test POST /hashtable endpoint with valid data."""
         # Mock the database response
-        with patch('REST_API_package.routes.db_instance') as mock_db:
+        with patch('squishy_REST_API.app_factory.api_routes.db_instance') as mock_db:
             # Configure mock to return changes
             mock_db.insert_or_update_hash.return_value = {
                 'modified': ['test_path'],
@@ -138,7 +162,7 @@ class PriorityEndpointTestCase(APITestCase):
     def test_get_priority_success(self):
         """Test GET /priority endpoint with valid parameters."""
         # Mock the database response
-        with patch('REST_API_package.routes.db_instance') as mock_db:
+        with patch('squishy_REST_API.app_factory.api_routes.db_instance') as mock_db:
             # Configure mock to return a list of directories
             mock_db.get_oldest_updates.return_value = [
                 '/test/dir1',
@@ -156,6 +180,8 @@ class PriorityEndpointTestCase(APITestCase):
 
             # Verify mock was called correctly
             mock_db.get_oldest_updates.assert_called_once_with('/test', 20)
+
+
 
 
 if __name__ == '__main__':

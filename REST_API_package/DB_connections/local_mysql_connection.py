@@ -493,26 +493,26 @@ class MYSQLConnection(DBConnection):
             logger.error(f"Unexpected error fetching log records: {e}")
             return []
 
-    def delete_log_entry(self, entry: int) -> bool:
+    def delete_log_entry(self, log_id: int) -> bool:
         """
         Remove a log entry from the database.
 
-        This method deletes a log_entry by number and is used to clean out local logs after they
+        This method deletes a log_entry by log_id and is used to clean out local logs after they
          have been forwarded to the core DB.
 
         Args:
-            An int representing the log entry to be removed from the local database.
+            An int representing the log entry's log_id to be removed from the local database.
 
         Returns:
             True if the log entry was deleted, False if not found, or an error occurred.
         """
-        query = "DELETE FROM logs WHERE log_entry = %s"
+        query = "DELETE FROM logs WHERE log_id = %s"
 
         try:
             with self._get_connection() as conn:
                 with conn.cursor() as cursor:
                     # Delete the entry with the matching path
-                    cursor.execute(query, (entry,))
+                    cursor.execute(query, (log_id,))
 
                     # Check if any rows were affected (deleted)
                     rows_affected = cursor.rowcount
@@ -522,7 +522,7 @@ class MYSQLConnection(DBConnection):
 
         except Exception as e:
             # Log the error
-            logger.error(f"Error deleting log entry #{entry}: {e}")
+            logger.error(f"Error deleting log entry #{log_id}: {e}")
             return False
 
     def life_check(self) -> bool:

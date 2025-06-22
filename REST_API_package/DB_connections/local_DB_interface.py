@@ -133,15 +133,15 @@ class DBConnection(ABC):
         pass
 
     @abstractmethod
-    def delete_log_entry(self, entry: int) -> bool:
+    def delete_log_entry(self, log_id: int) -> bool:
         """
         Remove a log entry from the database.
 
-        This method deletes a log_entry by number and is used to clean out local logs after they
+        This method deletes a log_entry by log_id and is used to clean out local logs after they
          have been forwarded to the core DB.
 
         Args:
-            An int representing the log entry to be removed from the local database.
+            An int representing the log entry's log_id to be removed from the local database.
 
         Returns:
             True if the log entry was deleted, False if not found, or an error occurred.

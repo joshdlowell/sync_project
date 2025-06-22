@@ -93,8 +93,8 @@ SELECT
 FROM logs
 WHERE summary_message = 'Happy day, booting complete';
 
--- Test 2: Verify log_entry auto increments
-SELECT 'Test 2: Verify log_entry auto increments:' as '';
+-- Test 2: Verify log_id auto increments
+SELECT 'Test 2: Verify log_id auto increments:' as '';
 
 -- Insert first record
 INSERT INTO logs (summary_message)
@@ -108,7 +108,7 @@ VALUES ('info message 2');
 SELECT
     CASE
         WHEN COUNT(*) = 2
-        AND MAX(log_entry) - MIN(log_entry) = 1
+        AND MAX(log_id) - MIN(log_id) = 1
         THEN 'PASSED'
         ELSE 'FAILED'
     END as test_result
@@ -117,10 +117,10 @@ WHERE summary_message IN ('info message', 'info message 2');
 
 -- Optional: Show the actual values for debugging
 SELECT 'Debug - Actual values:' as '';
-SELECT log_entry, summary_message
+SELECT log_id, summary_message
 FROM logs
 WHERE summary_message IN ('info message', 'info message 2')
-ORDER BY log_entry;
+ORDER BY log_id;
 
 -- Test 3: enforcement of required fields
 CALL test_without_required();
@@ -129,7 +129,7 @@ CALL test_without_required();
 SELECT 'Test 4: auto-population of fields:' as '';
 SELECT
     CASE
-        WHEN log_entry IS NOT NULL
+        WHEN log_id IS NOT NULL
         AND site_id = 'local'
         AND log_level = 'INFO'
         AND timestamp > UNIX_TIMESTAMP() - 60
@@ -265,7 +265,7 @@ FROM logs;
 
 SELECT
     'Unique entries: ' as metric,
-    COUNT(DISTINCT log_entry) as value
+    COUNT(DISTINCT log_id) as value
 FROM logs;
 
 SELECT
@@ -276,7 +276,7 @@ WHERE detailed_message IS NOT NULL;
 
 -- Display all test data
 SELECT '=== ALL TEST DATA ===' as data_review;
-SELECT * FROM logs ORDER BY log_entry;
+SELECT * FROM logs ORDER BY log_id;
 
 -- Rollback transaction to clean up test data
 ROLLBACK;

@@ -5,7 +5,7 @@ Here are several ways to add the SQL initialization script to your MySQL Docker 
 1. **Create your SQL file locally:**
 ```bash
 # Create the SQL file
-cat > init.sql << 'EOF'
+cat > hashtable_init.sql << 'EOF'
 CREATE TABLE IF NOT EXISTS hashtable (
     path VARCHAR PRIMARY KEY,
     current_hash VARCHAR DEFAULT 'None',
@@ -27,7 +27,7 @@ docker run -d \
   --name mysql-container \
   -e MYSQL_ROOT_PASSWORD=your_password \
   -e MYSQL_DATABASE=your_database \
-  -v /path/to/your/init.sql:/docker-entrypoint-initdb.d/init.sql \
+  -v /path/to/your/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
   -p 3306:3306 \
   mysql:8.0
 ```
@@ -48,7 +48,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql
       - mysql_data:/var/lib/mysql
     restart: unless-stopped
 
@@ -69,7 +69,7 @@ docker run -d \
 
 # Wait for MySQL to be ready, then execute the SQL
 sleep 30
-docker exec -i mysql-container mysql -uroot -pyour_password your_database < init.sql
+docker exec -i mysql-container mysql -uroot -pyour_password your_database < hashtable_init.sql
 ```
 
 ## Option 4: Using Docker Exec with Inline SQL

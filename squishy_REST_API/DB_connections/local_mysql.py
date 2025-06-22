@@ -3,7 +3,7 @@ import mysql.connector
 from mysql.connector import Error
 from contextlib import contextmanager
 from local_DB_interface import DBConnection
-from REST_API_package.logging_config import logger
+from squishy_REST_API.logging_config import logger
 
 
 class MYSQLConnection(DBConnection):

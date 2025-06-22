@@ -3,7 +3,7 @@ import time
 import hashlib
 from collections import defaultdict
 from local_DB_interface import DBConnection
-from REST_API_package.logging_config import logger
+from squishy_REST_API.logging_config import logger
 
 
 class LocalMemoryConnection(DBConnection):

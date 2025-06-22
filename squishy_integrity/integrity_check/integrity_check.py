@@ -5,7 +5,7 @@ Refactored for improved testability and maintainability.
 """
 
 from .factory import IntegrityCheckFactory
-from integrity_package.rest_connector import rest_connector
+from squishy_integrity.rest_connector import rest_connector
 
 # Create the service instance
 _service = IntegrityCheckFactory.create_service(rest_connector)

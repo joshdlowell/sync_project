@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch, mock_open
-from integrity_package.integrity_check.merkle_tree_service import MerkleTreeService
-from integrity_package.integrity_check.implementations import SHA1HashFunction
+from squishy_integrity.integrity_check.merkle_tree_service import MerkleTreeService
+from squishy_integrity.integrity_check.implementations import SHA1HashFunction
 
 
 class TestMerkleTreeService(unittest.TestCase):
@@ -57,7 +57,7 @@ class TestFileHasher(unittest.TestCase):
         self.mock_file_system = Mock()
         self.hash_function = SHA1HashFunction()
 
-        from integrity_package.integrity_check.file_hasher import FileHasher
+        from squishy_integrity.integrity_check.file_hasher import FileHasher
         self.file_hasher = FileHasher(
             self.mock_file_system,
             self.hash_function
@@ -94,7 +94,7 @@ class TestDirectoryTreeWalker(unittest.TestCase):
     def setUp(self):
         self.mock_file_system = Mock()
 
-        from integrity_package.integrity_check.tree_walker import DirectoryTreeWalker
+        from squishy_integrity.integrity_check.tree_walker import DirectoryTreeWalker
         self.walker = DirectoryTreeWalker(self.mock_file_system)
 
     def test_get_tree_structure(self):
@@ -121,7 +121,7 @@ class TestDirectoryTreeWalker(unittest.TestCase):
 
 class TestPathValidator(unittest.TestCase):
     def setUp(self):
-        from integrity_package.integrity_check.validators import PathValidator
+        from squishy_integrity.integrity_check.validators import PathValidator
         self.validator = PathValidator()
 
     def test_validate_root_and_dir_paths_valid(self):

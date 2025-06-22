@@ -72,11 +72,29 @@ docker run -d \
   -e MYSQL_PASSWORD=squishy \
   -e MYSQL_ROOT_PASSWORD=squishy_root \
   -e MYSQL_DATABASE=local_squishy_db \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/DB/init.sql:/docker-entrypoint-initdb.d/init.sql \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package/tests/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
   -v sql_volume:/var/lib/mysql \
   -p 3306:3306 \
   mysql:9.3
 ```
+docker run -d \
+  --name mysql-squishy-db \
+  -e MYSQL_ROOT_PASSWORD=your_root_password \
+  -e MYSQL_DATABASE=squishy_db \
+  -e MYSQL_USER=app_user \
+  -e MYSQL_PASSWORD=your_user_password \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package/logs_init.sql:/docker-entrypoint-initdb.d/logs_init.sql \
+  -p 3306:3306 \
+  mysql:9.3
+
+
+
+/mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package
+### tests
+docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < /mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package/tests/test_hashtable.sql
+docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_hashtable.sql
+
 
 ## integrity.py file structure
 empty   # dir with no contents

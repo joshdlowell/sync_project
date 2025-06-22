@@ -74,7 +74,7 @@ and a `logs_init.sql` file with the following content:
 
 ```sql
 CREATE TABLE IF NOT EXISTS logs (
-    log_entry INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    log_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     site_id VARCHAR(5) DEFAULT ('Local'),
     log_level ENUM('ERROR', 'STATUS', 'WARNING', 'INFO') DEFAULT ('INFO'),
     timestamp INT UNSIGNED DEFAULT (UNIX_TIMESTAMP()),
@@ -172,7 +172,7 @@ docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_
 ### **What the test_logs.sql script tests:**
 
 1. **Basic inserts** - Tests simple record insertion.
-2. **Auto increment log_entry** - Verifies that log_entry auto increments.
+2. **Auto increment log_id** - Verifies that log_id auto increments.
 3. **Required field enforcement** - Verifies records without required fields are rejected.
 4. **Default values** - Verifies default values are applied.
 5. **Length enforcement** Verifies length constraints are enforced.

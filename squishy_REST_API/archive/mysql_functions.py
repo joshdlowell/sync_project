@@ -4,7 +4,7 @@ from time import time
 from contextlib import contextmanager
 from typing import Optional, Dict, Any, List, Tuple
 
-from squishy_REST_API.logging_config import logger
+from squishy_REST_API.app_factory.logging_config import logger
 
 
 class HashTableDB:

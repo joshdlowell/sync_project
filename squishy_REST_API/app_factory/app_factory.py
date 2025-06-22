@@ -7,7 +7,7 @@ with proper configuration and dependency injection.
 from flask import Flask
 
 from squishy_REST_API.config import config
-from squishy_REST_API.logging_config import logger
+from squishy_REST_API.app_factory.logging_config import logger
 
 
 def create_app(test_config=None):
@@ -38,7 +38,7 @@ def create_app(test_config=None):
         logger.info("Application configured with default configuration")
     
     # Register routes
-    from squishy_REST_API.routes import register_routes
+    from squishy_REST_API.app_factory.api_routes import register_routes
     register_routes(app)
     
     # Log application startup

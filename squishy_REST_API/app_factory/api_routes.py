@@ -5,8 +5,8 @@ This module defines the API routes and registers them with the Flask application
 """
 from flask import jsonify, request, Flask
 
-from squishy_REST_API.database import db_instance
-from squishy_REST_API.logging_config import logger
+from squishy_REST_API.app_factory.database import db_instance
+from squishy_REST_API.app_factory.logging_config import logger
 
 
 def register_routes(app: Flask):
@@ -30,6 +30,7 @@ def register_routes(app: Flask):
             logger.debug(f"GET /hashtable for path: {path}")
 
             record = db_instance.get_hash_record(path)
+            print(f"***************************record = {record}")
             if not record:
                 logger.info(f"Path not found: {path}")
                 return jsonify({"message": "Path not found"}), 404

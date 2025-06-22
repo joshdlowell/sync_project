@@ -7,11 +7,11 @@ using configuration from the config module.
 from typing import Optional
 
 from squishy_REST_API.config import config
-from squishy_REST_API.mysql_functions import HashTableDB
-from squishy_REST_API.logging_config import logger
+from squishy_REST_API.DB_connections.local_mysql import MYSQLConnection
+from squishy_REST_API.app_factory.logging_config import logger
 
 
-def get_db_instance() -> Optional[HashTableDB]:
+def get_db_instance() -> Optional[MYSQLConnection]:
     """
     Create a database instance using configuration.
     
@@ -28,7 +28,7 @@ def get_db_instance() -> Optional[HashTableDB]:
     
     # Create database instance
     try:
-        db = HashTableDB(
+        db = MYSQLConnection(
             host=config.get('db_host'),
             database=config.get('db_name'),
             user=config.get('db_user'),

@@ -3,7 +3,7 @@ Main entry point for REST API package.
 
 This module creates and runs the Flask application.
 """
-from squishy_REST_API.app_factory import create_app
+from squishy_REST_API.app_factory.app_factory import create_app
 from squishy_REST_API.app_factory.logging_config import logger
 from squishy_REST_API.config import config
 

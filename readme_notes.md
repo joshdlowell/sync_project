@@ -38,12 +38,11 @@ docker run -it --rm \
   -e LOCAL_DATABASE=local_squishy_db \
   -e LOCAL_PORT=5000 \
   -p 80:5000 \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/rest:/squishy \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_REST_API:/squishy_REST_API \
   python:3.12-alpine /bin/sh
 ```
 ### Install dependencies
 ```bash
-apk add py3-flask py3-gunicorn py-requests
 pip install --no-cache-dir mysql-connector-python PyMySQL sqlalchemy cryptography flask gunicorn requests
 
 ```
@@ -72,7 +71,7 @@ docker run -d \
   -e MYSQL_PASSWORD=squishy \
   -e MYSQL_ROOT_PASSWORD=squishy_root \
   -e MYSQL_DATABASE=local_squishy_db \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package/tests/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/tests/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
   -v sql_volume:/var/lib/mysql \
   -p 3306:3306 \
   mysql:9.3
@@ -83,8 +82,8 @@ docker run -d \
   -e MYSQL_DATABASE=squishy_db \
   -e MYSQL_USER=app_user \
   -e MYSQL_PASSWORD=your_user_password \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package/logs_init.sql:/docker-entrypoint-initdb.d/logs_init.sql \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/logs_init.sql:/docker-entrypoint-initdb.d/logs_init.sql \
   -p 3306:3306 \
   mysql:9.3
 
@@ -92,7 +91,7 @@ docker run -d \
 
 /mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package
 ### tests
-docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < /mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package/tests/test_hashtable.sql
+docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/tests/test_hashtable.sql
 docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_hashtable.sql
 
 

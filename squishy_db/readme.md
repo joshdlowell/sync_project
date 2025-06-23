@@ -13,8 +13,7 @@ docker run -d \
   -e MYSQL_DATABASE=squishy_db \
   -e MYSQL_USER=app_user \
   -e MYSQL_PASSWORD=your_user_password \
-  -v $(pwd)/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
-  -v $(pwd)/logs_init.sql:/docker-entrypoint-initdb.d/logs_init.sql \
+  -v $(pwd)/init_scripts:/docker-entrypoint-initdb.d \
   -p 3306:3306 \
   mysql:9.3
 ```
@@ -35,8 +34,7 @@ services:
       MYSQL_USER: app_user
       MYSQL_PASSWORD: your_user_password
     volumes:
-      - ./hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql
-      - ./logs_init.sql:/docker-entrypoint-initdb.d/logs_init.sql
+      - ./init_scripts/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql
       - mysql_data:/var/lib/mysql
     ports:
       - "3306:3306"
@@ -44,6 +42,9 @@ services:
 volumes:
   mysql_data:
 ```
+**Note:** Both of these methods create a `docker volume` on the local machine and mount it at `/var/lib/mysql` 
+to hold the persistent database data. In a production environment this mount should be a true data
+store like a directory on the machine, or a network storage solution.
 
 Then run:
 ```bash
@@ -51,9 +52,11 @@ docker-compose up -d
 ```
 
 ## Required Files
-In your project directory:
+In the project directory there is subdirectory named `init_scripts` that contains the table
+configurations mysql will apply on startup if there is no database found. Below are the contents
+of the files found in that directory.
 
-Create a `hashtable_init.sql` file with the following content:
+A `hashtable_init.sql` file with the following content:
 
 ```sql
 CREATE TABLE IF NOT EXISTS hashtable (
@@ -92,9 +95,13 @@ CREATE TABLE IF NOT EXISTS logs (
 | `MYSQL_USER` | Application user name | Yes |
 | `MYSQL_PASSWORD` | Application user password | Yes |
 
+**NOTE** The environment variables are only used when no existing database/configuration
+is found. When mysql finds an existing configuration at `/var/lib/mysql`, it will ignore 
+the environment variables.
+
 ## Database Schema
 
-The database will be automatically initialized with the tables:
+The database will be automatically initialized on the first run with the tables:
 
 `hashtable`: Tracks file paths and their associated hash values, timestamps, and directory contents.
 

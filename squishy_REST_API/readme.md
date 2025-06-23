@@ -1,17 +1,23 @@
-# Containerized REST API
+# SquishyBadger Containerized REST API
 
-A containerized REST API (Representational State Transfer Application Programming Interface) for SquishyBadger based on the Python Flask library.
-This application provides the interface between worker applications (such as 
-the integrity verification app) and the local and core SquishyBadger databases.
+A containerized REST API (Representational State Transfer Application Programming 
+Interface) for SquishyBadger based on the Python Flask library. This application 
+provides the interface between worker applications (such as the integrity 
+verification app) and the local and core SquishyBadger databases.
 
 ## Quick Start
 
 ### Build from Dockerfile
-
+The included Dockerfile can be used to build the `squishy-rest-api` container 
+image locally by running the command below from inside the directory where 
+the Dockerfile is located.
+```bash
+docker build -t squishy-rest-api .
+```
 
 ### Using Docker Run
 
-TODO - update for
+TODO - update for gunicorn and dockerbuild ADD CONTAINER NETWORK if interfacing with db container
 ```bash
 docker run -it --rm \
   --name integrity \
@@ -25,6 +31,7 @@ docker run -it --rm \
 ### Using Docker Compose
 
 Create a `docker-compose.yml` file:
+TODO - update for gunicorn and dockerbuild
 
 ```yaml
 version: '3.8'
@@ -54,66 +61,39 @@ docker-compose up -d
 ```
 
 ## Required Files
-In your project directory:
-
-Create a `hashtable_init.sql` file with the following content:
-
-```sql
-CREATE TABLE IF NOT EXISTS hashtable (
-    path TEXT NOT NULL,
-    hashed_path VARCHAR(64) AS (SHA2(path, 256)) STORED PRIMARY KEY,
-    current_hash VARCHAR(40) NOT NULL,
-    current_dtg_latest INT UNSIGNED DEFAULT (UNIX_TIMESTAMP()),
-    current_dtg_first INT UNSIGNED DEFAULT (`current_dtg_latest`),
-    target_hash VARCHAR(40),
-    prev_hash VARCHAR(40),
-    prev_dtg_latest INT UNSIGNED,
-    dirs TEXT,
-    files TEXT,
-    links TEXT
-);
-```
-and a `logs_init.sql` file with the following content:
-
-```sql
-CREATE TABLE IF NOT EXISTS logs (
-    log_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    site_id VARCHAR(5) DEFAULT ('Local'),
-    log_level ENUM('ERROR', 'STATUS', 'WARNING', 'INFO') DEFAULT ('INFO'),
-    timestamp INT UNSIGNED DEFAULT (UNIX_TIMESTAMP()),
-    summary_message TEXT NOT NULL,
-    detailed_message TEXT
-);
-```
+None: All necessary files are already packaged into the image.
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `MYSQL_ROOT_PASSWORD` | Root user password | Yes |
-| `MYSQL_DATABASE` | Initial database name | Yes |
-| `MYSQL_USER` | Application user name | Yes |
-| `MYSQL_PASSWORD` | Application user password | Yes |
+There are two required environment variables that need to be set at runtime.
+They are the Mysql database username `LOCAL_USER` and password 
+`LOCAL_PASSWORD`. All other environment variables are pre-set to their default 
+values in the image and are sufficient to connect to a default local mssql-squishy-db
+instance. 
 
-## Database Schema
-
-The database will be automatically initialized with the tables:
-
-`hashtable`: Tracks file paths and their associated hash values, timestamps, and directory contents.
-
-`logs`: Stores log entries for review or forwarding to a core site
+| Variable | Description                | Required | Default |
+|----------|----------------------------|------|---------|
+| `LOCAL_USER` | Local Mysql username       | Yes  | None
+| `LOCAL_PASSWORD` | Local Mysql user password  | Yes | None
+| `LOCAL_MYSQL_NAME` | Local Mysql container name | No | local_squishy_db
+| `LOCAL_DATABASE` | Local Mysql database name  | No | local_squishy_db
+| `LOCAL_PORT` | REST API port              | No | 5000
 
 ## Connection
+The REST API will start automatically and can be used via HTTP requests 
+(from inside the container network)
 
 - **Host**: localhost (or container name if using Docker network)
-- **Port**: 3306
-- **Database**: Value of `MYSQL_DATABASE`
-- **Username**: Value of `MYSQL_USER`
-- **Password**: Value of `MYSQL_PASSWORD`
+- **Port**: 5000
 
 
 ## Interface
-This container enforces the DB schema(s) it is initialized with
+### Inputs
+This container accepts and processes HTTP GET and POST requests at these endpoints:
+
+TODO FROM HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+as input enforces the DB schema(s) it is initialized with
 
 `hashtable`: 
 1. Minimum required values are `path` and `current_hash`.
@@ -130,7 +110,14 @@ operation it must be one of `ERROR`, `STATUS`, `WARNING`, or `INFO`
 
 
 ## Unit testing
-This package also includes tests, in the form of SQL scripts, which can be used to verify that the 
+This package also includes unit and integration tests. The tests are written using Python's builtin `unittests` library and
+located in the `/app/squishy_REST_API/tests` directory. 
+
+```
+python -m squishy_REST_API.tests.test_api
+```
+
+swhich can be used to verify that the 
 tables exist and are configured in compliance with the Database interface. The scripts use 
 transactions that get rolled back at the end, so they won't leave test data in your table.
 

@@ -52,7 +52,7 @@ class DBConnection(ABC):
         pass
 
     @abstractmethod
-    def get_single_timestamp(self, path: str) -> float:
+    def get_single_timestamp(self, path: str) -> Optional[int]:
         """
         Get only the current hash timestamp value for a path.
 
@@ -60,7 +60,7 @@ class DBConnection(ABC):
             path: Path to retrieve timestamp for
 
         Returns:
-            timestamp value as float or None if not found or an error occurred
+            timestamp value as int or None if not found or an error occurred
         """
         pass
 

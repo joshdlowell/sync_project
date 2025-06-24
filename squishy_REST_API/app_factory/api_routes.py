@@ -17,7 +17,7 @@ def register_routes(app: Flask):
         app: Flask application instance
     """
 
-    @app.route('/hashtable', methods=['GET', 'POST'])
+    @app.route('/api/hashtable', methods=['GET', 'POST'])
     def get_put_hashes():
         """
         Get or update hash records.
@@ -27,7 +27,7 @@ def register_routes(app: Flask):
         """
         if request.method == 'GET':
             path = request.query_string.decode()
-            logger.debug(f"GET /hashtable for path: {path}")
+            logger.debug(f"GET /api/hashtable for path: {path}")
 
             record = db_instance.get_hash_record(path)
             print(f"***************************record = {record}")
@@ -39,10 +39,10 @@ def register_routes(app: Flask):
 
         elif request.method == 'POST':
             if 'path' not in request.json.keys():
-                logger.warning("POST /hashtable missing required 'path' field")
+                logger.warning("POST /api/hashtable missing required 'path' field")
                 return jsonify({"message": "path required but not found in your request json"}), 400
 
-            logger.debug(f"POST /hashtable for path: {request.json.get('path')}")
+            logger.debug(f"POST /api/hashtable for path: {request.json.get('path')}")
 
             # Extract path from request
             path = request.json.pop('path')
@@ -60,11 +60,11 @@ def register_routes(app: Flask):
             logger.warning(f"Method not allowed: {request.method}")
             return jsonify({"message": f"'{request.method}' Method not allowed"}), 405
 
-    @app.route('/hash', methods=['GET'])
+    @app.route('/api/hash', methods=['GET'])
     def get_hash():
         """Get a single hash value for a path."""
         path = request.query_string.decode()
-        logger.debug(f"GET /hash for path: {path}")
+        logger.debug(f"GET /api/hash for path: {path}")
 
         hash_value = db_instance.get_single_hash_record(path)
         if not hash_value:
@@ -73,20 +73,20 @@ def register_routes(app: Flask):
 
         return jsonify({"message": "Success", "data": hash_value})
 
-    @app.route('/timestamp', methods=['GET'])
+    @app.route('/api/timestamp', methods=['GET'])
     def get_timestamp():
         """Get the latest timestamp for a path."""
         path = request.query_string.decode()
-        logger.debug(f"GET /timestamp for path: {path}")
+        logger.debug(f"GET /api/timestamp for path: {path}")
 
         record = db_instance.get_hash_record(path)
-        if not record or 'current_dtg_latest' not in record:
+        if not record:
             logger.info(f"Path not found: {path}")
             return jsonify({"message": "Path not found"}), 404
 
-        return jsonify({"message": "Success", "data": record['current_dtg_latest']}), 200
+        return jsonify({"message": "Success", "data": record}), 200
 
-    @app.route('/priority', methods=['GET'])
+    @app.route('/api/priority', methods=['GET'])
     def get_priority():
         """
         Get a list of directories that need to be updated based on their age.
@@ -101,7 +101,7 @@ def register_routes(app: Flask):
 
         # Validate parameters
         if not root_path:
-            logger.warning("GET /priority missing required 'root_path' parameter")
+            logger.warning("GET /api/priority missing required 'root_path' parameter")
             return jsonify({"message": "root_path parameter is required"}), 400
 
         try:
@@ -112,7 +112,7 @@ def register_routes(app: Flask):
             logger.warning(f"Invalid percent parameter: {percent_str}")
             return jsonify({"message": f"Invalid percent parameter: {e}"}), 400
 
-        logger.debug(f"GET /priority for root_path: {root_path}, percent: {percent}")
+        logger.debug(f"GET /api/priority for root_path: {root_path}, percent: {percent}")
 
         # Get oldest updates from database
         priority = db_instance.get_oldest_updates(root_path, percent)
@@ -123,6 +123,14 @@ def register_routes(app: Flask):
     register_error_handlers(app)
 
     logger.info("API routes registered")
+
+    @app.route('/api/lifecheck', methods=['GET'])
+    def life_check():
+        """Get the liveness of the api and database."""
+        logger.debug(f"GET /api/lifecheck")
+        return jsonify({"message": "Success",
+                        "data": {'api': True,
+                                 'db': db_instance.life_check()}}), 200
 
 
 def register_error_handlers(app: Flask):

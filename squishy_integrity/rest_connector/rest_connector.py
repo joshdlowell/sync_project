@@ -61,7 +61,7 @@ class RestConnector:
             if 'current_dtg_latest' in item_data:
                 request_data['current_dtg_latest'] = item_data['current_dtg_latest']
 
-            code, update = self._db_put("hashtable", request_data)
+            code, update = self._db_put("api/hashtable", request_data)
 
             if code != 200:
                 print(f"ERROR: REST API returned {code}: {update}")
@@ -81,7 +81,7 @@ class RestConnector:
         Returns:
             The hash value as a string, or None if not found or error
         """
-        response = self._db_get("hash", {"path": path})
+        response = self._db_get("api/hash", {"path": path})
         return self._process_response(response)
 
     def get_hashtable(self, path: str) -> dict | None:
@@ -94,7 +94,7 @@ class RestConnector:
         Returns:
             A dictionary containing the hash table, or None if not found or error
         """
-        response = self._db_get("hashtable", {"path": path})
+        response = self._db_get("api/hashtable", {"path": path})
         return self._process_response(response)
 
     def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
@@ -144,7 +144,7 @@ class RestConnector:
         Returns:
             The timestamp as a float, or None if not found or error
         """
-        response = self._db_get("timestamp", {"path": path})
+        response = self._db_get("api/timestamp", {"path": path})
         return self._process_response(response)
 
     def get_priority_updates(self) -> str | None:
@@ -154,7 +154,7 @@ class RestConnector:
         Returns:
             A string containing paths that need priority updates, or None if not found or error
         """
-        response = self._db_get('priority')
+        response = self._db_get('api/priority')
         return self._process_response(response)
 
     def _has_validation_errors(self, path: str, item_data: dict) -> bool:

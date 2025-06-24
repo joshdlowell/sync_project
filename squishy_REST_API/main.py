@@ -4,8 +4,8 @@ Main entry point for REST API package.
 This module creates and runs the Flask application.
 """
 from squishy_REST_API.app_factory.app_factory import create_app
-# from squishy_REST_API.configs.logging_config import logger
-from squishy_REST_API.configs.config import config, rest_logger, db_conn_logger
+from squishy_REST_API.configuration.config import config
+from squishy_REST_API.configuration.logging_config import logger
 
 
 def main():
@@ -19,7 +19,7 @@ def main():
     debug = config.get('debug', False)
     
     # Run application
-    rest_logger.info(f"Starting application on {host}:{port} (debug={debug})")
+    logger.info(f"Starting application on {host}:{port} (debug={debug})")
     app.run(host=host, port=port, debug=debug)
 
 

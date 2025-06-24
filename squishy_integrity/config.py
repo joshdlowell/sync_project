@@ -1,5 +1,5 @@
 """
-Configuration module for REST API package.
+Configuration module for squishy_integrity package.
 
 This module centralizes configuration management and provides a way to
 load configuration from environment variables or configuration files.

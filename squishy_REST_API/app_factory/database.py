@@ -6,9 +6,8 @@ using configuration from the config module.
 """
 from typing import Optional
 
-from squishy_REST_API.config import config
+from squishy_REST_API.configs.config import config, logger
 from squishy_REST_API.DB_connections.local_mysql import MYSQLConnection
-from squishy_REST_API.app_factory.logging_config import logger
 
 
 def get_db_instance() -> Optional[MYSQLConnection]:

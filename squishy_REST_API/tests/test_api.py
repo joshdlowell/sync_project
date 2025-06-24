@@ -7,7 +7,7 @@ import json
 import unittest
 from unittest.mock import patch, MagicMock
 from squishy_REST_API.app_factory.app_factory import create_app
-from squishy_REST_API.DB_connections.local_memory import LocalMemoryConnection
+from squishy_REST_API.storage_service.local_memory import LocalMemoryConnection
 
 # from squishy_REST_API.tests.conftest import BaseTestCase
 class BaseTestCase(unittest.TestCase):

@@ -6,7 +6,8 @@ with proper configuration and dependency injection.
 """
 from flask import Flask
 
-from squishy_REST_API.configs.config import config, logger
+from squishy_REST_API.configuration.config import config
+from squishy_REST_API.configuration.logging_config import logger
 
 
 def create_app(test_config=None):

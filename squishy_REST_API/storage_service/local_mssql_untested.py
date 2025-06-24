@@ -1,44 +1,49 @@
 from typing import Optional, Dict, Any, List
-import mysql.connector
-from mysql.connector import Error
+import pyodbc
 from contextlib import contextmanager
-from squishy_REST_API.DB_connections.local_DB_interface import DBConnection
-from squishy_REST_API.configs.config import logger
+from squishy_REST_API.storage_service.local_DB_interface import DBConnection
+from squishy_REST_API.configuration.logging_config import logger
 
 
-class MYSQLConnection(DBConnection):
+class MSSQLConnection(DBConnection):
     """
     Database access class for hash table operations.
 
-    This class provides methods to interact with the MySQL database
+    This class provides methods to interact with the MSSQL database
     for storing and retrieving hash information.
     """
-    def __init__(self, host, database, user, password, port=3306,
-                 connection_factory=None, autocommit=True, raise_on_warnings=True):
+
+    def __init__(self, server, database, user, password, port=1433,
+                 connection_factory=None, autocommit=True, driver=None):
         """
         Initialize the database connection configuration.
 
         Args:
-            host: Database host
+            server: Database server
             database: Database name
             user: Database user
             password: Database password
-            port: Database port (default: 3306)
+            port: Database port (default: 1433)
             connection_factory: Optional factory function for creating connections (for testing)
             autocommit: Whether to autocommit transactions (default: True)
-            raise_on_warnings: Whether to raise on warnings (default: True)
+            driver: ODBC driver name (default: auto-detect)
         """
-        self.config = {
-            'host': host,
-            'database': database,
-            'user': user,
-            'password': password,
-            'port': port,
-            'autocommit': autocommit,
-            'raise_on_warnings': raise_on_warnings
-        }
+        # Auto-detect available driver if not specified
+        if driver is None:
+            available_drivers = [d for d in pyodbc.drivers() if 'SQL Server' in d]
+            driver = available_drivers[0] if available_drivers else 'ODBC Driver 17 for SQL Server'
+
+        self.connection_string = (
+            f"DRIVER={{{driver}}};"
+            f"SERVER={server},{port};"
+            f"DATABASE={database};"
+            f"UID={user};"
+            f"PWD={password};"
+            f"TrustServerCertificate=yes;"
+        )
         self.database = database
-        self.connection_factory = connection_factory or mysql.connector.connect
+        self.autocommit = autocommit
+        self.connection_factory = connection_factory or pyodbc.connect
 
     @contextmanager
     def _get_connection(self):
@@ -46,23 +51,23 @@ class MYSQLConnection(DBConnection):
         Context manager for database connections.
 
         Yields:
-            MySQL connection object
+            MSSQL connection object
 
         Raises:
             Error: If a database error occurs
         """
         connection = None
         try:
-            connection = self.connection_factory(**self.config)
-            logger.debug(f"Database connection established to {self.config['host']}")
+            connection = self.connection_factory(self.connection_string, autocommit=self.autocommit)
+            logger.debug(f"Database connection established to MSSQL server")
             yield connection
-        except Error as e:
+        except Exception as e:
             logger.error(f"Database error: {e}")
             if connection:
                 connection.rollback()
             raise
         finally:
-            if connection and connection.is_connected():
+            if connection:
                 connection.close()
                 logger.debug("Database connection closed")
 
@@ -91,10 +96,11 @@ class MYSQLConnection(DBConnection):
         # Get existing record
         try:
             with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT current_hash, dirs, links, files FROM hashtable WHERE path = %s", (path,))
-                    result = cursor.fetchone()
-        except Error as e:
+                cursor = conn.cursor()
+                cursor.execute("SELECT current_hash, dirs, links, files FROM hashtable WHERE path = ?", (path,))
+                result = cursor.fetchone()
+                cursor.close()
+        except Exception as e:
             logger.error(f"Error checking existing record: {e}")
             return None
 
@@ -124,57 +130,47 @@ class MYSQLConnection(DBConnection):
                      f"dirs={len(record.get('dirs', []))}, files={len(record.get('files', []))}, "
                      f"links={len(record.get('links', []))}")
 
-        # Determine operation and build query
-        query_params = {'path': path, 'current_hash': current_hash, 'dirs': dirs, 'files': files, 'links': links}
-
-        if not result:  # New record
-            logger.info(f"Inserting new record into database for path: {path}")
-            created.add(path)
-            query = """
-                    INSERT INTO hashtable (path, current_hash, current_dtg_latest, current_dtg_first,
-                                           dirs, files, links)
-                    VALUES (%(path)s, %(current_hash)s, UNIX_TIMESTAMP(), `current_dtg_latest`,
-                            %(dirs)s, %(files)s, %(links)s) AS entry
-                    ON DUPLICATE KEY
-                    UPDATE
-                        current_hash = entry.current_hash,
-                        current_dtg_latest = entry.current_dtg_latest,
-                        current_dtg_first = entry.current_dtg_first,
-                        dirs = entry.dirs,
-                        files = entry.files,
-                        links = entry.links
-                    """
-        elif result[0] == current_hash:  # Hash unchanged
-            logger.info(f"Found existing record for path, hash unchanged: {path}")
-            query = "UPDATE hashtable SET current_dtg_latest = UNIX_TIMESTAMP() WHERE path = %(path)s"
-        else:  # Hash changed, move current hash and timestamp to previous and update record
-            logger.info(f"Found existing record for path, hash has changed: {path}")
-            modified.add(path)
-            query = """
-                    UPDATE hashtable
-                    SET prev_hash          = `current_hash`,
-                        prev_dtg_latest    = `current_dtg_latest`,
-                        current_hash       = %(current_hash)s,
-                        current_dtg_latest = UNIX_TIMESTAMP(),
-                        current_dtg_first  = `current_dtg_latest`,
-                        dirs               = %(dirs)s,
-                        files              = %(files)s,
-                        links              = %(links)s
-                    WHERE path = %(path)s
-                    """
-
-        # Execute query and handle deletions
+        # Execute appropriate query based on record state
         try:
             with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(query, query_params)
-                    if cursor.rowcount == 1:
-                        logger.info(f"Successfully updated database for path: {path}")
-                    if cursor.rowcount > 1:
-                        logger.info(f"Caution, multiple records were updated for a single record operation for path: {path}")
-        except Error as e:
+                cursor = conn.cursor()
+
+                if not result:  # New record
+                    logger.info(f"Inserting new record into database for path: {path}")
+                    created.add(path)
+                    cursor.execute("""
+                                   INSERT INTO hashtable (path, current_hash, current_dtg_latest, current_dtg_first,
+                                                          dirs, files, links)
+                                   VALUES (?, ?, dbo.UNIX_TIMESTAMP(), dbo.UNIX_TIMESTAMP(), ?, ?, ?)
+                                   """, (path, current_hash, dirs, files, links))
+
+                elif result[0] == current_hash:  # Hash unchanged
+                    logger.info(f"Found existing record for path, hash unchanged: {path}")
+                    cursor.execute("UPDATE hashtable SET current_dtg_latest = dbo.UNIX_TIMESTAMP() WHERE path = ?",
+                                   (path,))
+
+                else:  # Hash changed
+                    logger.info(f"Found existing record for path, hash has changed: {path}")
+                    modified.add(path)
+                    cursor.execute("""
+                                   UPDATE hashtable
+                                   SET prev_hash          = current_hash,
+                                       prev_dtg_latest    = current_dtg_latest,
+                                       current_hash       = ?,
+                                       current_dtg_latest = dbo.UNIX_TIMESTAMP(),
+                                       current_dtg_first  = dbo.UNIX_TIMESTAMP(),
+                                       dirs               = ?,
+                                       files              = ?,
+                                       links              = ?
+                                   WHERE path = ?
+                                   """, (current_hash, dirs, files, links, path))
+
+                cursor.close()
+        except Exception as e:
             logger.error(f"Error inserting/updating record: {e}")
             return None
+
+        logger.info(f"Successfully updated database for path: {path}")
 
         # Prune deleted paths from the database
         for del_path in deleted:
@@ -196,16 +192,12 @@ class MYSQLConnection(DBConnection):
         Returns:
             True if the record was deleted, False if not found, or an error occurred.
         """
-        query = "DELETE FROM hashtable WHERE path = %s"
-
         try:
             with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    # Delete the entry with the matching path
-                    cursor.execute(query, (path,))
-
-                    # Check if any rows were affected (deleted)
-                    rows_affected = cursor.rowcount
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM hashtable WHERE path = ?", (path,))
+                rows_affected = cursor.rowcount
+                cursor.close()
 
             logger.info(f"Removed {rows_affected} record from the database: {path}")
             return rows_affected > 0
@@ -225,19 +217,23 @@ class MYSQLConnection(DBConnection):
         Returns:
             Dictionary with record data or None if not found or an error occurred
         """
-        query = "SELECT * FROM hashtable WHERE path = %s"
-
         try:
             with self._get_connection() as conn:
-                with conn.cursor(dictionary=True) as cursor:
-                    cursor.execute(query, (path,))
-                    result = cursor.fetchone()
-                    if result:
-                        logger.debug(f"Found record for path: {path}")
-                    else:
-                        logger.debug(f"No record found for path: {path}")
-                    return result
-        except Error as e:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM hashtable WHERE path = ?", (path,))
+
+                # Get column names
+                columns = [column[0] for column in cursor.description]
+                result = cursor.fetchone()
+                cursor.close()
+
+                if result:
+                    logger.debug(f"Found record for path: {path}")
+                    return dict(zip(columns, result))
+                else:
+                    logger.debug(f"No record found for path: {path}")
+                    return None
+        except Exception as e:
             logger.error(f"Error fetching record: {e}")
             return None
 
@@ -251,19 +247,20 @@ class MYSQLConnection(DBConnection):
         Returns:
             Hash value as string or None if not found or an error occurred
         """
-        query = "SELECT current_hash FROM hashtable WHERE path = %s"
-
         try:
             with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(query, (path,))
-                    result = cursor.fetchone()
-                    if result:
-                        logger.debug(f"Found hash for path: {path}")
-                    else:
-                        logger.debug(f"No hash found for path: {path}")
-                    return result[0] if result else None
-        except Error as e:
+                cursor = conn.cursor()
+                cursor.execute("SELECT current_hash FROM hashtable WHERE path = ?", (path,))
+                result = cursor.fetchone()
+                cursor.close()
+
+                if result:
+                    logger.debug(f"Found hash for path: {path}")
+                    return result[0]
+                else:
+                    logger.debug(f"No hash found for path: {path}")
+                    return None
+        except Exception as e:
             logger.error(f"Error fetching hash: {e}")
             return None
 
@@ -277,20 +274,21 @@ class MYSQLConnection(DBConnection):
         Returns:
             timestamp value as int or None if not found or an error occurred
         """
-        query = "SELECT current_dtg_latest FROM hashtable WHERE path = %s"
-
         try:
             with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(query, (path,))
-                    result = cursor.fetchone()
-                    if result:
-                        logger.debug(f"Found hash for path: {path}")
-                    else:
-                        logger.debug(f"No hash found for path: {path}")
-                    return result[0] if result else None
-        except Error as e:
-            logger.error(f"Error fetching hash: {e}")
+                cursor = conn.cursor()
+                cursor.execute("SELECT current_dtg_latest FROM hashtable WHERE path = ?", (path,))
+                result = cursor.fetchone()
+                cursor.close()
+
+                if result:
+                    logger.debug(f"Found timestamp for path: {path}")
+                    return result[0]
+                else:
+                    logger.debug(f"No timestamp found for path: {path}")
+                    return None
+        except Exception as e:
+            logger.error(f"Error fetching timestamp: {e}")
             return None
 
     def get_oldest_updates(self, path: str, percent: int = 10) -> List[str]:
@@ -345,18 +343,18 @@ class MYSQLConnection(DBConnection):
         Returns:
             List of directory paths needing updates, deduplicated by hierarchy
         """
-        query = """
-                SELECT path \
-                FROM hashtable
-                WHERE target_hash IS NOT NULL \
-                  AND current_hash != target_hash \
-                """
         try:
             with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(query)
-                    paths = [row[0] for row in cursor.fetchall()]
-        except Error as e:
+                cursor = conn.cursor()
+                cursor.execute("""
+                               SELECT path
+                               FROM hashtable
+                               WHERE target_hash IS NOT NULL
+                                 AND current_hash != target_hash
+                               """)
+                paths = [row[0] for row in cursor.fetchall()]
+                cursor.close()
+        except Exception as e:
             logger.error(f"Error fetching priority updates: {e}")
             return []
 
@@ -382,7 +380,7 @@ class MYSQLConnection(DBConnection):
         This method inserts log entries into the local_database.
 
         Returns:
-            log_id number (int) if the log entry was inserted, None if an error occurred
+            True if log entry was inserted, False if an error occurred
         """
         # Check for required parameters
         if not args_dict.get('summary_message'):
@@ -397,27 +395,27 @@ class MYSQLConnection(DBConnection):
             'detailed_message': args_dict.get('detailed_message', None)
         }
 
-        query = """INSERT INTO logs (site_id, log_level, summary_message, detailed_message)
-                   VALUES (%(site_id)s, %(log_level)s, %(summary_message)s, %(detailed_message)s)"""
-        print(f"**************** log entry: {args_dict}")
-        print(f"****************    params: {params}")
-
         try:
             with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(query, params)
-                    print(f"**************** rowcount: {cursor.rowcount}")
-                    if cursor.rowcount == 0:
-                        logger.info("Log entry failed to insert")
-                        return None
-                    if cursor.rowcount > 1:
-                        logger.warning("Multiple records were updated for a single log entry operation")
+                cursor = conn.cursor()
+                cursor.execute("""
+                               INSERT INTO logs (site_id, log_level, summary_message, detailed_message)
+                                   OUTPUT INSERTED.log_id
+                               VALUES (?, ?, ?, ?)
+                               """, (params['site_id'], params['log_level'],
+                                     params['summary_message'], params['detailed_message']))
 
-                    # Get the auto-generated log_id
-                    log_id = cursor.lastrowid
-                    logger.info(f"Successfully inserted log entry with ID: {log_id}")
-                    return log_id
-        except Error as e:
+                result = cursor.fetchone()
+                cursor.close()
+
+                if result:
+                    logger.debug(f"Entry inserted into logs table: {result[0]}")
+                    return result[0]
+                else:
+                    logger.error("Error: log entry was not inserted")
+                    return None
+
+        except Exception as e:
             logger.error(f"Error inserting log entry: {e}")
             return None
 
@@ -457,44 +455,45 @@ class MYSQLConnection(DBConnection):
         if order_by not in allowed_columns:
             raise ValueError(f"Invalid order_by column. Allowed: {allowed_columns}")
 
-        # Build query with proper parameterization
+        # Build query - MSSQL uses OFFSET/FETCH instead of LIMIT/OFFSET
         base_query = "SELECT * FROM logs"
         query_parts = [base_query]
         query_params = []
 
-        # Add ORDER BY clause (safe since we validated the column name)
+        # Add ORDER BY clause (required for OFFSET/FETCH in MSSQL)
         query_parts.append(f"ORDER BY {order_by} {order_direction.upper()}")
 
-        # Add LIMIT and OFFSET
-        if limit is not None:
-            query_parts.append("LIMIT %s")
-            query_params.append(limit)
-
-        if offset > 0:
-            query_parts.append("OFFSET %s")
+        # Add OFFSET and FETCH (MSSQL equivalent of LIMIT)
+        if offset > 0 or limit is not None:
+            query_parts.append(f"OFFSET ? ROWS")
             query_params.append(offset)
+
+            if limit is not None:
+                query_parts.append("FETCH NEXT ? ROWS ONLY")
+                query_params.append(limit)
 
         final_query = " ".join(query_parts)
 
         try:
             with self._get_connection() as conn:
-                with conn.cursor(dictionary=True, buffered=True) as cursor:
-                    cursor.execute(final_query, query_params)
-                    result = cursor.fetchall()
+                cursor = conn.cursor()
+                cursor.execute(final_query, query_params)
 
-                    # More informative logging
-                    record_count = len(result) if result else 0
-                    logger.debug(f"Retrieved {record_count} log records from database")
+                # Get column names
+                columns = [column[0] for column in cursor.description]
+                results = cursor.fetchall()
+                cursor.close()
 
-                    return result or []  # Ensure we always return a list
+                # Convert to list of dictionaries
+                result = [dict(zip(columns, row)) for row in results] if results else []
 
-        except mysql.connector.Error as e:
-            # More specific error handling
-            logger.error(f"MySQL error fetching log records: {e.errno} - {e.msg}")
-            return []
+                record_count = len(result)
+                logger.debug(f"Retrieved {record_count} log records from database")
+
+                return result or []  # Ensure we always return a list
+
         except Exception as e:
-            # Catch any other unexpected errors
-            logger.error(f"Unexpected error fetching log records: {e}")
+            logger.error(f"MSSQL error fetching log records: {e}")
             return []
 
     def delete_log_entry(self, log_id: int) -> bool:
@@ -510,16 +509,12 @@ class MYSQLConnection(DBConnection):
         Returns:
             True if the log entry was deleted, False if not found, or an error occurred.
         """
-        query = "DELETE FROM logs WHERE log_id = %s"
-
         try:
             with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    # Delete the entry with the matching path
-                    cursor.execute(query, (log_id,))
-
-                    # Check if any rows were affected (deleted)
-                    rows_affected = cursor.rowcount
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM logs WHERE log_id = ?", (log_id,))
+                rows_affected = cursor.rowcount
+                cursor.close()
 
             logger.info(f"Removed {rows_affected} log entry from the database")
             return rows_affected > 0
@@ -540,13 +535,12 @@ class MYSQLConnection(DBConnection):
          """
         try:
             with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT 1;")
-                    _ = cursor.fetchall()  # Consume the result
-                    # If the query executes without an exception, the database is responsive
-                    logger.info("MySQL database is responsive.")
-                    return True
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1")
+                cursor.close()
+                logger.info("MSSQL database is responsive.")
+                return True
 
         except Exception as e:
-            logger.error(f"Error connecting to MySQL: {e}")
+            logger.error(f"Error connecting to MSSQL: {e}")
             return False

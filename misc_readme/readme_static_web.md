@@ -26,8 +26,8 @@ This module defines the API routes and registers them with the Flask application
 """
 from flask import jsonify, request, Flask, render_template
 
-from squishy_REST_API.app_factory.database import db_instance
-from squishy_REST_API.app_factory.logging_config import logger
+from squishy_REST_API.configuration.database_config import db_instance
+from squishy_REST_API.configuration.logging_config import logger
 ```
 
 ## 4. Add HTML template routes to your register_routes function:
@@ -133,6 +133,7 @@ def register_routes(app: Flask):
 ## 5. Create HTML template files:
 
 **templates/base.html:**
+
 ```html
 <!DOCTYPE html>
 <html lang="en">
@@ -141,26 +142,58 @@ def register_routes(app: Flask):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Squishy REST API{% endblock %}</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .nav { margin-bottom: 20px; }
-        .nav a { margin-right: 15px; text-decoration: none; color: #007bff; }
-        .nav a:hover { text-decoration: underline; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .error { color: red; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .nav {
+            margin-bottom: 20px;
+        }
+
+        .nav a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .nav a:hover {
+            text-decoration: underline;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .error {
+            color: red;
+            padding: 10px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
     </style>
 </head>
 <body>
-    <nav class="nav">
-        <a href="/">Dashboard</a>
-        <a href="/web/hashtable">Hashtable Records</a>
-        <a href="/web/priority">Priority Updates</a>
-    </nav>
-    
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+<nav class="nav">
+    <a href="/">Dashboard</a>
+    <a href="/web/hashtable">Hashtable Records</a>
+    <a href="/web/priority">Priority Updates</a>
+</nav>
+
+<main>
+    {% block content %}{% endblock %}
+</main>
 </body>
 </html>
 ```

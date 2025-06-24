@@ -9,11 +9,12 @@ Main entry point for REST API package.
 This module creates the Flask application for WSGI deployment.
 """
 from squishy_REST_API.app_factory.app_factory import create_app
-from squishy_REST_API.app_factory.logging_config import logger
-from squishy_REST_API.config import config
+from squishy_REST_API.configuration.logging_config import logger
+from squishy_REST_API.configuration.config import config
 
 # Create application instance for WSGI
 app = create_app()
+
 
 def main():
     """Create and run the Flask application with development server."""
@@ -21,10 +22,11 @@ def main():
     host = config.get('api_host', '0.0.0.0')
     port = config.get('api_port', 5000)
     debug = config.get('debug', False)
-    
+
     # Run application (only for development)
     logger.info(f"Starting development server on {host}:{port} (debug={debug})")
     app.run(host=host, port=port, debug=debug)
+
 
 if __name__ == '__main__':
     main()
@@ -73,7 +75,7 @@ Create `gunicorn.conf.py`:
 
 ```python
 """Gunicorn configuration file."""
-from squishy_REST_API.config import config
+from squishy_REST_API.configuration.config import config
 
 # Server socket
 bind = f"{config.get('api_host', '0.0.0.0')}:{config.get('api_port', 5000)}"
@@ -93,7 +95,7 @@ max_requests_jitter = 100
 # Logging
 loglevel = 'info'
 accesslog = '-'  # Log to stdout
-errorlog = '-'   # Log to stderr
+errorlog = '-'  # Log to stderr
 
 # Process naming
 proc_name = 'squishy_rest_api'

@@ -65,28 +65,16 @@ gunicorn -b 0.0.0.0:5000 rest_api:app
 ## Run sql container detached
 ```bash
 docker run -d \
-  --name local_squishy_db \
-  --network DB-net \
-  -e MYSQL_USER=squishy \
-  -e MYSQL_PASSWORD=squishy \
-  -e MYSQL_ROOT_PASSWORD=squishy_root \
-  -e MYSQL_DATABASE=local_squishy_db \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/tests/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
-  -v sql_volume:/var/lib/mysql \
-  -p 3306:3306 \
-  mysql:9.3
-```
-docker run -d \
   --name mysql-squishy-db \
   -e MYSQL_ROOT_PASSWORD=your_root_password \
   -e MYSQL_DATABASE=squishy_db \
   -e MYSQL_USER=app_user \
   -e MYSQL_PASSWORD=your_user_password \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/logs_init.sql:/docker-entrypoint-initdb.d/logs_init.sql \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/tests/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/tests/logs_init.sql:/docker-entrypoint-initdb.d/logs_init.sql \
   -p 3306:3306 \
   mysql:9.3
-
+```
 
 
 /mnt/c/Users/joshu/Documents/Current_work/squishy/DB_package
@@ -123,3 +111,23 @@ ln -s dir5/dir5_1/file2 dir5/lnk2
 ln dir1/file1 dir5/hlnk2
 ln -s dir1 dir5/lnk3
 ```  
+
+## Environment variables and other settings
+
+### squishy_db
+
+container name   
+--name mysql-squishy-db \
+
+mounts
+1. /hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql \
+2. /logs_init.sql:/docker-entrypoint-initdb.d/logs_init.sql \
+3. database-storage:/var/lib/mysql
+
+env vars
+
+  -e MYSQL_ROOT_PASSWORD=your_root_password \
+  -e MYSQL_DATABASE=squishy_db \
+  -e MYSQL_USER=app_user \
+  -e MYSQL_PASSWORD=your_user_password \
+

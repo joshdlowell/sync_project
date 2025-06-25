@@ -2,8 +2,8 @@ from typing import Optional, Dict, Any, List
 import mysql.connector
 from mysql.connector import Error
 from contextlib import contextmanager
-from squishy_REST_API.storage_service.local_DB_interface import DBConnection
-from squishy_REST_API.configuration.logging_config import logger
+from .local_DB_interface import DBConnection
+from squishy_REST_API import logger
 
 
 class MYSQLConnection(DBConnection):

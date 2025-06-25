@@ -1,8 +1,8 @@
 from typing import Optional, Dict, Any, List
 import time
 import hashlib
-from squishy_REST_API.storage_service.local_DB_interface import DBConnection
-from squishy_REST_API.configuration.logging_config import logger
+from squishy_REST_API import logger
+from .local_DB_interface import DBConnection
 
 
 class LocalMemoryConnection(DBConnection):

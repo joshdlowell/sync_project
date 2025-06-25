@@ -4,9 +4,7 @@ Routes module for REST API package.
 This module defines the API routes and registers them with the Flask application.
 """
 from flask import jsonify, request, Flask
-
-from squishy_REST_API.configuration.database_config import db_instance
-from squishy_REST_API.configuration.logging_config import logger
+from squishy_REST_API import db_instance, logger
 
 
 

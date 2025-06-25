@@ -1,0 +1,7 @@
+mysql-connector-python
+PyMySQL
+sqlalchemy
+cryptography
+flask
+gunicorn
+requests

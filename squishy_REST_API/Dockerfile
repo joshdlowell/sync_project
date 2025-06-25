@@ -27,11 +27,13 @@ COPY squishy_REST_API/ /app/squishy_REST_API/
 COPY gunicorn.conf.py /app/
 
 # Set environment variables
-ENV LOCAL_MYSQL_NAME=local_squishy_db
-ENV LOCAL_USER=squishy
-ENV LOCAL_PASSWORD=squishy
-ENV LOCAL_DATABASE=local_squishy_db
-ENV LOCAL_PORT=5000
+ENV LOCAL_MYSQL_HOST=squishy-mysql-db
+ENV LOCAL_MYSQL_DATABASE=squishy_db
+ENV LOCAL_MYSQL_PORT=3306
+ENV API_HOST=0.0.0.0
+ENV API_PORT=5000
+ENV DEBUG=False
+ENV LOG_LEVEL=INFO
 
 # Expose port and create baseline directory
 EXPOSE 5000

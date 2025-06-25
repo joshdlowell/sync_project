@@ -22,7 +22,7 @@ class Config:
 
     # Default values for configuration
     DEFAULTS = {
-        'db_host': 'mysql-squishy-db',
+        'db_host': 'squishy-mysql-db',
         'db_name': 'squishy_db',
         'db_user': None,
         'db_password': None,
@@ -36,15 +36,15 @@ class Config:
 
     # Environment variable mapping
     ENV_MAPPING = {
-        'db_host': 'LOCAL_MYSQL_NAME',
-        'db_name': 'LOCAL_DATABASE',
-        'db_user': 'LOCAL_USER',
-        'db_password': 'LOCAL_PASSWORD',
+        'db_host': 'LOCAL_MYSQL_HOST',
+        'db_name': 'LOCAL_MYSQL_DATABASE',
+        'db_user': 'LOCAL_MYSQL_USER',
+        'db_password': 'LOCAL_MYSQL_PASSWORD',
         'db_port': 'LOCAL_MYSQL_PORT',
         'api_host': 'API_HOST',
         'api_port': 'API_PORT',
         'debug': 'DEBUG',
-        'secret_key': 'SECRET_KEY',
+        'secret_key': 'API_SECRET_KEY',
         'log_level': 'LOG_LEVEL'
     }
 

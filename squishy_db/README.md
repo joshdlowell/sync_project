@@ -8,10 +8,10 @@ A containerized MySQL database setup for SquishyBadger data management with auto
 
 ```bash
 docker run -d \
-  --name mysql-squishy-db \
+  --name squishy-mysql-db \
   -e MYSQL_ROOT_PASSWORD=your_root_password \
   -e MYSQL_DATABASE=squishy_db \
-  -e MYSQL_USER=app_user \
+  -e MYSQL_USER=your_app_user \
   -e MYSQL_PASSWORD=your_user_password \
   -v $(pwd)/init_scripts:/docker-entrypoint-initdb.d \
   -p 3306:3306 \
@@ -31,10 +31,10 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: your_root_password
       MYSQL_DATABASE: squishy_db
-      MYSQL_USER: app_user
+      MYSQL_USER: your_app_user
       MYSQL_PASSWORD: your_user_password
     volumes:
-      - ./init_scripts/hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql
+      - ./init_scripts:/docker-entrypoint-initdb.d
       - mysql_data:/var/lib/mysql
     ports:
       - "3306:3306"

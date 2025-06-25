@@ -41,3 +41,7 @@ RUN mkdir -p /baseline
 
 # Start the application
 CMD ["gunicorn", "squishy_REST_API.main:app", "-c", "gunicorn.conf.py"]
+
+# Once runnable do this instead
+## Start the application using the runnable package
+#CMD ["python", "-m", "squishy_REST_API"]

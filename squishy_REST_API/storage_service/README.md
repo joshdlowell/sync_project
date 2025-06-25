@@ -45,22 +45,26 @@ The `DBConnection` interface provides a standardized way to interact with differ
 
 ```python
 # For memory implementation
-from squishy_REST_API.storage_service.local_memory import LocalMemoryConnection
+from squishy_REST_API import LocalMemoryConnection
 
 # For MySQL implementation  
-from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
-
-# Import the base interface for type hints
-from squishy_REST_API.storage_service.db_connection import DBConnection
+from squishy_REST_API import MYSQLConnection
 ```
 
 ## Quick Start
 
 ```python
-from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
+from squishy_REST_API import config, MYSQLConnection
 
 # Initialize your chosen implementation
-db = MYSQLConnection()
+db = MYSQLConnection(
+            host=config.get('db_host'),
+            database=config.get('db_name'),
+            user=config.get('db_user'),
+            password=config.get('db_password'),
+            port=config.get('db_port', 3306)
+)
+        
 
 # Check database health
 if not db.life_check():
@@ -340,10 +344,16 @@ else:
 ### Basic Hash Management
 
 ```python
-from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
+from squishy_REST_API import config, MYSQLConnection
 
 # Initialize database connection
-db = MYSQLConnection()
+db = MYSQLConnection(
+            host=config.get('db_host'),
+            database=config.get('db_name'),
+            user=config.get('db_user'),
+            password=config.get('db_password'),
+            port=config.get('db_port', 3306)
+)
 
 # Create a hash record
 record = {
@@ -362,10 +372,16 @@ if result:
 ### Batch Operations
 
 ```python
-from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
+from squishy_REST_API import config, MYSQLConnection
 import time
 
-db = MYSQLConnection()
+db = MYSQLConnection(
+            host=config.get('db_host'),
+            database=config.get('db_name'),
+            user=config.get('db_user'),
+            password=config.get('db_password'),
+            port=config.get('db_port', 3306)
+)
 
 # Process multiple files
 files_to_process = [
@@ -394,9 +410,15 @@ for file_path in files_to_process:
 ### Priority Management
 
 ```python
-from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
+from squishy_REST_API import config, MYSQLConnection
 
-db = MYSQLConnection()
+db = MYSQLConnection(
+            host=config.get('db_host'),
+            database=config.get('db_name'),
+            user=config.get('db_user'),
+            password=config.get('db_password'),
+            port=config.get('db_port', 3306)
+)
 
 # Get directories needing immediate attention
 priority_updates = db.get_priority_updates()
@@ -415,10 +437,16 @@ for path in priority_updates:
 ### Logging Operations
 
 ```python
-from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
+from squishy_REST_API import config, MYSQLConnection
 import time
 
-db = MYSQLConnection()
+db = MYSQLConnection(
+            host=config.get('db_host'),
+            database=config.get('db_name'),
+            user=config.get('db_user'),
+            password=config.get('db_password'),
+            port=config.get('db_port', 3306)
+)
 
 # Add log entries
 log_entries = [
@@ -449,14 +477,19 @@ for log in recent_logs:
 ### Switching Implementations
 
 ```python
-from squishy_REST_API.storage_service.local_memory import LocalMemoryConnection
-from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
-from squishy_REST_API.storage_service.db_connection import DBConnection
+from squishy_REST_API.storage_service import DBConnection
+from squishy_REST_API import config, LocalMemoryConnection, MYSQLConnection
 
 def create_db_connection(use_persistent: bool = True) -> DBConnection:
     """Factory function to create appropriate database connection."""
     if use_persistent:
-        return MYSQLConnection()
+        return MYSQLConnection(
+            host=config.get('db_host'),
+            database=config.get('db_name'),
+            user=config.get('db_user'),
+            password=config.get('db_password'),
+            port=config.get('db_port', 3306)
+        )
     else:
         return LocalMemoryConnection()
 
@@ -487,9 +520,15 @@ All methods handle errors gracefully by returning appropriate default values:
 For specific error conditions, some methods may raise `ValueError` for invalid parameters:
 
 ```python
-from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
+from squishy_REST_API import config, MYSQLConnection
 
-db = MYSQLConnection()
+db = MYSQLConnection(
+            host=config.get('db_host'),
+            database=config.get('db_name'),
+            user=config.get('db_user'),
+            password=config.get('db_password'),
+            port=config.get('db_port', 3306)
+)
 
 try:
     # This might raise ValueError for invalid parameters
@@ -507,10 +546,16 @@ except ValueError as e:
 ### Connection Error Handling
 
 ```python
-from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
+from squishy_REST_API import config, MYSQLConnection
 
 def safe_database_operation():
-    db = MYSQLConnection()
+    db = MYSQLConnection(
+            host=config.get('db_host'),
+            database=config.get('db_name'),
+            user=config.get('db_user'),
+            password=config.get('db_password'),
+            port=config.get('db_port', 3306)
+    )
     
     # Always check connection health first
     if not db.life_check():
@@ -537,7 +582,7 @@ except Exception as e:
 To create a new storage backend, inherit from `DBConnection` and implement all abstract methods:
 
 ```python
-from squishy_REST_API.storage_service.db_connection import DBConnection
+from squishy_REST_API.storage_service import DBConnection
 from typing import Optional, Dict, List, Any
 
 class CustomDBConnection(DBConnection):

@@ -1,9 +1,9 @@
 import unittest
 from unittest.mock import Mock, patch
-from squishy_integrity.rest_connector.rest_connector import RestConnector
-from squishy_integrity.rest_connector.configuration import Config
-from squishy_integrity.rest_connector.client import HttpClient
-from squishy_integrity.rest_connector.validator import HashInfoValidator
+from squishy_integrity.storage_service.rest_connector import RestConnector
+from squishy_integrity.storage_service.configuration import Config
+from squishy_integrity.storage_service.client import HttpClient
+from squishy_integrity.storage_service.validator import HashInfoValidator
 
 
 class TestRestConnector(unittest.TestCase):

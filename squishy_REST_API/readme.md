@@ -1,58 +1,58 @@
-# SquishyBadger Containerized REST API
+# SquishyBadger REST API
 
-A containerized REST API (Representational State Transfer Application Programming 
-Interface) for SquishyBadger based on the Python Flask library. This application 
-provides the interface between worker applications (such as the integrity 
-verification app) and the local and core SquishyBadger databases.
+A containerized REST API for SquishyBadger that provides seamless integration between worker applications (such as integrity verification services) and both local and core SquishyBadger databases. Built with Python Flask and designed for production deployment.
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [API Reference](#api-reference)
+- [Development](#development)
+- [Project Structure](#project-structure)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Quick Start
 
-### Build from Dockerfile
-The included Dockerfile can be used to build the `squishy-rest-api` container 
-image locally by running the command below from inside the directory where 
-the Dockerfile is located.
+### Using Docker (Recommended)
+
+#### Build the Container
 ```bash
 docker build -t squishy-rest-api .
 ```
 
-### Using Docker Run
-
-TODO - update for gunicorn and dockerbuild ADD CONTAINER NETWORK if interfacing with db container
+#### Run with Docker
 ```bash
-docker run -it --rm \
-  --name integrity \
-  --network alpine-net \
-  -e REST_API_NAME=restapi \
-  -e REST_API_PORT=5000 \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/integrity:/squishy \
-  alpine:3.22.0 /bin/sh
+docker build -t squishy-rest-api:1.0 .
+docker run -d \
+  --name squishy-rest-api \
+  --network squishy-network \
+  -e LOCAL_MYSQL_USER=your_app_user \
+  -e LOCAL_MYSQL_PASSWORD=your_user_password \
+  -e API_SECRET_KEY=squishy_key_12345 \
+  -p 5000:5000 \
+  squishy-rest-api:1.0
 ```
 
-### Using Docker Compose
-
+#### Run with Docker Compose
 Create a `docker-compose.yml` file:
-TODO - update for gunicorn and dockerbuild
 
 ```yaml
 version: '3.8'
-services:
-  mysql:
-    image: mysql:9.3
-    container_name: mysql-squishy-db
-    environment:
-      MYSQL_ROOT_PASSWORD: your_root_password
-      MYSQL_DATABASE: squishy_db
-      MYSQL_USER: app_user
-      MYSQL_PASSWORD: your_user_password
-    volumes:
-      - ./hashtable_init.sql:/docker-entrypoint-initdb.d/hashtable_init.sql
-      - ./logs_init.sql:/docker-entrypoint-initdb.d/logs_init.sql
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
 
-volumes:
-  mysql_data:
+services:
+  squishy-api:
+    build: .
+    container_name: squishy-rest-api
+    environment:    
+      LOCAL_MYSQL_USER: your_app_user
+      LOCAL_MYSQL_PASSWORD: your_user_password
+      API_SECRET_KEY: squishy_key_12345
+    ports:
+      - "5000:5000"
+    networks:
+      - squishy-network
 ```
 
 Then run:
@@ -60,113 +60,224 @@ Then run:
 docker-compose up -d
 ```
 
-## Required Files
-None: All necessary files are already packaged into the image.
+### Local Development
 
-## Environment Variables
-
-There are two required environment variables that need to be set at runtime.
-They are the Mysql database username `LOCAL_USER` and password 
-`LOCAL_PASSWORD`. All other environment variables are pre-set to their default 
-values in the image and are sufficient to connect to a default local mssql-squishy-db
-instance. 
-
-| Variable | Description                | Required | Default |
-|----------|----------------------------|------|---------|
-| `LOCAL_USER` | Local Mysql username       | Yes  | None
-| `LOCAL_PASSWORD` | Local Mysql user password  | Yes | None
-| `LOCAL_MYSQL_NAME` | Local Mysql container name | No | local_squishy_db
-| `LOCAL_DATABASE` | Local Mysql database name  | No | local_squishy_db
-| `LOCAL_PORT` | REST API port              | No | 5000
-
-## Connection
-The REST API will start automatically and can be used via HTTP requests 
-(from inside the container network)
-
-- **Host**: localhost (or container name if using Docker network)
-- **Port**: 5000
-
-
-## Interface
-### Inputs
-This container accepts and processes HTTP GET and POST requests at these endpoints:
-
-TODO FROM HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-as input enforces the DB schema(s) it is initialized with
-
-`hashtable`: 
-1. Minimum required values are `path` and `current_hash`.
-2. For new rows, `current_dtg_latest` and `current_dtg_first` are set to the current
-time automatically.
-3. A column `hashed_path` is generated automatically to enforce uniqueness and act as
-primary key (Uniqueness can't be enforced directly on the path column because it is a TEXT column with no defined length limit).
-
-`logs`:
-1. Minimum required values are `summary_message`
-2. `site_id` must be five or fewer characters, and is set to `local` by default
-3. `log_level` is `INFO` by default. If this value is included in an insert or update 
-operation it must be one of `ERROR`, `STATUS`, `WARNING`, or `INFO`
-
-
-## Unit testing
-This package also includes unit and integration tests. The tests are written using Python's builtin `unittests` library and
-located in the `/app/squishy_REST_API/tests` directory. 
-
-```
-python -m squishy_REST_API.tests.test_api
-```
-
-swhich can be used to verify that the 
-tables exist and are configured in compliance with the Database interface. The scripts use 
-transactions that get rolled back at the end, so they won't leave test data in your table.
-
-To run the scripts in your MySQL 9.3 container:
-
-1. **Copy the scripts to your container**:
-      ```bash
-      docker cp tests/. mysql-squishy-db:/tmp/
-      ```
-2. **Execute the scripts in the container**:
-   ```bash
-   docker exec -it mysql-squishy-db mysql -u root -pyour_root_password -e "source /tmp/test_hashtable.sql"
-   ```
-   ```bash
-   docker exec -it mysql-squishy-db mysql -u root -pyour_root_password -e "source /tmp/test_logs.sql"
-   ```
-
-Or run them directly:
 ```bash
-docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_hashtable.sql
+# Clone the repository
+git clone <repository-url>
+cd squishy-rest-api
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variables
+export LOCAL_MYSQL_HOST: squishy-mysql-db
+export LOCAL_MYSQL_DATABASE: squishy_db
+export LOCAL_MYSQL_PORT: 3306
+export API_HOST: 0.0.0.0
+export API_PORT: 5000
+export DEBUG: False
+export LOG_LEVEL: INFO
+export LOCAL_MYSQL_USER: your_app_user
+export LOCAL_MYSQL_PASSWORD: your_user_password
+export API_SECRET_KEY: squishy_key_12345
+
+
+# Run the application
+python -m squishy_REST_API.main
 ```
+
+## Configuration
+
+### Required Environment Variables
+| Variable      | Description     | Default Value |
+|---------------|-----------------|---------------|
+| `LOCAL_MYSQL_USER`     | MySQL username  | `None` |
+| `LOCAL_MYSQL_PASSWORD` | MySQL password  | 'None' |
+| `API_SECRET_KEY`      | API session key | `None`  |
+
+### Other configurable Environment Variables
+| Variable               | Description            | Default              |
+|------------------------|------------------------|----------------------|
+| `LOCAL_MYSQL_HOST`     | MySQL hostname         | `squishy-mysql-db` |
+| `LOCAL_MYSQL_DATABASE` | MySQL database name    | `squishy_db`       |
+| `LOCAL_MYSQL_PORT`     | MySQL server port      | `3306`               |
+| `API_HOST`             | REST API address       | `0.0.0.0`          |
+| `API_PORT`             | REST API port          | `5000`               |
+| `DEBUG`                | REST API debugging     | `False`              |
+| `LOG_LEVEL`            | REST API logging level | `'INFO'`              | 
+
+
+### Connection Details
+
+- **Host**: `localhost` (or container name in Docker networks)
+- **Port**: `5000` (configurable via `API_PORT`)
+- **Base URL**: `http://localhost:5000/api/`
+
+## API Reference
+
+### Base URL
+All endpoints are prefixed with `/api/`
+
+### Response Format
+```json
+{
+    "message": "Success|Error message",
+    "data": {} // Response data (when applicable)
+}
+```
+
+### Endpoints
+
+#### Hash Table Operations
+
+**GET /api/hashtable**
+- Retrieve hash record by file path
+- Query: File path as query string
+- Returns: Complete hash record or 404 if not found
+
+**POST /api/hashtable**
+- Insert or update hash record
+- Body: `{"path": "string", "hash": "string", "timestamp": "string"}`
+- Returns: Operation result with change count
+
+#### Hash Operations
+
+**GET /api/hash**
+- Get hash value for specific path
+- Query: File path as query string  
+- Returns: Hash string or 404 if not found
+
+#### Timestamp Operations
+
+**GET /api/timestamp**
+- Get latest timestamp for specific path
+- Query: File path as query string
+- Returns: Timestamp data or 404 if not found
+
+#### Priority Operations
+
+**GET /api/priority**
+- Get prioritized directory list for updates
+- Query: `root_path` (required), `percent` (optional, 1-100, default: 10)
+- Returns: Ordered list of directories needing updates
+
+#### Health Check
+
+**GET /api/lifecheck**
+- Check API and database health status
+- Returns: Service health information
+
+### Example Usage
+
 ```bash
-docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_logs.sql
+# Get hash for a file
+curl "http://localhost:5000/api/hash?/path/to/file.txt"
+
+# Update hash record
+curl -X POST http://localhost:5000/api/hashtable \
+  -H "Content-Type: application/json" \
+  -d '{"path": "/path/to/file.txt", "hash": "abc123", "timestamp": "2023-12-01T10:00:00Z"}'
+
+# Get priority directories
+curl "http://localhost:5000/api/priority?root_path=/home/user&percent=20"
+
+# Health check
+curl http://localhost:5000/api/lifecheck
 ```
 
-### **What the test_hashtable.sql script tests:**
+## Development
 
-1. **Basic inserts** - Tests simple minimum record insertion
-2. **Generated column** - Verifies the hash unique key generation works correctly
-3. **Default values** - Verifies default values are applied
-4. **Timestamp functionality** - Verifies automatic timestamp generation
-5. **Insert all fields** - Verifies that record insertion with all fields works correctly
-6. **Update operations** - Tests record updates
-7. **Ordered update operations** - Verifies 'in database' field shift then update operations work correctly
-8. **Complex queries** - Tests aggregation functions
-9. **Data integrity** - Verifies field lengths and constraints
-10. **Special characters** - Tests handling of special characters in text fields
-11. **Case in-sensitivity** - Verifies current_hash, target_hash, and prev_hash are case-insensitive
-12. **Required field enforcement** - Verifies records without required fields are rejected.
+### Project Structure
 
+```
+squishy_REST_API/
+├── main.py                      # Application entry point
+├── app_factory/
+│   ├── api_routes.py            # API endpoint definitions
+│   └── app_factory.py           # Flask application factory
+├── configuration/               # Application configurations
+│   ├── config.py                # Main configuration
+│   ├── logging_config.py        # System logging configuration
+│   └── database_config.py       # Database implementation config
+├── storage_service/             # Database interface implementations
+│   ├── local_DB_interface.py    # Abstract interface
+│   ├── local_memory.py          # In-memory implementation
+│   ├── local_mysql.py           # MySQL implementation
+│   └── local_mssql_untested.py  # SQL Server (experimental)
+├── tests/                       # Test suite
+│   ├── test_api.py              # API endpoint tests
+│   └── test_storage_service.py  # Database tests
+├── Dockerfile                   # Container build instructions
+├── requirements.txt             # Python dependencies
+└── README.md
+```
 
-### **What the test_logs.sql script tests:**
+### Local Development Setup
 
-1. **Basic inserts** - Tests simple record insertion.
-2. **Auto increment log_id** - Verifies that log_id auto increments.
-3. **Required field enforcement** - Verifies records without required fields are rejected.
-4. **Default values** - Verifies default values are applied.
-5. **Length enforcement** Verifies length constraints are enforced.
-6. **ENUM permitted** Verifies 'log_levels' in the table's list are accepted.
-7. **ENUM enforcement** Verifies 'log_levels' must be from table's list.
-8. **Full field insertion** - Tests full record insertion.
-9. **Case in-sensitivity** - Verifies site_id and log_level are case-insensitive.
+1. **Prerequisites**: Python 3.12+, MySQL 8.0+
+2. **Virtual Environment**:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+3. **Database Setup**: Ensure MySQL is running with proper credentials
+4. **Environment**: Set required environment variables
+5. **Run**: `python -m squishy_REST_API.main`
+
+## Testing
+
+The project includes comprehensive unit and integration tests using Python's `unittest` framework. Tests cover:
+
+- API endpoint functionality
+- Database connection interfaces
+- Error handling and edge cases
+- Configuration validation
+
+Run tests with detailed output:
+```bash
+python -m unittest discover tests/ -v
+```
+
+## Error Handling
+
+### HTTP Status Codes
+- **200**: Success
+- **400**: Bad Request (missing/invalid parameters)
+- **404**: Resource Not Found
+- **405**: Method Not Allowed
+- **500**: Internal Server Error
+
+### Common Error Messages
+- `"Path not found"`: Requested resource doesn't exist
+- `"path required but not found in your request json"`: Missing required field
+- `"Database error, see DB logs"`: Internal database issue
+- `"root_path parameter is required"`: Missing query parameter
+
+## Project Status
+
+🟢 **Active Development** - This project is actively maintained and regularly updated.
+
+### Roadmap
+- [ ] Enhanced authentication and authorization
+- [ ] Rate limiting implementation
+- [ ] Comprehensive logging and monitoring
+- [ ] Performance optimization
+- [ ] Additional database backend support
+
+## Support
+
+- **Issues**: Report bugs and request features by contacting us
+- **Documentation**: Detailed API docs available in `configuration/README.md` and `storage_service/README.md`
+
+## Acknowledgments
+
+- Built with [Flask](https://flask.palletsprojects.com/) web framework
+- Database connectivity powered by MySQL
+- Containerization with Docker
+- Testing framework: Python unittest
+
+---
+
+**Made with 😠 by the SquishyBadger Team**

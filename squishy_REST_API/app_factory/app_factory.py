@@ -5,7 +5,7 @@ This module provides a factory function to create Flask application instances
 with proper configuration and dependency injection.
 """
 from flask import Flask
-from squishy_REST_API import config, logger
+from squishy_REST_API.configuration import config, logger
 
 def create_app(test_config=None):
     """

@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any, List
 import pyodbc
 from contextlib import contextmanager
 from .local_DB_interface import DBConnection
-from squishy_REST_API import logger
+from squishy_REST_API.configuration import logger
 
 
 class MSSQLConnection(DBConnection):

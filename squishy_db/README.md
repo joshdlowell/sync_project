@@ -23,7 +23,6 @@ docker run -d \
 Create a `docker-compose.yml` file:
 
 ```yaml
-version: '3.8'
 services:
   mysql:
     image: mysql:9.3

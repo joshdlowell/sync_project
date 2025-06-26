@@ -122,7 +122,7 @@ class Config:
                 return int(value)
             except ValueError:
                 raise ConfigError(f"Invalid integer value for {key}: {value}")
-        elif key == 'debug':
+        elif key in ('debug', 'use_gunicorn'):
             return value.lower() in ('true', '1', 'yes', 'on')
         return value
 

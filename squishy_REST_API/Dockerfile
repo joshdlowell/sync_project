@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir \
     requests
 
 FROM python:3.12-alpine
+LABEL authors="jdlowel"
 
 # Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
@@ -24,9 +25,9 @@ WORKDIR /app
 
 # Copy application code
 COPY . /app/squishy_REST_API/
-COPY gunicorn.conf.py /app/
 
 # Set environment variables
+ENV LOCAL_DB_TYPE=mysql
 ENV LOCAL_MYSQL_HOST=mysql-squishy-db
 ENV LOCAL_MYSQL_DATABASE=squishy_db
 ENV LOCAL_MYSQL_PORT=3306
@@ -35,13 +36,8 @@ ENV API_PORT=5000
 ENV DEBUG=False
 ENV LOG_LEVEL=INFO
 
-# Expose port and create baseline directory
+# Expose port
 EXPOSE 5000
-RUN mkdir -p /baseline
 
-# Start the application
-CMD ["gunicorn", "squishy_REST_API.main:app", "-c", "gunicorn.conf.py"]
-
-# Once runnable do this instead
 ## Start the application using the runnable package
-#CMD ["python", "-m", "squishy_REST_API"]
+CMD ["python", "-m", "squishy_REST_API"]

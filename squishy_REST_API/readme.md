@@ -87,17 +87,17 @@ export API_SECRET_KEY: squishy_key_12345
 
 
 # Run the application
-python -m squishy_REST_API.main
+python -m squishy_REST_API
 ```
 
 ## Configuration
 
 ### Required Environment Variables
 | Variable      | Description     | Default Value |
-|---------------|-----------------|---------------|
+|---------------|-----------------|-----------|
 | `LOCAL_MYSQL_USER`     | MySQL username  | `None` |
-| `LOCAL_MYSQL_PASSWORD` | MySQL password  | 'None' |
-| `API_SECRET_KEY`      | API session key | `None`  |
+| `LOCAL_MYSQL_PASSWORD` | MySQL password  | `None` |
+| `API_SECRET_KEY`      | API session key | `None` |
 
 ### Other configurable Environment Variables
 | Variable               | Description            | Default              |
@@ -110,6 +110,19 @@ python -m squishy_REST_API.main
 | `API_PORT`             | REST API port          | `5000`               |
 | `DEBUG`                | REST API debugging     | `False`              |
 | `LOG_LEVEL`            | REST API logging level | `'INFO'`              | 
+
+### Non-configurable variables
+| Variable                       | Description                            | Default |
+|--------------------------------|----------------------------------------|--------|
+| `workers`                      | number of gunicorn workers             | `4`      |
+| `worker_class`                 | gunicorn request handling              | `sync` |
+| `timeout`                      | Time before resetting idle workers     | `30`     |
+| `keepalive`                    | Seconds to wait for requests           | `2`      |
+| `max_requests`                 | Maximum requests before worker reset   | `1000`   |
+| `max_requests_jitter`          | jitter tolerance to add to requests    | `100`    |
+| `accesslog` | log write to location (default syslog) |  `-`   |
+| `errorlog` | log write to location (default errorlog) | `-` |                
+| `proc_name` | The name given to the process in the system | `squishy_rest_api` | 
 
 
 ### Connection Details
@@ -196,7 +209,7 @@ curl http://localhost:5000/api/lifecheck
 
 ```
 squishy_REST_API/
-├── main.py                      # Application entry point
+├── core.py                      # Application entry point
 ├── app_factory/
 │   ├── api_routes.py            # API endpoint definitions
 │   └── app_factory.py           # Flask application factory
@@ -212,6 +225,7 @@ squishy_REST_API/
 ├── tests/                       # Test suite
 │   ├── test_api.py              # API endpoint tests
 │   └── test_storage_service.py  # Database tests
+├── docker-compose.yaml          # Docker compose file
 ├── Dockerfile                   # Container build instructions
 ├── requirements.txt             # Python dependencies
 └── README.md

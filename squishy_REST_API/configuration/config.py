@@ -4,16 +4,8 @@ Configuration module for REST API package.
 This module centralizes configuration management and provides a way to
 load configuration from environment variables or configuration files.
 """
-# import logging
 import os
-# import sys
 from typing import Dict, Any, Optional, Union
-# from .logging_config import configure_logging
-# from ..storage_service import DBConnection
-
-
-# from .database_config import get_db_instance
-# from ..storage_service import DBConnection
 
 
 class ConfigError(Exception):
@@ -40,10 +32,19 @@ class Config:
         'api_port': 5000,
         'debug': False,
         'secret_key': None,
-        'log_level': 'INFO'
+        'log_level': 'INFO',
+        'workers': 4,  # Gunicorn specific configs start here
+        'worker_class': 'sync',
+        'timeout': 30,
+        'keepalive': 2,
+        'max_requests': 1000,
+        'max_requests_jitter': 100,
+        'accesslog': '-',
+        'errorlog': '-',
+        'proc_name': 'squishy_rest_api'
     }
 
-    # Environment variable mapping
+    # Environment variable mapping (add more gunicorn adjustments?)
     ENV_MAPPING = {
         'db_type': 'LOCAL_DB_TYPE',
         'db_host': 'LOCAL_MYSQL_HOST',
@@ -79,6 +80,20 @@ class Config:
             self._load_from_environment()
 
         self._validate_configuration()
+
+        self.gunicorn_config = {
+            'bind': f'{self._config["api_host"]}:{self._config["api_port"]}',
+            'workers': self._config["workers"],
+            'worker_class': self._config["worker_class"],
+            'timeout': self._config["timeout"],
+            'keepalive': self._config["keepalive"],
+            'max_requests': self._config["max_requests"],
+            'max_requests_jitter': self._config["max_requests_jitter"],
+            'loglevel': self._config["log_level"],  # Accepts same levels as our logger debug,info,warning,error,critical
+            'accesslog': self._config["accesslog"],
+            'errorlog': self._config["errorlog"],
+            'proc_name': self._config["proc_name"],
+        }
 
     def _load_from_environment(self) -> None:
         """Load configuration from environment variables."""

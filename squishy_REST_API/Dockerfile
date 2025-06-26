@@ -23,11 +23,11 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 WORKDIR /app
 
 # Copy application code
-COPY squishy_REST_API/ /app/squishy_REST_API/
+COPY . /app/squishy_REST_API/
 COPY gunicorn.conf.py /app/
 
 # Set environment variables
-ENV LOCAL_MYSQL_HOST=squishy-mysql-db
+ENV LOCAL_MYSQL_HOST=mysql-squishy-db
 ENV LOCAL_MYSQL_DATABASE=squishy_db
 ENV LOCAL_MYSQL_PORT=3306
 ENV API_HOST=0.0.0.0

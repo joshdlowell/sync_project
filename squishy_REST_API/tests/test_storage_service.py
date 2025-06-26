@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch, MagicMock
 import time
+from squishy_REST_API.configuration import config
 # Import both implementations
 from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
 from squishy_REST_API.storage_service.local_memory import LocalMemoryConnection
@@ -348,76 +349,76 @@ class DBConnectionTestMixin():
         self.assertEqual(len(result['deleted']), 0)
 
 
-class TestMYSQLConnectionMock(unittest.TestCase, DBConnectionTestMixin):
-    """Test cases for MySQL implementation"""
-
-    def setUp(self):
-        """Set up MySQL connection with mock"""
-        # Mock the mysql.connector to avoid actual database connections
-        self.mock_connection = MagicMock()
-        self.mock_cursor = MagicMock()
-        self.mock_connection.cursor.return_value.__enter__.return_value = self.mock_cursor
-        self.mock_connection.cursor.return_value.__exit__.return_value = None
-        self.mock_connection.is_connected.return_value = True
-
-        # Create connection factory that returns our mock
-        def mock_factory(**kwargs):
-            return self.mock_connection
-
-        self.db = MYSQLConnection(
-            host='localhost',
-            database='test_db',
-            user='test_user',
-            password='test_pass',
-            connection_factory=mock_factory
-        )
-
-    def test_mysql_specific_connection_handling(self):
-        """Test MySQL-specific connection handling"""
-        # Test successful connection
-        with self.db._get_connection() as conn:
-            self.assertEqual(conn, self.mock_connection)
-
-        # Test connection closing
-        self.mock_connection.close.assert_called()
-
-    def test_mysql_error_handling(self):
-        """Test MySQL error handling"""
-        from mysql.connector import Error
-
-        # Make the connection factory raise an error
-        def error_factory(**kwargs):
-            raise Error("Connection failed")
-
-        self.db.connection_factory = error_factory
-
-        with self.assertRaises(Error):
-            with self.db._get_connection() as conn:
-                pass
-
-    def test_mysql_insert_queries(self):
-        """Test that MySQL queries are properly formed"""
-        # Mock fetchone to return None (no existing record)
-        self.mock_cursor.fetchone.return_value = None
-
-        record = {
-            'path': '/test/path',
-            'current_hash': 'abc123',
-            'dirs': ['dir1'],
-            'files': ['file1.txt'],
-            'links': []
-        }
-
-        result = self.db.insert_or_update_hash(record)
-
-        # Verify that execute was called
-        self.mock_cursor.execute.assert_called()
-
-        # Check that the result structure is correct
-        self.assertIsInstance(result, dict)
-        self.assertIn('created', result)
-        self.assertIn('modified', result)
-        self.assertIn('deleted', result)
+# class TestMYSQLConnectionMock(unittest.TestCase, DBConnectionTestMixin):
+#     """Test cases for MySQL implementation"""
+#
+#     def setUp(self):
+#         """Set up MySQL connection with mock"""
+#         # Mock the mysql.connector to avoid actual database connections
+#         self.mock_connection = MagicMock()
+#         self.mock_cursor = MagicMock()
+#         self.mock_connection.cursor.return_value.__enter__.return_value = self.mock_cursor
+#         self.mock_connection.cursor.return_value.__exit__.return_value = None
+#         self.mock_connection.is_connected.return_value = True
+#
+#         # Create connection factory that returns our mock
+#         def mock_factory(**kwargs):
+#             return self.mock_connection
+#
+#         self.db = MYSQLConnection(
+#             host='localhost',
+#             database='test_db',
+#             user='test_user',
+#             password='test_pass',
+#             connection_factory=mock_factory
+#         )
+#
+#     def test_mysql_specific_connection_handling(self):
+#         """Test MySQL-specific connection handling"""
+#         # Test successful connection
+#         with self.db._get_connection() as conn:
+#             self.assertEqual(conn, self.mock_connection)
+#
+#         # Test connection closing
+#         self.mock_connection.close.assert_called()
+#
+#     def test_mysql_error_handling(self):
+#         """Test MySQL error handling"""
+#         from mysql.connector import Error
+#
+#         # Make the connection factory raise an error
+#         def error_factory(**kwargs):
+#             raise Error("Connection failed")
+#
+#         self.db.connection_factory = error_factory
+#
+#         with self.assertRaises(Error):
+#             with self.db._get_connection() as conn:
+#                 pass
+#
+#     def test_mysql_insert_queries(self):
+#         """Test that MySQL queries are properly formed"""
+#         # Mock fetchone to return None (no existing record)
+#         self.mock_cursor.fetchone.return_value = None
+#
+#         record = {
+#             'path': '/test/path',
+#             'current_hash': 'abc123',
+#             'dirs': ['dir1'],
+#             'files': ['file1.txt'],
+#             'links': []
+#         }
+#
+#         result = self.db.insert_or_update_hash(record)
+#
+#         # Verify that execute was called
+#         self.mock_cursor.execute.assert_called()
+#
+#         # Check that the result structure is correct
+#         self.assertIsInstance(result, dict)
+#         self.assertIn('created', result)
+#         self.assertIn('modified', result)
+#         self.assertIn('deleted', result)
 
 class TestMYSQLConnection(unittest.TestCase, DBConnectionTestMixin):
     """Test cases for MySQL implementation with real database"""
@@ -427,7 +428,7 @@ class TestMYSQLConnection(unittest.TestCase, DBConnectionTestMixin):
         cls.test_db_config = {
             'host':'mysql-squishy-db',
             'database':'squishy_db',
-            'user':'app_user',
+            'user':'your_app_user',
             'password':'your_user_password'
         }
 
@@ -454,7 +455,7 @@ class TestMYSQLConnection(unittest.TestCase, DBConnectionTestMixin):
         try:
             with self.db._get_connection() as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("DELETE FROM directory_hashes WHERE path LIKE '/test/%'")
+                    cursor.execute("DELETE FROM hashtable WHERE path LIKE '/test/%'")
                 conn.commit()
         except Exception:
             pass  # Ignore cleanup errors

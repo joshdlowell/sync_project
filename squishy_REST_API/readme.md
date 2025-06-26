@@ -27,7 +27,7 @@ docker build -t squishy-rest-api .
 docker build -t squishy-rest-api:1.0 .
 docker run -d \
   --name squishy-rest-api \
-  --network squishy-network \
+  --network squishy_db_default \
   -e LOCAL_MYSQL_USER=your_app_user \
   -e LOCAL_MYSQL_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
@@ -39,8 +39,6 @@ docker run -d \
 Create a `docker-compose.yml` file:
 
 ```yaml
-version: '3.8'
-
 services:
   squishy-api:
     build: .
@@ -52,7 +50,11 @@ services:
     ports:
       - "5000:5000"
     networks:
-      - squishy-network
+      - squishy_db_default
+  
+networks:
+  squishy_db_default:
+    external: true
 ```
 
 Then run:
@@ -71,7 +73,8 @@ cd squishy-rest-api
 pip install -r requirements.txt
 
 # Set environment variables
-export LOCAL_MYSQL_HOST: squishy-mysql-db
+export LOCAL_DB_TYPE: mysql
+export LOCAL_MYSQL_HOST: mysql-squishy-db
 export LOCAL_MYSQL_DATABASE: squishy_db
 export LOCAL_MYSQL_PORT: 3306
 export API_HOST: 0.0.0.0
@@ -99,7 +102,8 @@ python -m squishy_REST_API.main
 ### Other configurable Environment Variables
 | Variable               | Description            | Default              |
 |------------------------|------------------------|----------------------|
-| `LOCAL_MYSQL_HOST`     | MySQL hostname         | `squishy-mysql-db` |
+| `LOCAL_DB_TYPE`        | Type of storage to use | `mysql` |
+| `LOCAL_MYSQL_HOST`     | MySQL hostname         | `mysql-squishy-db` |
 | `LOCAL_MYSQL_DATABASE` | MySQL database name    | `squishy_db`       |
 | `LOCAL_MYSQL_PORT`     | MySQL server port      | `3306`               |
 | `API_HOST`             | REST API address       | `0.0.0.0`          |
@@ -237,7 +241,7 @@ The project includes comprehensive unit and integration tests using Python's `un
 
 Run tests with detailed output:
 ```bash
-python -m unittest discover tests/ -v
+python -m unittest discover squishy_REST_API/tests/ -v
 ```
 
 ## Error Handling
@@ -260,9 +264,10 @@ python -m unittest discover tests/ -v
 🟢 **Active Development** - This project is actively maintained and regularly updated.
 
 ### Roadmap
+- [ ] Comprehensive logging and monitoring
+- [ ] Web GUI to easily access status
 - [ ] Enhanced authentication and authorization
 - [ ] Rate limiting implementation
-- [ ] Comprehensive logging and monitoring
 - [ ] Performance optimization
 - [ ] Additional database backend support
 

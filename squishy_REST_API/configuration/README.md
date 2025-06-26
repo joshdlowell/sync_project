@@ -16,7 +16,7 @@ The Configuration module provides centralized configuration management for REST 
 ## Quick Start
 
 ```python
-from squishy_REST_API.configuration.config import config
+from squishy_REST_API import config
 
 # Use the default global config instance
 database_url = config.get_database_url()
@@ -243,8 +243,8 @@ except ConfigError as e:
 A pre-configured global instance is available for convenience:
 
 ```python
-from squishy_REST_API import logger
-from squishy_REST_API.configuration import config
+from squishy_REST_API.configuration.logging_config import logger
+from squishy_REST_API import config
 
 # Use the global config instance
 database_url = config.get_database_url()
@@ -261,6 +261,7 @@ logger.info("Using global configuration")
 - `secret_key` - Application secret key
 
 ### Optional Keys
+- `db_type` - Type of database being used (default: mysql)
 - `db_host` - Database host (default: localhost)
 - `db_port` - Database port (default: 3306)
 - `db_name` - Database name (default: mydb)

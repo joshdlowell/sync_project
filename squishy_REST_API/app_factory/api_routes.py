@@ -4,15 +4,17 @@ Routes module for REST API package.
 This module defines the API routes and registers them with the Flask application.
 """
 from flask import jsonify, request, Flask
-from squishy_REST_API.configuration import db_instance, logger
+from squishy_REST_API import config
+from squishy_REST_API.configuration.logging_config import logger
 
 
-def register_routes(app: Flask):
+def register_routes(app: Flask, db_instance):
     """
     Register API routes with the Flask application.
 
     Args:
         app: Flask application instance
+        db_instance: The DBConnection instance to use for API requests
     """
 
     @app.route('/api/hashtable', methods=['GET', 'POST'])
@@ -77,7 +79,7 @@ def register_routes(app: Flask):
         path = request.query_string.decode()
         logger.debug(f"GET /api/timestamp for path: {path}")
 
-        record = db_instance.get_hash_record(path)
+        record = db_instance.get_single_timestamp(path)
         if not record:
             logger.info(f"Path not found: {path}")
             return jsonify({"message": "Path not found"}), 404
@@ -117,11 +119,6 @@ def register_routes(app: Flask):
 
         return jsonify({"message": "Success", "data": priority}), 200
 
-    # Register error handlers
-    register_error_handlers(app)
-
-    logger.info("API routes registered")
-
     @app.route('/api/lifecheck', methods=['GET'])
     def life_check():
         """Get the liveness of the api and database."""
@@ -129,6 +126,11 @@ def register_routes(app: Flask):
         return jsonify({"message": "Success",
                         "data": {'api': True,
                                  'db': db_instance.life_check()}}), 200
+
+    # Register error handlers
+    register_error_handlers(app)
+
+    logger.info("API routes registered")
 
 
 def register_error_handlers(app: Flask):

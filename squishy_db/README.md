@@ -8,7 +8,7 @@ A containerized MySQL database setup for SquishyBadger data management with auto
 
 ```bash
 docker run -d \
-  --name squishy-mysql-db \
+  --name mysql-squishy-db \
   -e MYSQL_ROOT_PASSWORD=your_root_password \
   -e MYSQL_DATABASE=squishy_db \
   -e MYSQL_USER=your_app_user \

@@ -5,18 +5,23 @@ This module provides a factory function to create Flask application instances
 with proper configuration and dependency injection.
 """
 from flask import Flask
-from squishy_REST_API.configuration import config, logger
+from squishy_REST_API import config
+from squishy_REST_API.configuration.logging_config import logger
 
 def create_app(test_config=None):
     """
     Create and configure a Flask application instance.
     
     Args:
+        db_instance: The DBConnection instance to use for API requests
         test_config: Optional configuration dictionary for testing
         
     Returns:
         Configured Flask application
     """
+    # Get db instance
+    from squishy_REST_API.configuration.database_config import get_db_instance
+    db_instance = get_db_instance()
     # Create Flask app
     app = Flask(__name__)
     
@@ -36,7 +41,7 @@ def create_app(test_config=None):
     
     # Register routes
     from squishy_REST_API.app_factory.api_routes import register_routes
-    register_routes(app)
+    register_routes(app, db_instance)
     
     # Log application startup
     logger.info(f"Application created with DEBUG={app.config['DEBUG']}")

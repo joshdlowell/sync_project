@@ -4,8 +4,16 @@ Configuration module for REST API package.
 This module centralizes configuration management and provides a way to
 load configuration from environment variables or configuration files.
 """
+# import logging
 import os
+# import sys
 from typing import Dict, Any, Optional, Union
+# from .logging_config import configure_logging
+# from ..storage_service import DBConnection
+
+
+# from .database_config import get_db_instance
+# from ..storage_service import DBConnection
 
 
 class ConfigError(Exception):
@@ -22,7 +30,8 @@ class Config:
 
     # Default values for configuration
     DEFAULTS = {
-        'db_host': 'squishy-mysql-db',
+        'db_type': 'mysql',
+        'db_host': 'mysql-squishy-db',
         'db_name': 'squishy_db',
         'db_user': None,
         'db_password': None,
@@ -36,6 +45,7 @@ class Config:
 
     # Environment variable mapping
     ENV_MAPPING = {
+        'db_type': 'LOCAL_DB_TYPE',
         'db_host': 'LOCAL_MYSQL_HOST',
         'db_name': 'LOCAL_MYSQL_DATABASE',
         'db_user': 'LOCAL_MYSQL_USER',
@@ -149,48 +159,6 @@ class Config:
         """
         return bool(self._config.get('debug', False))
 
-    # def configure_logging(self, logger_name: str = None) -> logging.Logger:
-    #     """
-    #     Configure logging for the application.
-    #
-    #     Returns:
-    #         Configured logger instance
-    #     """
-    #     if not logger_name:
-    #         logger_name = 'rest_api'
-    #
-    #     log_level = str(self._config.get('log_level', 'INFO')).upper()
-    #
-    #     # Validate log level
-    #     if log_level not in self.VALID_LOG_LEVELS:
-    #         log_level = 'INFO'
-    #
-    #     # Create logger
-    #     logger = logging.getLogger(logger_name)
-    #
-    #     # Avoid adding multiple handlers if logger is already configured
-    #     if logger.handlers:
-    #         return logger
-    #
-    #     # Set log level
-    #     numeric_level = getattr(logging, log_level)
-    #     logger.setLevel(numeric_level)
-    #
-    #     # Create console handler
-    #     console_handler = logging.StreamHandler(sys.stdout)
-    #     console_handler.setLevel(numeric_level)
-    #
-    #     # Create formatter
-    #     formatter = logging.Formatter(
-    #         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    #     )
-    #     console_handler.setFormatter(formatter)
-    #
-    #     # Add handler to logger
-    #     logger.addHandler(console_handler)
-    #
-    #     return logger
-
     def __getitem__(self, key: str) -> Any:
         """Allow dictionary-style access to configuration."""
         return self._config[key]
@@ -206,19 +174,5 @@ class Config:
         return f"Config({safe_config})"
 
 
-# def create_config(config_dict: Optional[Dict[str, Any]] = None) -> Config:
-#     """
-#     Create a configuration instance.
-#
-#     Args:
-#         config_dict: Optional dictionary with configuration values
-#
-#     Returns:
-#         Configuration instance
-#     """
-#     return Config(config_dict)
-
-
 # Default configuration instances
 config = Config()
-# logger = config.configure_logging()

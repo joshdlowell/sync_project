@@ -31,16 +31,25 @@ apk add python3 py-yaml py-requests
 ```bash
 docker run -it --rm \
   --name restapi \
-  --network DB-net \
-  -e LOCAL_MYSQL_NAME=local_squishy_db \
-  -e LOCAL_USER=squishy \
-  -e LOCAL_PASSWORD=squishy \
-  -e LOCAL_DATABASE=local_squishy_db \
-  -e LOCAL_PORT=5000 \
-  -p 80:5000 \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_REST_API:/squishy_REST_API \
+  --network squishy_db_default \
+  -e LOCAL_MYSQL_USER=your_app_user \
+  -e LOCAL_MYSQL_PASSWORD=your_user_password \
+  -e API_SECRET_KEY=squishy_key_12345 \
+  -p 5000:5000 \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_REST_API:/app/squishy_REST_API \
   python:3.12-alpine /bin/sh
 ```
+
+docker run -d \
+  --name squishy-rest-api \
+  --network squishy_db_default \
+  -e LOCAL_MYSQL_USER=your_app_user \
+  -e LOCAL_MYSQL_PASSWORD=your_user_password \
+  -e API_SECRET_KEY=squishy_key_12345 \
+  -p 5000:5000 \
+  squishy-rest-api:1.0
+
+
 ### Install dependencies
 ```bash
 pip install --no-cache-dir mysql-connector-python PyMySQL sqlalchemy cryptography flask gunicorn requests

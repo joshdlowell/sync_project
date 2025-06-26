@@ -234,11 +234,12 @@ project_root/
 ```
 
 **wsgi.py:**
+
 ```python
 """
 WSGI entry point for the REST API application.
 """
-from squishy_REST_API.main import app
+from squishy_REST_API.core import app
 
 if __name__ == "__main__":
     app.run()

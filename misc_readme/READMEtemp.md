@@ -15,7 +15,7 @@
 
 | Config Key | Environment Variable   | Default Value                | Type |
 |------------|------------------------|------------------------------|------|
-| `db_host` | `LOCAL_MYSQL_HOST`     | `'squishy-mysql-db'` | string |
+| `db_host` | `LOCAL_MYSQL_HOST`     | `'mysql-squishy-db'` | string |
 | `db_name` | `LOCAL_MYSQL_DATABASE` | `'squishy_db'`               | string |
 | `db_port` | `LOCAL_MYSQL_PORT`     | `3306`                       | integer |
 | `api_host` | `API_HOST`             | `'0.0.0.0'`                  | string |
@@ -169,8 +169,9 @@ None
 None
 
 **Example:**
+
 ```python
-from squishy_REST_API.main import main
+from squishy_REST_API.core import main
 
 # Start the application
 main()
@@ -187,7 +188,7 @@ main()
 ### Basic Usage
 
 ```python
-from squishy_REST_API.main import main
+from squishy_REST_API.core import main
 
 if __name__ == '__main__':
     main()
@@ -202,12 +203,12 @@ from squishy_REST_API.configuration.config import config
 
 # Update configuration
 config.update({
-   'api_host': 'localhost',
-   'api_port': 8080,
-   'debug': True
+    'api_host': 'localhost',
+    'api_port': 8080,
+    'debug': True
 })
 
-from squishy_REST_API.main import main
+from squishy_REST_API.core import main
 
 main()
 ```

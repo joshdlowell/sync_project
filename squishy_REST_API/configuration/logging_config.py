@@ -4,9 +4,10 @@ Logging configuration for REST API package.
 This module provides a centralized logging configuration for the application.
 """
 import logging
-import os
 import sys
 from typing import Optional
+
+from squishy_REST_API import config
 
 
 def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
@@ -23,7 +24,7 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
     """
     # Get log level from environment variable if not provided
     if log_level is None:
-        log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
+        log_level = 'INFO'
 
     # Create logger
     logger = logging.getLogger('rest_api')
@@ -51,4 +52,4 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
 
 
 # Default logger instance
-logger = configure_logging()
+logger = configure_logging(config.get('log_level'))

@@ -83,15 +83,18 @@ def run_development():
 
 def main():
     """Main entry point with server selection."""
-    # Check for command line arguments
-    use_gunicorn = '--gunicorn' in sys.argv or config.get('use_gunicorn', False)
-    use_gunicorn = True
-    if use_gunicorn:
-        if not run_with_gunicorn():
-            logger.warning("Failed to start Gunicorn, falling back to development server")
+    try:
+        if config.get('use_gunicorn', True):
+            if not run_with_gunicorn():
+                logger.warning("Failed to start Gunicorn, falling back to development server")
+                run_development()
+        else:
             run_development()
-    else:
-        run_development()
+
+    except Exception as e:
+        logger.error(f"Fatal error in main routine: {e}")
+        return 1  # Failure
+    return 0 # Success
 
 
 if __name__ == '__main__':

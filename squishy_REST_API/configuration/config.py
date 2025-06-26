@@ -41,7 +41,8 @@ class Config:
         'max_requests_jitter': 100,
         'accesslog': '-',
         'errorlog': '-',
-        'proc_name': 'squishy_rest_api'
+        'proc_name': 'squishy_rest_api',
+        'use_gunicorn': True
     }
 
     # Environment variable mapping (add more gunicorn adjustments?)

@@ -1,3 +1,3 @@
-from db_bootstrap import DBClient
+from .db_bootstrap import DBClient
 
 __all__ = ['DBClient']

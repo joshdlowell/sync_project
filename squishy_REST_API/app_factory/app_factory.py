@@ -5,8 +5,11 @@ This module provides a factory function to create Flask application instances
 with proper configuration and dependency injection.
 """
 from flask import Flask
+
 from squishy_REST_API import config
 from squishy_REST_API.configuration.logging_config import logger
+from squishy_REST_API.database_client import DBClient
+from .api_routes import register_routes
 
 def create_app(test_config=None):
     """
@@ -20,8 +23,8 @@ def create_app(test_config=None):
         Configured Flask application
     """
     # Get db instance
-    from squishy_REST_API.configuration.database_config import get_db_instance
-    db_instance = get_db_instance()
+
+    db_instance = DBClient.database_client
     # Create Flask app
     app = Flask(__name__)
     
@@ -40,7 +43,6 @@ def create_app(test_config=None):
         logger.info("Application configured with default configuration")
     
     # Register routes
-    from squishy_REST_API.app_factory.api_routes import register_routes
     register_routes(app, db_instance)
     
     # Log application startup

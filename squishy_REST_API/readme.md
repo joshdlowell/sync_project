@@ -24,7 +24,6 @@ docker build -t squishy-rest-api .
 
 #### Run with Docker
 ```bash
-docker build -t squishy-rest-api:1.0 .
 docker run -d \
   --name squishy-rest-api \
   --network squishy_db_default \
@@ -32,7 +31,7 @@ docker run -d \
   -e LOCAL_MYSQL_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
   -p 5000:5000 \
-  squishy-rest-api:1.0
+  squishy-rest-api
 ```
 
 #### Run with Docker Compose
@@ -41,7 +40,9 @@ Create a `docker-compose.yml` file:
 ```yaml
 services:
   squishy-api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: squishy-rest-api
     environment:    
       LOCAL_MYSQL_USER: your_app_user
@@ -112,17 +113,18 @@ python -m squishy_REST_API
 | `LOG_LEVEL`            | REST API logging level | `'INFO'`              | 
 
 ### Non-configurable variables
-| Variable                       | Description                            | Default |
-|--------------------------------|----------------------------------------|--------|
-| `workers`                      | number of gunicorn workers             | `4`      |
-| `worker_class`                 | gunicorn request handling              | `sync` |
-| `timeout`                      | Time before resetting idle workers     | `30`     |
-| `keepalive`                    | Seconds to wait for requests           | `2`      |
-| `max_requests`                 | Maximum requests before worker reset   | `1000`   |
-| `max_requests_jitter`          | jitter tolerance to add to requests    | `100`    |
+| Variable                      | Description                            | Default |
+|-------------------------------|----------------------------------------|--------|
+| `workers`                     | number of gunicorn workers             | `4`      |
+| `worker_class`                | gunicorn request handling              | `sync` |
+| `timeout`                     | Time before resetting idle workers     | `30`     |
+| `keepalive`                   | Seconds to wait for requests           | `2`      |
+| `max_requests`                | Maximum requests before worker reset   | `1000`   |
+| `max_requests_jitter`         | jitter tolerance to add to requests    | `100`    |
 | `accesslog` | log write to location (default syslog) |  `-`   |
 | `errorlog` | log write to location (default errorlog) | `-` |                
 | `proc_name` | The name given to the process in the system | `squishy_rest_api` | 
+| `use_gunicorn` | Run the application with gunicorn (not dev) | `True` | 
 
 
 ### Connection Details
@@ -242,7 +244,7 @@ squishy_REST_API/
    ```
 3. **Database Setup**: Ensure MySQL is running with proper credentials
 4. **Environment**: Set required environment variables
-5. **Run**: `python -m squishy_REST_API.main`
+5. **Run**: `python -m squishy_REST_API`
 
 ## Testing
 

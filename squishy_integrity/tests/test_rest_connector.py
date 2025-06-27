@@ -1,17 +1,19 @@
 import unittest
 from unittest.mock import Mock, patch
-from squishy_integrity.storage_service.rest_connector import RestConnector
-from squishy_integrity.storage_service.configuration import Config
-from squishy_integrity.storage_service.client import HttpClient
-from squishy_integrity.storage_service.validator import HashInfoValidator
+from squishy_integrity.rest_client.rest_processor import RestProcessor
+from squishy_integrity import config
+from squishy_integrity.rest_client.http_client import HttpClient
+from squishy_integrity.rest_client.info_validator import HashInfoValidator
+from squishy_integrity.rest_client import RestClient
 
 
 class TestRestConnector(unittest.TestCase):
     def setUp(self):
-        self.config = Config("test-api", "8080")
+        config._set('rest_api_host', "test-api")
+        config._set('rest_api_port', "8080")
         self.mock_http_client = Mock(spec=HttpClient)
         self.validator = HashInfoValidator()
-        self.rest_connector = RestConnector(self.config, self.mock_http_client, self.validator)
+        self.rest_connector = RestProcessor(self.mock_http_client, self.validator)
 
     def test_get_single_hash_success(self):
         # Arrange

@@ -46,13 +46,13 @@ class HashStorageInterface(ABC):
     def get_single_hash(self, path: str) -> Optional[str]:
         pass
 
+    @abstractmethod
+    def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
+        pass
 
-# class TimeProvider(ABC):
-#     """Abstract interface for time operations"""
-#
-#     @abstractmethod
-#     def current_time(self) -> float:
-#         pass
+    @abstractmethod
+    def get_priority_updates(self) -> str | None:
+        pass
 
 
 class HashFunction(ABC):

@@ -4,8 +4,8 @@ Merkle Tree File Integrity System
 Refactored for improved testability and maintainability.
 """
 
-from .factory import IntegrityCheckFactory
-from squishy_integrity.rest_connector import rest_connector
+from squishy_integrity.integrity_check.app_factory import IntegrityCheckFactory
+from squishy_integrity.rest_client import rest_processor
 
 # Create the service instance
 _service = IntegrityCheckFactory.create_service(rest_connector)

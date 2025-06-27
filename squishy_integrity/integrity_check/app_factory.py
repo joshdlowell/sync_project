@@ -1,21 +1,23 @@
 from .merkle_tree_service import MerkleTreeService
-from .implementations import StandardFileSystem, RestHashStorage, SHA1HashFunction #, SystemTimeProvider,
+from .implementations import StandardFileSystem, RestHashStorage, SHA1HashFunction
 from .validators import PathValidator
 from .tree_walker import DirectoryTreeWalker
 from .file_hasher import FileHasher
+
+from squishy_integrity import RestClient
 
 
 class IntegrityCheckFactory:
     """Factory for creating integrity check components"""
 
     @staticmethod
-    def create_service(rest_connector) -> MerkleTreeService:
+    def create_service() -> MerkleTreeService:
         """Create a fully configured MerkleTreeService"""
 
         # Create implementations
         file_system = StandardFileSystem()
-        hash_storage = RestHashStorage(rest_connector)
-        # time_provider = SystemTimeProvider()
+        rest_service = RestClient.rest_client
+        hash_storage = RestHashStorage(rest_service)
         hash_function = SHA1HashFunction()
 
         # Create components

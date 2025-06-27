@@ -1,16 +1,16 @@
-from configuration import Config
-from client import HttpClient
-from validator import HashInfoValidator
+from squishy_integrity import config
+from .http_client import HttpClient
+from .info_validator import HashInfoValidator
 from typing import Tuple, Any
 
-class RestConnector:
+class RestProcessor:
     """
     Connector for interacting with the REST API for hash storage operations.
 
     This class implements the HashStorageInterface required by the MerkleTreeService.
     """
 
-    def __init__(self, config: Config, http_client: HttpClient, validator: HashInfoValidator = None):
+    def __init__(self, http_client: HttpClient, validator: HashInfoValidator = None):
         """
         Initialize the RestConnector.
 
@@ -19,7 +19,7 @@ class RestConnector:
             http_client: HTTP client for making requests
             validator: Validator for hash information (optional)
         """
-        self.config = config
+        # self.config = config
         self.http_client = http_client
         self.validator = validator or HashInfoValidator()
 
@@ -71,19 +71,6 @@ class RestConnector:
 
         return self._process_changes(changes)
 
-    def get_single_hash(self, path: str) -> str | None:
-        """
-        Get the hash value for a specific path.
-
-        Args:
-            path: The path to get the hash for
-
-        Returns:
-            The hash value as a string, or None if not found or error
-        """
-        response = self._db_get("api/hash", {"path": path})
-        return self._process_response(response)
-
     def get_hashtable(self, path: str) -> dict | None:
         """
         Get the complete hash table for a specific path.
@@ -95,6 +82,19 @@ class RestConnector:
             A dictionary containing the hash table, or None if not found or error
         """
         response = self._db_get("api/hashtable", {"path": path})
+        return self._process_response(response)
+
+    def get_single_hash(self, path: str) -> str | None:
+        """
+        Get the hash value for a specific path.
+
+        Args:
+            path: The path to get the hash for
+
+        Returns:
+            The hash value as a string, or None if not found or error
+        """
+        response = self._db_get("api/hash", {"path": path})
         return self._process_response(response)
 
     def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
@@ -205,10 +205,23 @@ class RestConnector:
             The content if status_code is 200, None otherwise
         """
         code, content = response
-        if code != 200:
-            print(f"WARNING: REST API returned status code {code}")
-            return None
-        return content
+
+        if code == 200:
+            return content
+
+        # Handle specific error cases
+        if code == 0:
+            print(f"CRITICAL: Network error - {content}")
+        elif code == 408:
+            print(f"WARNING: Request timeout - {content}")
+        elif code == 503:
+            print(f"WARNING: Service unavailable - {content}")
+        elif code == 404:
+            print(f"INFO: Resource not found - {content}")
+        else:
+            print(f"WARNING: REST API returned status code {code} - {content}")
+
+        return None
 
     def _db_put(self, endpoint: str, request: dict) -> Tuple[int, Any]:
         """
@@ -221,7 +234,7 @@ class RestConnector:
         Returns:
             A tuple containing (status_code, content)
         """
-        url = f"{self.config.rest_api_url}/{endpoint}"
+        url = f"{config.rest_api_url}/{endpoint}"
         return self.http_client.post(url, request)
 
     def _db_get(self, endpoint: str, params: dict = None) -> Tuple[int, Any]:
@@ -235,5 +248,5 @@ class RestConnector:
         Returns:
             A tuple containing (status_code, content)
         """
-        url = f"{self.config.rest_api_url}/{endpoint}"
+        url = f"{config.rest_api_url}/{endpoint}"
         return self.http_client.get(url, params)

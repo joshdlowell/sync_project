@@ -49,6 +49,44 @@ class MerkleTreeService:
 
         return dir_hash, changes
 
+    def remove_redundant_paths_with_priority(self, priority, routine):
+        """Simplified version with better performance"""
+
+        # Combine and deduplicate while preserving priority order
+        seen = set()
+        combined = []
+
+        for path in priority + routine:
+            if path not in seen:
+                combined.append(path)
+                seen.add(path)
+
+        # Remove redundant children
+        result = []
+        # import os
+        for current in combined:
+            # current_norm = os.path.normpath(current)
+            is_redundant = False
+
+            for existing in result:
+                # existing_norm = os.path.normpath(existing)
+                # If current is child of existing, it's redundant
+                # if current_norm.startswith(existing_norm + os.sep):
+                if current.startswith(existing):
+                    is_redundant = True
+                    break
+                # If existing is child of current, remove existing and add current
+                # elif existing_norm.startswith(current_norm + os.sep):
+                elif existing.startswith(current):
+
+                    result.remove(existing)
+                    break
+
+            if not is_redundant:
+                result.append(current)
+
+        return result
+
     def _compute_merkle_recursive(self, dir_path: str, changes: Dict[str, Set[str]], tree_dict: Dict[str, Any]) -> str:
         """Recursively compute Merkle tree hashes"""
         # Initialize hash info for this directory

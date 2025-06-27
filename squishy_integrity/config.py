@@ -1,12 +1,10 @@
 """
-Configuration module for squishy_integrity package.
+Configuration module for integrity package.
 
 This module centralizes configuration management and provides a way to
 load configuration from environment variables or configuration files.
 """
 import os
-import sys
-import logging
 from typing import Dict, Any, Optional, Union
 
 
@@ -16,37 +14,31 @@ class ConfigError(Exception):
 
 
 class Config:
-    """Configuration class for REST API package."""
+    """Configuration class for integrity package."""
 
     # Define required keys as class constants
-    REQUIRED_KEYS = ['db_user', 'db_password', 'secret_key']
-    SENSITIVE_KEYS = ['db_password', 'secret_key']
+    REQUIRED_KEYS = []
+    SENSITIVE_KEYS = []
 
     # Default values for configuration
     DEFAULTS = {
-        'db_host': 'mysql-squishy-db',
-        'db_name': 'squishy_db',
-        'db_user': None,
-        'db_password': None,
-        'db_port': 3306,
-        'api_host': '0.0.0.0',
-        'api_port': 5000,
+        'rest_api_host': 'squishy-rest-api',
+        'rest_api_port': 5000,
+        'baseline': '/baseline',
         'debug': False,
-        'secret_key': None,
-        'log_level': 'INFO'
+        'log_level': 'INFO',
+        'max_retries': 3,
+        'retry_delay': 5,
+        'long_delay': 30,
+        'max_runtime_min': 10
     }
 
-    # Environment variable mapping
+    # Environment variable mapping (add more gunicorn adjustments?)
     ENV_MAPPING = {
-        'db_host': 'LOCAL_MYSQL_NAME',
-        'db_name': 'LOCAL_DATABASE',
-        'db_user': 'LOCAL_USER',
-        'db_password': 'LOCAL_PASSWORD',
-        'db_port': 'LOCAL_MYSQL_PORT',
-        'api_host': 'API_HOST',
-        'api_port': 'API_PORT',
+        'rest_api_host': 'REST_API_HOST',
+        'rest_api_port': 'REST_API_PORT',
+        'baseline': 'BASELINE',
         'debug': 'DEBUG',
-        'secret_key': 'SECRET_KEY',
         'log_level': 'LOG_LEVEL'
     }
 
@@ -72,6 +64,10 @@ class Config:
 
         self._validate_configuration()
 
+    @property
+    def rest_api_url(self) -> str:
+        return f"http://{self._config.get('rest_api_host')}:{self._config.get('rest_api_port')}"
+
     def _load_from_environment(self) -> None:
         """Load configuration from environment variables."""
         for config_key, env_key in self.ENV_MAPPING.items():
@@ -93,7 +89,7 @@ class Config:
         Raises:
             ConfigError: If conversion fails
         """
-        if key in ('db_port', 'api_port'):
+        if key in ['rest_api_port', 'max_retries', 'retry_delay', 'long_delay', 'max_runtime_minutes']:
             try:
                 return int(value)
             except ValueError:
@@ -130,17 +126,15 @@ class Config:
         """
         return self._config.get(key, default)
 
-    def get_database_url(self) -> str:
+    def _set(self, key: str, value: Any = None) -> None:
         """
-        Get database connection URL.
+        Set configuration value by key (used for running tests).
 
-        Returns:
-            Database connection URL
+        Args:
+            key: Configuration key
+            value: The value to set
         """
-        return (
-            f"mysql://{self._config['db_user']}:{self._config['db_password']}"
-            f"@{self._config['db_host']}:{self._config['db_port']}/{self._config['db_name']}"
-        )
+        self._config[key] = value
 
     def is_debug_mode(self) -> bool:
         """
@@ -150,48 +144,6 @@ class Config:
             True if debug mode is enabled, False otherwise
         """
         return bool(self._config.get('debug', False))
-
-    def configure_logging(self, logger_name: str = None) -> logging.Logger:
-        """
-        Configure logging for the application.
-
-        Returns:
-            Configured logger instance
-        """
-        if not logger_name:
-            logger_name = 'rest_api'
-
-        log_level = str(self._config.get('log_level', 'INFO')).upper()
-
-        # Validate log level
-        if log_level not in self.VALID_LOG_LEVELS:
-            log_level = 'INFO'
-
-        # Create logger
-        logger = logging.getLogger(logger_name)
-
-        # Avoid adding multiple handlers if logger is already configured
-        if logger.handlers:
-            return logger
-
-        # Set log level
-        numeric_level = getattr(logging, log_level)
-        logger.setLevel(numeric_level)
-
-        # Create console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(numeric_level)
-
-        # Create formatter
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        console_handler.setFormatter(formatter)
-
-        # Add handler to logger
-        logger.addHandler(console_handler)
-
-        return logger
 
     def __getitem__(self, key: str) -> Any:
         """Allow dictionary-style access to configuration."""
@@ -208,19 +160,5 @@ class Config:
         return f"Config({safe_config})"
 
 
-def create_config(config_dict: Optional[Dict[str, Any]] = None) -> Config:
-    """
-    Create a configuration instance.
-
-    Args:
-        config_dict: Optional dictionary with configuration values
-
-    Returns:
-        Configuration instance
-    """
-    return Config(config_dict)
-
-
-# Default configuration instance
+# Default configuration instances
 config = Config()
-logger = config.configure_logging()

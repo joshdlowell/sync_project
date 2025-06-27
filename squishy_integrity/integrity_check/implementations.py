@@ -34,19 +34,23 @@ class StandardFileSystem(FileSystemInterface):
 
 class RestHashStorage(HashStorageInterface):
     """Hash storage implementation using REST connector"""
-
-    def __init__(self, rest_connector):
-        self.rest_connector = rest_connector
+    def __init__(self, rest_processor):
+        self.rest_processor = rest_processor
 
     def put_hashtable(self, hash_info: Dict[str, Any]) -> Dict[str, Set[str]]:
-        return self.rest_connector.put_hashtable(hash_info)
+        return self.rest_processor.put_hashtable(hash_info)
 
     def get_hashtable(self, path: str) -> Optional[Dict[str, Any]]:
-        return self.rest_connector.get_hashtable(path)
+        return self.rest_processor.get_hashtable(path)
 
     def get_single_hash(self, path: str) -> Optional[str]:
-        return self.rest_connector.get_single_hash(path)
+        return self.rest_processor.get_single_hash(path)
 
+    def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
+        return self.rest_processor.get_oldest_updates(root_path, percent)
+
+    def get_priority_updates(self) -> str | None:
+        return self.rest_processor.get_priority_updates()
 
 # class SystemTimeProvider(TimeProvider):
 #     """System time provider implementation"""

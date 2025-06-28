@@ -39,23 +39,23 @@ Create a `docker-compose.yml` file:
 
 ```yaml
 services:
-  squishy-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: squishy-rest-api
-    environment:    
-      LOCAL_MYSQL_USER: your_app_user
-      LOCAL_MYSQL_PASSWORD: your_user_password
-      API_SECRET_KEY: squishy_key_12345
-    ports:
-      - "5000:5000"
-    networks:
-      - squishy_db_default
-  
+   squishy-api:
+      build:
+         context: .
+         dockerfile: ../Dockerfile_rest
+      container_name: squishy-rest-api
+      environment:
+         LOCAL_MYSQL_USER: your_app_user
+         LOCAL_MYSQL_PASSWORD: your_user_password
+         API_SECRET_KEY: squishy_key_12345
+      ports:
+         - "5000:5000"
+      networks:
+         - squishy_db_default
+
 networks:
-  squishy_db_default:
-    external: true
+   squishy_db_default:
+      external: true
 ```
 
 Then run:

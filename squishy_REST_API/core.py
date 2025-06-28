@@ -94,6 +94,7 @@ def main():
     except Exception as e:
         logger.error(f"Fatal error in main routine: {e}")
         return 1  # Failure
+    logger.info(f"REST_API server successfully started.")
     return 0 # Success
 
 

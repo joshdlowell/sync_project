@@ -3,8 +3,8 @@ from unittest.mock import Mock, patch, MagicMock
 import time
 from squishy_REST_API.configuration import config
 # Import both implementations
-from squishy_REST_API.storage_service.local_mysql import MYSQLConnection
-from squishy_REST_API.storage_service.local_memory import LocalMemoryConnection
+from squishy_REST_API.database_client.local_mysql import MYSQLConnection
+from squishy_REST_API.database_client.local_memory import LocalMemoryConnection
 
 
 class DBConnectionTestMixin():

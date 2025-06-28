@@ -21,6 +21,7 @@ docker network rm squishy_db_default
 ```bash
 docker run -d \
   --name mysql-squishy-db \
+  --network squishy_db_default \
   -e MYSQL_ROOT_PASSWORD=your_root_password \
   -e MYSQL_DATABASE=squishy_db \
   -e MYSQL_USER=your_app_user \
@@ -34,6 +35,7 @@ docker run -d \
 ```bash
 docker run -d \
   --name mysql-squishy-db \
+  --network squishy_db_default \
   -e MYSQL_ROOT_PASSWORD=your_root_password \
   -e MYSQL_DATABASE=squishy_db \
   -e MYSQL_USER=your_app_user \
@@ -55,11 +57,56 @@ docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/
 docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/tests/test_logs.sql
 ```
 
+### Run REST API container detached
+#### First time through you will need to build the container image
+```bash
+docker build -t squishy-rest-api:v1.0 . -f Dockerfile_rest
+```
 
-### tests
-docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/tests/test_hashtable.sql
-docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_hashtable.sql
+You can run this container for testing, or for production
+#### Run interactive for testing
+This command will start the docker container without launching the rest api service and add the tests 
+to the package
+```bash
+docker run -it --rm \
+  --name squishy-rest-api \
+  --network squishy_db_default \
+  -e LOCAL_MYSQL_USER=your_app_user \
+  -e LOCAL_MYSQL_PASSWORD=your_user_password \
+  -e API_SECRET_KEY=squishy_key_12345 \
+  -v $(pwd)/squishy_REST_API/tests:/app/squishy_REST_API/tests \
+  -p 5000:5000 \
+  squishy-rest-api:v1.0 /bin/sh
+```
+******With all my local files mounted for development
+```bash
+docker run -it --rm \
+  --name squishy-rest-api \
+  --network squishy_db_default \
+  -e LOCAL_MYSQL_USER=your_app_user \
+  -e LOCAL_MYSQL_PASSWORD=your_user_password \
+  -e API_SECRET_KEY=squishy_key_12345 \
+  -p 5000:5000 \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_REST_API:/app/squishy_REST_API \
+  squishy-rest-api:v1.0 /bin/sh
+```
 
+Run tests with detailed output:
+```bash
+python -m unittest discover squishy_REST_API/tests/ -v
+```
+
+#### Run the container detached for production
+```bash
+docker run -d \
+  --name squishy-rest-api \
+  --network squishy_db_default \
+  -e LOCAL_MYSQL_USER=your_app_user \
+  -e LOCAL_MYSQL_PASSWORD=your_user_password \
+  -e API_SECRET_KEY=squishy_key_12345 \
+  -p 5000:5000 \
+  squishy-rest-api:v1.0
+```
 
 
 
@@ -92,7 +139,7 @@ docker run -it --rm \
   -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_REST_API:/app/squishy_REST_API \
   python:3.12-alpine /bin/sh
 ```
-
+```bash
 docker run -d \
   --name squishy-rest-api \
   --network squishy_db_default \
@@ -101,7 +148,7 @@ docker run -d \
   -e API_SECRET_KEY=squishy_key_12345 \
   -p 5000:5000 \
   squishy-rest-api:1.0
-
+```
 
 ### Install dependencies
 ```bash

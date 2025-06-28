@@ -2,7 +2,7 @@ services:
   squishy-api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ../Dockerfile_rest
     container_name: squishy-rest-api
     environment:    
       LOCAL_MYSQL_USER: your_app_user

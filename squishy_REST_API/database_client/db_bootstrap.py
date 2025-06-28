@@ -5,8 +5,8 @@ This module provides a factory function to create database instances
 using configuration from the config module.
 """
 from typing import Optional
-from squishy_REST_API import config
-from squishy_REST_API.configuration.logging_config import logger
+from squishy_REST_API import config, logger
+# from squishy_REST_API.configuration.logging_config import logger
 from .local_DB_interface import DBConnection
 from .local_mysql import MYSQLConnection
 from .local_memory import LocalMemoryConnection

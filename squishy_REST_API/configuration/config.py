@@ -7,14 +7,23 @@ load configuration from environment variables or configuration files.
 import os
 from typing import Dict, Any, Optional, Union
 
+from .logging_config import configure_logging
 
 class ConfigError(Exception):
     """Custom exception for configuration errors."""
     pass
 
 
+
 class Config:
     """Configuration class for REST API package."""
+    _instance = None
+    _config = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(Config, cls).__new__(cls)
+        return cls._instance
 
     # Define required keys as class constants
     REQUIRED_KEYS = ['db_user', 'db_password', 'secret_key']
@@ -96,6 +105,9 @@ class Config:
             'proc_name': self._config["proc_name"],
         }
 
+        # Create logger
+        self.logger = configure_logging(self._config.get('log_level'))
+
     def _load_from_environment(self) -> None:
         """Load configuration from environment variables."""
         for config_key, env_key in self.ENV_MAPPING.items():
@@ -140,6 +152,10 @@ class Config:
 
         if missing_keys:
             raise ConfigError(f"Missing required configuration keys: {', '.join(missing_keys)}")
+
+        self._config['log_level'] = self._config['log_level'].upper()
+        if self._config['log_level'].upper() not in self.VALID_LOG_LEVELS:
+            self._config['log_level'] = 'INFO'
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -192,3 +208,19 @@ class Config:
 
 # Default configuration instances
 config = Config()
+# Default logger instance
+logger = config.logger
+# class RESTConfig:
+#     _instance = None
+#     _config = None
+#
+#     def __new__(cls):
+#         if cls._instance is None:
+#             cls._instance = super(RESTConfig, cls).__new__(cls)
+#         return cls._instance
+#
+#     @property
+#     def config(self) -> Config:
+#         if self._config is None:
+#             self._config = Config()
+#         return self._config

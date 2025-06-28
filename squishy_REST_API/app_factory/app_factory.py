@@ -6,8 +6,8 @@ with proper configuration and dependency injection.
 """
 from flask import Flask
 
-from squishy_REST_API import config
-from squishy_REST_API.configuration.logging_config import logger
+from squishy_REST_API import config, logger
+# from squishy_REST_API.configuration.logging_config import logger
 from squishy_REST_API.database_client import DBClient
 from .api_routes import register_routes
 

@@ -43,20 +43,20 @@ Create a `docker-compose.yml` file:
 
 ```yaml
 services:
-  squishy-integrity:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: squishy-integrity
-    networks:
-      - squishy_db_default
-    volumes:
-      - /location/of/baseline:/baseline
-    restart: unless-stopped
+   squishy-integrity:
+      build:
+         context: .
+         dockerfile: ../Dockerfile_integrity
+      container_name: squishy-integrity
+      networks:
+         - squishy_db_default
+      volumes:
+         - /location/of/baseline:/baseline
+      restart: unless-stopped
 
 networks:
-  squishy_db_default:
-    external: true
+   squishy_db_default:
+      external: true
 ```
 
 Then run:

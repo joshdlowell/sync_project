@@ -2,7 +2,7 @@ services:
   squishy-integrity:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ../Dockerfile_integrity
     container_name: squishy-integrity
     networks:
       - squishy_db_default

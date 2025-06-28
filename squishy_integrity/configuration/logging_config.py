@@ -7,7 +7,7 @@ import logging
 import sys
 from typing import Optional
 
-from squishy_integrity import config
+# from squishy_integrity import config
 
 
 def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
@@ -52,4 +52,4 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
 
 
 # Default logger instance
-logger = configure_logging(config.get('log_level'))
+# logger = configure_logging(config.get('log_level'))

@@ -7,6 +7,8 @@ load configuration from environment variables or configuration files.
 import os
 from typing import Dict, Any, Optional, Union
 
+from .logging_config import configure_logging
+
 
 class ConfigError(Exception):
     """Custom exception for configuration errors."""
@@ -15,7 +17,13 @@ class ConfigError(Exception):
 
 class Config:
     """Configuration class for integrity package."""
+    _instance = None
+    _config = None
 
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(Config, cls).__new__(cls)
+        return cls._instance
     # Define required keys as class constants
     REQUIRED_KEYS = []
     SENSITIVE_KEYS = []
@@ -63,6 +71,8 @@ class Config:
             self._load_from_environment()
 
         self._validate_configuration()
+
+        self.logger = configure_logging(self._config.get('log_level'))
 
     @property
     def rest_api_url(self) -> str:
@@ -166,3 +176,4 @@ class Config:
 
 # Default configuration instances
 config = Config()
+logger = config.logger

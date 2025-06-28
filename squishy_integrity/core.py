@@ -2,8 +2,8 @@ from time import time
 from contextlib import contextmanager
 from typing import List, Tuple
 
-from squishy_integrity import IntegrityCheckFactory, config
-from squishy_integrity.logging_config import logger
+from squishy_integrity import IntegrityCheckFactory, config, logger
+# from squishy_integrity.logging_config import logger
 
 
 @contextmanager

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Tuple, Any
-from squishy_integrity.config import config
+from squishy_integrity.configuration.config import config
 
 
 class HttpClient(ABC):

@@ -23,7 +23,7 @@ class IntegrityCheckFactory:
         # Create components
         path_validator = PathValidator()
         tree_walker = DirectoryTreeWalker(file_system)
-        file_hasher = FileHasher(file_system, hash_function) #, time_provider)
+        file_hasher = FileHasher(file_system, hash_function)
 
         # Create main service
         return MerkleTreeService(hash_storage, tree_walker, file_hasher, path_validator)

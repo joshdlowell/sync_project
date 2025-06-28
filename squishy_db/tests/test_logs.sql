@@ -159,6 +159,19 @@ SELECT
     END as test_result
 FROM logs
 WHERE summary_message = 'INFO level test message' AND log_level = 'INFO';
+-- test log_level accepts desired levels 'CRITICAL'
+INSERT INTO logs (summary_message, log_level)
+VALUES ('CRITICAL level test message', 'CRITICAL');
+-- Verify the insert worked
+SELECT
+    'key: CRITICAL' as log_level,
+    CASE
+
+        WHEN COUNT(*) = 1 THEN 'PASSED'
+        ELSE 'FAILED'
+    END as test_result
+FROM logs
+WHERE summary_message = 'CRITICAL level test message' AND log_level = 'CRITICAL';
 -- test log_level accepts desired levels 'ERROR'
 INSERT INTO logs (summary_message, log_level)
 VALUES ('ERROR level test message', 'ERROR');
@@ -171,18 +184,18 @@ SELECT
     END as test_result
 FROM logs
 WHERE summary_message = 'ERROR level test message' AND log_level = 'ERROR';
--- test log_level accepts desired levels 'STATUS'
+-- test log_level accepts desired levels 'DEBUG'
 INSERT INTO logs (summary_message, log_level)
-VALUES ('STATUS level test message', 'STATUS');
+VALUES ('DEBUG level test message', 'DEBUG');
 -- Verify the insert worked
 SELECT
-    'key: STATUS' as log_level,
+    'key: DEBUG' as log_level,
     CASE
         WHEN COUNT(*) = 1 THEN 'PASSED'
         ELSE 'FAILED'
     END as test_result
 FROM logs
-WHERE summary_message = 'STATUS level test message' AND log_level = 'STATUS';
+WHERE summary_message = 'DEBUG level test message' AND log_level = 'DEBUG';
 -- test log_level accepts desired levels 'WARNING'
 INSERT INTO logs (summary_message, log_level)
 VALUES ('WARNING level test message', 'WARNING');
@@ -209,7 +222,7 @@ INSERT INTO logs (
     detailed_message
 ) VALUES (
     'SIT0',
-    'STATUS',
+    'INFO',
     UNIX_TIMESTAMP() + 1002,
     'Test status message',
     'This is a test status message for testing'
@@ -220,7 +233,7 @@ INSERT INTO logs (
 SELECT
     CASE
         WHEN site_id = 'SIT0'
-        AND log_level = 'STATUS'
+        AND log_level = 'INFO'
         AND timestamp > UNIX_TIMESTAMP() + 1000
         AND summary_message = 'Test status message'
         AND detailed_message = 'This is a test status message for testing'

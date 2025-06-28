@@ -2,6 +2,8 @@ from .rest_processor import RestProcessor
 from .http_client import RequestsHttpClient
 from .info_validator import HashInfoValidator
 
+from squishy_integrity import logger
+
 
 class RestClient:
     rest_api_name: str
@@ -17,5 +19,5 @@ class RestClient:
             validator = HashInfoValidator()
             return RestProcessor(http_client, validator)
         except ValueError as e:
-            print(f"ERROR: Unable to bootstrap rest_connector: {e}")
+            logger.error(f"Unable to bootstrap rest_connector: {e}")
             exit(78)  # Configuration error

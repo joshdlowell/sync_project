@@ -41,7 +41,8 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
 
     # Create formatter
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        '[%(asctime)s +0000] [%(process)d] [%(levelname)s] [%(name)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
     )
     console_handler.setFormatter(formatter)
 

@@ -22,7 +22,7 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
     Returns:
         Configured logger instance
     """
-    # Get log level from environment variable if not provided
+    # If not provided set to default
     if log_level is None:
         log_level = 'INFO'
 

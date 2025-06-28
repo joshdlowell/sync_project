@@ -4,6 +4,8 @@ from .validators import PathValidator
 from .tree_walker import DirectoryTreeWalker
 from .file_hasher import FileHasher
 
+from squishy_integrity import logger
+
 
 class MerkleTreeService:
     """Main service for Merkle tree integrity checking"""
@@ -31,7 +33,8 @@ class MerkleTreeService:
         """
         # Validate paths
         if not self.path_validator.validate_root_and_dir_paths(root_path, dir_path):
-            print(f"ERROR: Requested path is not a child of the given root_path")
+            # print(f"ERROR: Requested path is not a child of the given root_path")
+            logger.error(f"Requested path ({dir_path}) is not a child of the given root_path ({root_path})")
             return None, None
 
         # Initialize change tracking

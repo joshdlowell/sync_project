@@ -30,7 +30,6 @@ def register_routes(app: Flask, db_instance):
             logger.debug(f"GET /api/hashtable for path: {path}")
 
             record = db_instance.get_hash_record(path)
-            print(f"***************************record = {record}")
             if not record:
                 logger.info(f"Path not found: {path}")
                 return jsonify({"message": "Path not found"}), 404

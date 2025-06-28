@@ -399,14 +399,11 @@ class MYSQLConnection(DBConnection):
 
         query = """INSERT INTO logs (site_id, log_level, summary_message, detailed_message)
                    VALUES (%(site_id)s, %(log_level)s, %(summary_message)s, %(detailed_message)s)"""
-        print(f"**************** log entry: {args_dict}")
-        print(f"****************    params: {params}")
 
         try:
             with self._get_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(query, params)
-                    print(f"**************** rowcount: {cursor.rowcount}")
                     if cursor.rowcount == 0:
                         logger.info("Log entry failed to insert")
                         return None

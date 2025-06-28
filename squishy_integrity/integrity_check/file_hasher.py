@@ -1,11 +1,11 @@
 from typing import Dict, Any
-from .interfaces import FileSystemInterface, HashFunction  #, TimeProvider
+from .interfaces import FileSystemInterface, HashFunction
 
 
 class FileHasher:
     """Handles hashing of files, directories, and links"""
 
-    def __init__(self, file_system: FileSystemInterface, hash_function: HashFunction): #, time_provider: TimeProvider):
+    def __init__(self, file_system: FileSystemInterface, hash_function: HashFunction):
         self.file_system = file_system
         self.hash_function = hash_function
         # self.time_provider = time_provider
@@ -48,7 +48,3 @@ class FileHasher:
                 hash_string += f"{dir_path}/{category}: EMPTY "
 
         return hash_string
-
-    # def get_current_timestamp(self) -> str:
-    #     """Get current timestamp as string"""
-    #     return str(self.time_provider.current_time())

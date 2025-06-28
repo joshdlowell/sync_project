@@ -1,8 +1,7 @@
 import hashlib
-# from time import time
 from pathlib import Path
 from typing import Dict, Set, Any, Optional
-from .interfaces import FileSystemInterface, HashStorageInterface, HashFunction  # TimeProvider, HashFunction
+from .interfaces import FileSystemInterface, HashStorageInterface, HashFunction
 
 
 class StandardFileSystem(FileSystemInterface):
@@ -51,12 +50,6 @@ class RestHashStorage(HashStorageInterface):
 
     def get_priority_updates(self) -> str | None:
         return self.rest_processor.get_priority_updates()
-
-# class SystemTimeProvider(TimeProvider):
-#     """System time provider implementation"""
-#
-#     def current_time(self) -> float:
-#         return time()
 
 
 class SHA1HashFunction(HashFunction):

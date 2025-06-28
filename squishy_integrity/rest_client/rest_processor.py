@@ -1,4 +1,4 @@
-from squishy_integrity import config
+from squishy_integrity import config, logger
 from .http_client import HttpClient
 from .info_validator import HashInfoValidator
 from typing import Tuple, Any
@@ -40,7 +40,7 @@ class RestProcessor:
         validation_errors = self.validator.validate(hash_info)
         if validation_errors:
             for error in validation_errors:
-                print(f"Validation error: {error}")
+                logger.error(f"Validation error: {error}")
 
         changes = []
 
@@ -64,7 +64,7 @@ class RestProcessor:
             code, update = self._db_put("api/hashtable", request_data)
 
             if code != 200:
-                print(f"ERROR: REST API returned {code}: {update}")
+                logger.error(f"REST API returned {code}: {update}")
                 continue
 
             changes.append(update)
@@ -115,12 +115,12 @@ class RestProcessor:
         base_response = self.get_hashtable(root_path)
 
         if not base_response or not base_response.get('current_dtg_latest'):
-            print("STATUS: Local database is empty, requesting full hash")
+            logger.status("Local database is empty, requesting full hash")
             return [root_path]
 
         dirs = base_response.get('dirs', [])
         if not dirs:
-            print("STATUS: no child directories in database, requesting full hash")
+            logger.status("no child directories in database, requesting full hash")
             return [root_path]
 
         # Build and sort by timestamp
@@ -131,7 +131,7 @@ class RestProcessor:
         update_num = max(1, int(len(dirs) * percent / 100))
         update_num = min(update_num, len(dirs))
 
-        print(f"Returning {update_num} directories for update")
+        logger.info(f"Returning {update_num} directories for update")
         return ordered_dirs[:update_num]
 
     def get_single_timestamp(self, path: str) -> float | None:
@@ -171,7 +171,7 @@ class RestProcessor:
         errors = self.validator._validate_item(path, item_data)
         if errors:
             for error in errors:
-                print(f"ERROR: {error}")
+                logger.error(error)
             return True
         return False
 
@@ -211,15 +211,15 @@ class RestProcessor:
 
         # Handle specific error cases
         if code == 0:
-            print(f"CRITICAL: Network error - {content}")
+            logger.critical(f"Network error - {content}")
         elif code == 408:
-            print(f"WARNING: Request timeout - {content}")
+            logger.warning(f"Request timeout - {content}")
         elif code == 503:
-            print(f"WARNING: Service unavailable - {content}")
+            logger.warning(f"Service unavailable - {content}")
         elif code == 404:
-            print(f"INFO: Resource not found - {content}")
+            logger.info(f"Resource not found - {content}")
         else:
-            print(f"WARNING: REST API returned status code {code} - {content}")
+            logger.warning(f"REST API returned status code {code} - {content}")
 
         return None
 

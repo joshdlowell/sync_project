@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Tuple, Any
-from squishy_integrity.configuration.config import config
+from squishy_integrity import config, logger
 
 
 class HttpClient(ABC):
@@ -59,28 +59,28 @@ class RequestsHttpClient(HttpClient):
                     except ValueError:
                         error_message = f'HTTP {response.status_code}: {response.text}'
 
-                    print(f"ERROR: Unable to contact database on attempt #{i * 5 + j + 1}")
-                    print(f"ERROR {response.status_code}, {error_message}")
+                    logger.warning(f"Unable to contact database on attempt #{i * 5 + j + 1}")
+                    logger.warning(f"{response.status_code}, {error_message}")
 
                 except requests.exceptions.Timeout:
-                    print(f"Request timeout on attempt #{i * 5 + j + 1}: {url}")
+                    logger.warning(f"Request timeout on attempt #{i * 5 + j + 1}: {url}")
                     if i == self.max_retries - 1 and j == 4:  # Last attempt
                         return 408, "Request timeout - server did not respond"
 
                 except requests.exceptions.ConnectionError:
-                    print(f"Connection error on attempt #{i * 5 + j + 1}: {url}")
+                    logger.warning(f"Connection error on attempt #{i * 5 + j + 1}: {url}")
                     if i == self.max_retries - 1 and j == 4:  # Last attempt
                         return 503, "Service unavailable - cannot connect to server"
 
                 except requests.exceptions.RequestException as e:
-                    print(f"Request exception on attempt #{i * 5 + j + 1}: {e}")
+                    logger.warning(f"Request exception on attempt #{i * 5 + j + 1}: {e}")
                     if i == self.max_retries - 1 and j == 4:  # Last attempt
                         return 500, f"Request failed: {str(e)}"
 
                 sleep(self.retry_delay)
 
-            print(f"ERROR: Failed to contact database {url}, pausing before retry.")
+            logger.error(f"Failed to contact database {url}, pausing before retry.")
             sleep(self.long_delay)
 
-        # Instead of exit(), return an error status
+        # Return an error status
         return 503, "Service unavailable after all retry attempts"

@@ -113,6 +113,10 @@ class Config:
         if missing_keys:
             raise ConfigError(f"Missing required configuration keys: {', '.join(missing_keys)}")
 
+        self._config['log_level'] = self._config['log_level'].upper()
+        if self._config['log_level'].upper() not in self.VALID_LOG_LEVELS:
+            self._config['log_level'] = 'INFO'
+
     def get(self, key: str, default: Any = None) -> Any:
         """
         Get configuration value by key.

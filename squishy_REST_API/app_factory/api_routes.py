@@ -47,15 +47,12 @@ def register_routes(app: Flask, db_instance):
             logger.debug(f"POST /api/hashtable for path: {request.json.get('path')}")
             logger.debug(f"request.json: {request.json}")
 
-            # TODO push changes handling to db client
             # Insert or update hash
-            changes = db_instance.insert_or_update_hash(record=request.json)
-
-            if not changes:
+            if not db_instance.insert_or_update_hash(record=request.json):
                 logger.error(f"Database error for record: {request.json}")
                 return jsonify({"message": "Database error, see DB logs"}), 500
 
-            return jsonify({"message": "Success", "data": changes})
+            return jsonify({"message": "Success"})
 
         else:
             logger.warning(f"Method not allowed: {request.method}")

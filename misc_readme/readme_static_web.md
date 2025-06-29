@@ -26,7 +26,7 @@ This module defines the API routes and registers them with the Flask application
 """
 from flask import jsonify, request, Flask, render_template
 
-from squishy_REST_API.configuration.database_config import db_instance
+from squishy_REST_API.storage_service.db_bootstrap import db_instance
 from squishy_REST_API.configuration.logging_config import logger
 ```
 

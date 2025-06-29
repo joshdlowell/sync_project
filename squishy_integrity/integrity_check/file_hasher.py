@@ -1,5 +1,6 @@
 from typing import Dict, Any
 from .interfaces import FileSystemInterface, HashFunction
+from squishy_integrity import logger
 
 
 class FileHasher:
@@ -26,8 +27,13 @@ class FileHasher:
 
     def hash_directory(self, dir_path: str, hash_info: Dict[str, Any]) -> str:
         """Hash a directory based on its contents"""
+        logger.debug("Getting directory hashable string...")
         dir_representation = self._get_directory_representation(dir_path, hash_info)
         return self.hash_function.hash_string(dir_representation)
+
+    def hash_string(self, hashable: str) -> str:
+        """Hash a string using the Filehasher methods"""
+        return self.hash_function.hash_string(hashable)
 
     def _get_link_representation(self, link_path: str) -> str:
         """Get string representation of a link for hashing"""

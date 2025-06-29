@@ -51,7 +51,7 @@ class HashStorageInterface(ABC):
         pass
 
     @abstractmethod
-    def get_priority_updates(self) -> str | None:
+    def get_priority_updates(self) -> list[str] | None:
         pass
 
 

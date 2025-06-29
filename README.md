@@ -79,6 +79,7 @@ docker run -it --rm \
   -e LOCAL_MYSQL_USER=your_app_user \
   -e LOCAL_MYSQL_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
+  -e LOG_LEVEL=DEBUG \
   -v $(pwd)/squishy_REST_API/tests:/app/squishy_REST_API/tests \
   -p 5000:5000 \
   squishy-rest-api:v1.0 /bin/sh
@@ -91,6 +92,7 @@ docker run -it --rm \
   -e LOCAL_MYSQL_USER=your_app_user \
   -e LOCAL_MYSQL_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
+  -e LOG_LEVEL=DEBUG \
   -p 5000:5000 \
   -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_REST_API:/app/squishy_REST_API \
   squishy-rest-api:v1.0 /bin/sh
@@ -135,6 +137,7 @@ to the package
 docker run -it --rm \
   --name squishy-integrity \
   --network squishy_db_default \
+  -e LOG_LEVEL=DEBUG \
   -v $(pwd)/squishy_integrity/tests:/app/squishy_integrity/tests \
   squishy-integrity:v1.0 /bin/sh
 ```
@@ -143,7 +146,9 @@ docker run -it --rm \
 docker run -it --rm \
   --name squishy-integrity \
   --network squishy_db_default \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_integrity/tests:/app/squishy_integrity/tests \
+    -e LOG_LEVEL=DEBUG \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_integrity:/app/squishy_integrity \
+  -v /mnt/c/Users/joshu/Downloads:/baseline \
   squishy-integrity:v1.0 /bin/sh
 ```
 
@@ -165,7 +170,7 @@ docker run -d \
 docker run -d \
   --name squishy-integrity \
   --network squishy_db_default \
-    -v /mnt/c/Users/joshu/Downloads:/baseline \
+  -v /mnt/c/Users/joshu/Downloads:/baseline \
   squishy-integrity:v1.0
 ```
 

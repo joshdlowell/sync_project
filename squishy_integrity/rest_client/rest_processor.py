@@ -42,11 +42,13 @@ class RestProcessor:
             for error in validation_errors:
                 logger.error(f"Validation error: {error}")
 
+        # TODO push change processing back into REST
         changes = []
 
         for path, item_data in hash_info.items():
             # Skip invalid items
             if self._has_validation_errors(path, item_data):
+                logger.debug(f"Skipping put_hashtable for invalid item: {path} with data: {item_data}")
                 continue
 
             request_data = {
@@ -68,7 +70,7 @@ class RestProcessor:
                 continue
 
             changes.append(update)
-
+        logger.debug("Completed hashtable put request")
         return self._process_changes(changes)
 
     def get_hashtable(self, path: str) -> dict | None:
@@ -82,7 +84,12 @@ class RestProcessor:
             A dictionary containing the hash table, or None if not found or error
         """
         response = self._db_get("api/hashtable", {"path": path})
-        return self._process_response(response)
+        content = self._process_response(response)
+        for key in ['dirs', 'files', 'links']:
+            if key in content and isinstance(content[key], str):
+                # Split by common delimiters (adjust as needed based on data format)
+                content[key] = [item.strip() for item in content[key].split(',') if item.strip()]
+        return content
 
     def get_single_hash(self, path: str) -> str | None:
         """
@@ -95,6 +102,7 @@ class RestProcessor:
             The hash value as a string, or None if not found or error
         """
         response = self._db_get("api/hash", {"path": path})
+        logger.debug("Returning single hash request")
         return self._process_response(response)
 
     def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
@@ -115,14 +123,15 @@ class RestProcessor:
         base_response = self.get_hashtable(root_path)
 
         if not base_response or not base_response.get('current_dtg_latest'):
-            logger.status("Local database is empty, requesting full hash")
+            logger.info("Database is empty, requesting full hash")
             return [root_path]
 
         dirs = base_response.get('dirs', [])
         if not dirs:
-            logger.status("no child directories in database, requesting full hash")
-            return [root_path]
-
+            logger.info("no child directories in database, requesting full hash")
+            return [root_path]  # TODO update this to circuit breaker if the baseline is empty
+        # TODO develop test for only one directory, none, multiple
+        dirs = [f"{root_path}/{relative_dir}" for relative_dir in dirs]
         # Build and sort by timestamp
         dir_timestamps = [(self.get_single_timestamp(directory), directory) for directory in dirs]
         ordered_dirs = [directory for _, directory in sorted(dir_timestamps)]
@@ -145,9 +154,10 @@ class RestProcessor:
             The timestamp as a float, or None if not found or error
         """
         response = self._db_get("api/timestamp", {"path": path})
+        logger.debug("Returning single timestamp request")
         return self._process_response(response)
 
-    def get_priority_updates(self) -> str | None:
+    def get_priority_updates(self) -> list | None:
         """
         Get paths that need priority updates.
 
@@ -155,6 +165,7 @@ class RestProcessor:
             A string containing paths that need priority updates, or None if not found or error
         """
         response = self._db_get('api/priority')
+        logger.debug("Returning priority updates request")
         return self._process_response(response)
 
     def _has_validation_errors(self, path: str, item_data: dict) -> bool:

@@ -24,7 +24,9 @@ def performance_monitor(operation_name: str):
 def get_paths_to_process(merkle_service, root_path: str) -> List[str]:
     """Get and deduplicate paths that need processing."""
     priority = merkle_service.hash_storage.get_priority_updates()
+    logger.debug(f"Priority updates: {priority}")
     routine = merkle_service.hash_storage.get_oldest_updates(root_path)
+    logger.debug(f"Oldest updates: {routine}")
     return merkle_service.remove_redundant_paths_with_priority(priority, routine)
 
 
@@ -67,8 +69,10 @@ def main() -> int:
 
             merkle_service = IntegrityCheckFactory.create_service()
             root_path = config.get('root_path')
+            logger.info(f"Discovered root path {root_path}")
             max_runtime_min = config.get('max_runtime_min', 10)
 
+            logger.info(f"Collecting paths to process paths")
             paths_list = get_paths_to_process(merkle_service, root_path)
             logger.info(f"Processing {len(paths_list)} paths")
 

@@ -48,7 +48,7 @@ class RestHashStorage(HashStorageInterface):
     def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
         return self.rest_processor.get_oldest_updates(root_path, percent)
 
-    def get_priority_updates(self) -> str | None:
+    def get_priority_updates(self) -> list[str] | None:
         return self.rest_processor.get_priority_updates()
 
 

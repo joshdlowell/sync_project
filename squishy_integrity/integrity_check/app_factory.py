@@ -1,4 +1,6 @@
-from squishy_integrity import RestClient, logger
+from squishy_integrity import logger
+from squishy_integrity.rest_client import RestClient
+
 from .merkle_tree_service import MerkleTreeService
 from .implementations import StandardFileSystem, RestHashStorage, SHA1HashFunction
 from .validators import PathValidator
@@ -15,7 +17,7 @@ class IntegrityCheckFactory:
 
         # Create implementations
         file_system = StandardFileSystem()
-        rest_service = RestClient.rest_client
+        rest_service = (RestClient()).rest_client
         hash_storage = RestHashStorage(rest_service)
         hash_function = SHA1HashFunction()
 

@@ -19,10 +19,13 @@ class Config:
     """Configuration class for integrity package."""
     _instance = None
     _config = None
+    _session_id = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(Config, cls).__new__(cls)
+            # Session id for grouping log updates
+            cls._session_id = os.urandom(16).hex()
         return cls._instance
     # Define required keys as class constants
     REQUIRED_KEYS = []
@@ -77,6 +80,10 @@ class Config:
     @property
     def rest_api_url(self) -> str:
         return f"http://{self._config.get('rest_api_host')}:{self._config.get('rest_api_port')}"
+
+    @property
+    def session_id(self) -> str:
+        return self._session_id
 
     def _load_from_environment(self) -> None:
         """Load configuration from environment variables."""

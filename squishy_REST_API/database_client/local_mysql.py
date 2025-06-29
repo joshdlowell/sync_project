@@ -102,6 +102,7 @@ class MYSQLConnection(DBConnection):
         format_list = lambda field_list: ','.join(x.strip() for x in field_list) if field_list else None
         dirs, links, files = (format_list(record.get(field)) for field in ['dirs', 'links', 'files'])
 
+        # TODO handle changes inside this module
         # Initialize change tracking
         modified, created, deleted = set(), set(), set()
 

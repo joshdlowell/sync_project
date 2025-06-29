@@ -71,15 +71,15 @@ class MSSQLConnection(DBConnection):
                 connection.close()
                 logger.debug("Database connection closed")
 
-    def insert_or_update_hash(self, record: dict[str, Any]) -> Optional[Dict[str, list]]:
+    def insert_or_update_hash(self, record: dict[str, Any]) -> bool:
         """
-        Insert new record or update existing one.
+        Insert new record or update existing one. Logs changes discovered to database.
 
         Args:
             record: Dict of hashtable column:value keypairs to be added to the db
 
         Returns:
-            Dictionary with modified, created, and deleted paths, or None if an error occurred
+            True if successful, False if an error occurred.
 
         Raises:
             ValueError: If required parameters are not provided
@@ -102,7 +102,7 @@ class MSSQLConnection(DBConnection):
                 cursor.close()
         except Exception as e:
             logger.error(f"Error checking existing record: {e}")
-            return None
+            return False
 
         # Format list fields for database
         format_list = lambda field_list: ','.join(x.strip() for x in field_list) if field_list else None
@@ -169,7 +169,7 @@ class MSSQLConnection(DBConnection):
                 cursor.close()
         except Exception as e:
             logger.error(f"Error inserting/updating record: {e}")
-            return None
+            return False
 
         logger.info(f"Successfully updated database for path: {path}")
 
@@ -179,9 +179,10 @@ class MSSQLConnection(DBConnection):
 
         changes = {field: sorted(paths) for field, paths in
                    [('modified', modified), ('created', created), ('deleted', deleted)]}
+        self._log_changes(changes)
 
         logger.debug(f"Changes: modified={len(modified)}, created={len(created)}, deleted={len(deleted)}")
-        return changes
+        return True
 
     def _delete_hash_entry(self, path: str) -> bool:
         """
@@ -207,6 +208,11 @@ class MSSQLConnection(DBConnection):
             # Log the error
             logger.error(f"Error deleting hash entry for path {path}: {e}")
             return False
+
+    def _log_changes(self, changes: dict[str, list[str]]) -> None:
+        # Send change logs to db
+        # TODO complete this method
+        pass
 
     def get_hash_record(self, path: str) -> Optional[Dict[str, Any]]:
         """

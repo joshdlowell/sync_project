@@ -10,15 +10,15 @@ class DBConnection(ABC):
     """
 
     @abstractmethod
-    def insert_or_update_hash(self, record: dict[str, Any]) -> Optional[Dict[str, list]]:
+    def insert_or_update_hash(self, record: dict[str, Any]) -> bool:
         """
-        Insert new record or update existing one.
+        Insert new record or update existing one. Logs changes discovered to database.
 
         Args:
             record: Dict of hashtable column:value keypairs to be added to the db
 
         Returns:
-            Dictionary with modified, created, and deleted paths, or None if an error occurred
+            True if successful, False if an error occurred.
 
         Raises:
             ValueError: If required parameters are not provided

@@ -39,7 +39,7 @@ class LocalMemoryConnection(DBConnection):
         """
         return hashlib.sha256(path.encode()).hexdigest()
 
-    def insert_or_update_hash(self, record: dict[str, Any]) -> Optional[Dict[str, list]]:
+    def insert_or_update_hash(self, record: dict[str, Any]) -> bool:
         """
         Insert new record or update existing one.
 
@@ -137,9 +137,10 @@ class LocalMemoryConnection(DBConnection):
 
         changes = {field: sorted(paths) for field, paths in
                    [('modified', modified), ('created', created), ('deleted', deleted)]}
+        self._log_changes(changes)
 
         logger.debug(f"Changes: modified={len(modified)}, created={len(created)}, deleted={len(deleted)}")
-        return changes
+        return True
 
     def _delete_hash_entry(self, path: str) -> bool:
         """
@@ -163,6 +164,11 @@ class LocalMemoryConnection(DBConnection):
         except Exception as e:
             logger.error(f"Error deleting hash entry for path {path}: {e}")
             return False
+
+    def _log_changes(self, changes: dict[str, list[str]]) -> None:
+        # Send change logs to db
+        # TODO complete this method
+        pass
 
     def get_hash_record(self, path: str) -> Optional[Dict[str, Any]]:
         """

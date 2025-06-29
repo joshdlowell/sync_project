@@ -51,6 +51,105 @@ class TestMerkleTreeService(unittest.TestCase):
         self.assertIn('Deleted', changes)
         self.assertIn('Modified', changes)
 
+    def test_remove_redundant_paths_no_change(self):
+        # Arrange
+        priority_list = ['/root/dir1', '/root/dir2']
+        routine_list = ['/root/dir3']
+        return_value = priority_list + routine_list
+
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), return_value,
+                         "Paths were removed when they shouldn't have been")
+
+    def test_remove_redundant_paths_with_change_1(self):
+        # Arrange
+        priority_list = ['/root/dir1', '/root/dir2']
+        routine_list = ['/root/dir1']
+
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), priority_list,
+                         "Failed to remove routine list entry that should have been")
+
+    def test_remove_redundant_paths_with_change_2(self):
+        # Arrange
+        priority_list = ['/root/dir1', '/root/dir2/dir3/file.txt', '/root/dir2/dir3', '/root/dir2/dir4']
+        routine_list = ['/root/dir1']
+        return_list = ['/root/dir1', '/root/dir2/dir3', '/root/dir2/dir4']
+
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), return_list,
+                         "Failed to remove priority list items that share parent")
+
+    def test_remove_redundant_paths_with_change_3(self):
+        # Arrange
+        priority_list = ['/root/dir1', '/root/dir2/dir3', '/root/dir4/common_dir']
+        routine_list = ['/root/dir4/common_dir/file.txt', '/root/dir4/common_dir/dir4/file2.txt',]
+        return_list = ['/root/dir1', '/root/dir2/dir3', '/root/dir4/common_dir']
+
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), return_list,
+                         "Failed to remove routine list items that share parent")
+
+    def test_remove_redundant_paths_with_change_root_1(self):
+        # Arrange
+        priority_list = ['/root', '/root/dir1', '/root/dir2/dir3']
+        routine_list = ['/root/dir4/common_dir', '/root/dir4/common_dir/file.txt', '/root/dir4/common_dir/dir4/file2.txt',]
+        bad_return_list = ['/root']
+        return_list = ['/root/dir1', '/root/dir2/dir3', '/root/dir4/common_dir']
+
+        self.assertNotEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), bad_return_list,
+                         "Returned only root path when is shouldn't have")
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), return_list,
+                         "Returned Incorrect list contents")
+
+    def test_remove_redundant_paths_with_change_root_2(self):
+        # Arrange
+        priority_list = []
+        routine_list = ['/root']
+
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list),
+                         routine_list,
+                         "Returned '/root' when it should have")
+
+    def test_remove_redundant_paths_with_change_root_3(self):
+        # Arrange
+        priority_list = ['/root']
+        routine_list = ['/root']
+
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list),
+                         routine_list,
+                         "Returned '/root' when it should have")
+
+    def test_remove_redundant_paths_no_priority(self):
+        # Arrange
+        priority_list = []
+        routine_list = ['/root/dir1', '/root/dir2']
+
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), routine_list,
+                         "Failed to handle only empty routine list")
+
+    def test_remove_redundant_paths_no_routine(self):
+        # Arrange
+        priority_list = ['/root/dir1', '/root/dir2']
+        routine_list = []
+
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), priority_list,
+                         "Failed to handle only empty routine list")
+
+    def test_remove_redundant_paths_no_lists_1(self):
+        # Arrange
+        priority_list = []
+        routine_list = []
+        return_value = []
+
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), return_value,
+                         "Failed to handle empty list inputs")
+
+    def test_remove_redundant_paths_no_lists_2(self):
+        # Arrange
+        priority_list = None
+        routine_list = None
+        return_value = []
+
+        self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), return_value,
+                         "Failed to handle 'NoneType' inputs")
+
 
 class TestFileHasher(unittest.TestCase):
     def setUp(self):

@@ -54,44 +54,6 @@ class MerkleTreeService:
 
         return dir_hash, changes
 
-    def remove_redundant_paths_with_priority(self, priority, routine):
-        """Simplified version with better performance"""
-
-        # Combine and deduplicate while preserving priority order
-        seen = set()
-        combined = []
-
-        for path in priority + routine:
-            if path not in seen:
-                combined.append(path)
-                seen.add(path)
-
-        # Remove redundant children
-        result = []
-        # import os
-        for current in combined:
-            # current_norm = os.path.normpath(current)
-            is_redundant = False
-
-            for existing in result:
-                # existing_norm = os.path.normpath(existing)
-                # If current is child of existing, it's redundant
-                # if current_norm.startswith(existing_norm + os.sep):
-                if current.startswith(existing):
-                    is_redundant = True
-                    break
-                # If existing is child of current, remove existing and add current
-                # elif existing_norm.startswith(current_norm + os.sep):
-                elif existing.startswith(current):
-
-                    result.remove(existing)
-                    break
-
-            if not is_redundant:
-                result.append(current)
-        logger.debug("Combined and deduplicated paths lists")
-        return result
-
     def _compute_merkle_recursive(self, dir_path: str, changes: Dict[str, Set[str]], tree_dict: Dict[str, Any]) -> str:
         """Recursively compute Merkle tree hashes"""
         # Initialize hash info for this directory
@@ -125,6 +87,94 @@ class MerkleTreeService:
         self._update_directory_hash(hash_info, dir_path, changes)
         logger.debug(f"Returning from merkle recursive for {dir_path}")
         return hash_info[dir_path]["current_hash"]
+
+    def remove_redundant_paths_with_priority(self, priority: list, routine: list):
+        """
+        Remove redundant paths from the provided lists while preserving priority order.
+
+        Args:
+            priority: list of paths that should be processed first
+            routine: list of paths for hash recomputing
+
+        Returns:
+            Combined, deduplicated list of paths with priority items first
+        """
+        # Check and clean args
+        priority = priority or []
+        routine = routine or []
+        # Remove root dir only if there are multiple entries in the lists
+        for items in [priority, routine]:
+            if len(items) <= 1:
+                continue
+            # Find the root directory
+            root_dir = None
+            for item in items:
+                root_name = [part for part in item.split('/') if part][0]
+                if root_name:
+                    potential_root = '/' + root_name
+                    if root_dir is None:
+                        root_dir = potential_root
+                        break
+            # Remove root_dir in-place
+            while root_dir in items:
+                items.remove(root_dir)
+
+        # Deduplicate the priority list first
+        priority = self._remove_redundant_paths(priority, 1)
+        # Deduplicate and return the combined lists
+        combined = priority + routine
+        return self._remove_redundant_paths(combined, 1)
+
+    def _remove_redundant_paths(self, items: list, min_depth: int = 1) -> list:
+        """
+        Returns a list of path strings containing only the deepest common parents
+        that are at least as deep as root + 1.
+
+        Args:
+            items: List of path strings
+            root_depth: Depth of the root path (default 0)
+
+        Returns:
+            List of non-redundant path strings
+        """
+        if not items:
+            return []
+
+        # Filter paths to ensure they're at least min_depth deep
+        filtered_items = []
+
+        for path in items:
+            # Count depth by number of separators (assuming '/' as separator)
+            depth = path.count('/') if path.startswith('/') else path.count('/') + 1
+            if depth >= min_depth:
+                filtered_items.append(path)
+
+        if not filtered_items:
+            return []
+
+        # Remove redundant paths - keep only the deepest common parents
+        result = []
+
+        for current in filtered_items:
+            should_add = True
+            items_to_remove = []
+
+            for i, existing in enumerate(result):
+                if current.startswith(existing + '/') or current == existing:
+                    # Current is child of existing or same - don't add current
+                    should_add = False
+                    break
+                elif existing.startswith(current + '/'):
+                    # Existing is child of current - mark existing for removal
+                    items_to_remove.append(i)
+
+            if should_add:
+                # Remove children that are deeper than current
+                for i in reversed(items_to_remove):  # Remove in reverse order to maintain indices
+                    result.pop(i)
+                result.append(current)
+
+        return result
 
     def _update_directory_hash(self, hash_info: Dict[str, Any], dir_path: str, changes: Dict[str, Set[str]]):
         """Update directory hash and track changes"""

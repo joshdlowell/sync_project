@@ -1,0 +1,47 @@
+services:
+  mysql-squishy-db:
+    image: mysql:9.3
+    container_name: mysql-squishy-db
+    environment:
+      MYSQL_ROOT_PASSWORD: your_root_password
+      MYSQL_DATABASE: squishy_db
+      MYSQL_USER: your_app_user
+      MYSQL_PASSWORD: your_user_password
+    volumes:
+      - ./squishy_db/init_scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+    networks:
+      - squishy_db_default
+
+  squishy-rest-api:
+    build:
+      context: .
+      dockerfile: Dockerfile_rest
+    image: squishy-rest-api:v1.0
+    container_name: squishy-rest-api
+    environment:
+      LOCAL_MYSQL_USER: your_app_user
+      LOCAL_MYSQL_PASSWORD: your_user_password
+      API_SECRET_KEY: squishy_key_12345
+    ports:
+      - "5000:5000"
+    networks:
+      - squishy_db_default
+    depends_on:
+      - mysql-squishy-db
+
+  squishy-integrity:
+    build:
+      context: .
+      dockerfile: Dockerfile_integrity
+    image: squishy-integrity:v1.0
+    container_name: squishy-integrity
+    networks:
+      - squishy_db_default
+    depends_on:
+      - squishy-rest-api
+
+networks:
+  squishy_db_default:
+    driver: bridge

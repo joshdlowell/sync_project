@@ -67,9 +67,7 @@ class LocalMemoryConnection(DBConnection):
 
         # Format list fields
         format_list = lambda field_list: ','.join(x.strip() for x in field_list) if field_list else None
-        dirs = format_list(record.get('dirs'))
-        links = format_list(record.get('links'))
-        files = format_list(record.get('files'))
+        dirs, links, files = (format_list(record.get(field)) for field in ['dirs', 'links', 'files'])
 
         # Initialize change tracking
         modified, created, deleted = set(), set(), set()
@@ -85,7 +83,8 @@ class LocalMemoryConnection(DBConnection):
                 ('links', existing_record.get('links'), record.get('links', []))
             ]:
                 existing_list = parse_existing(existing_str)
-                # created.update(f"{path}/{x}" for x in set(request_list) - set(existing_list))
+                if not request_list:
+                    request_list = []
                 deleted.update(f"{path}/{x}" for x in set(existing_list) - set(existing_list))
 
         logger.debug(f"Prepared data for path {path}: hash={current_hash}, "
@@ -279,6 +278,7 @@ class LocalMemoryConnection(DBConnection):
         update_num = max(1, min(int(len(ordered_items) * percent / 100), len(ordered_items)))
 
         logger.info(f"Returning the {update_num} oldest items")
+        logger.debug(f"Oldest items: {ordered_items[:update_num]}")
         return ordered_items[:update_num]
 
     def get_priority_updates(self) -> List[str]:
@@ -309,7 +309,7 @@ class LocalMemoryConnection(DBConnection):
                 # Skip if already covered by existing shallower path
                 if not any(path.startswith(existing + '/') for existing in priority):
                     priority.append(path)
-
+            logger.debug(f"Sorted priority updates: {paths}")
             return priority
 
         except Exception as e:
@@ -445,6 +445,7 @@ class LocalMemoryConnection(DBConnection):
             return False
 
         except Exception as e:
+            # Log the error
             logger.error(f"Error deleting log entry #{log_id}: {e}")
             return False
 

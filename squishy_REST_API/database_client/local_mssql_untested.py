@@ -123,7 +123,8 @@ class MSSQLConnection(DBConnection):
                 ('links', existing_links, record.get('links', []))
             ]:
                 existing_list = parse_existing(existing_str)
-                # created.update(f"{path}/{x}" for x in set(request_list) - set(existing_list))
+                if not request_list:
+                    request_list = []
                 deleted.update(f"{path}/{x}" for x in set(existing_list) - set(request_list))
 
         logger.debug(f"Prepared data for path {path}: hash={current_hash}, "
@@ -333,6 +334,7 @@ class MSSQLConnection(DBConnection):
         update_num = max(1, min(int(len(ordered_items) * percent / 100), len(ordered_items)))
 
         logger.info(f"Returning the {update_num} oldest items")
+        logger.debug(f"Oldest items: {ordered_items[:update_num]}")
         return ordered_items[:update_num]
 
     def get_priority_updates(self) -> List[str]:
@@ -359,10 +361,11 @@ class MSSQLConnection(DBConnection):
             return []
 
         if not paths:
-            logger.debug("All hashes in the db are in sync")
+            logger.info("All hashes in the db are in sync")
             return []
 
         # Sort by depth and remove paths covered by shallower ones
+        logger.debug(f"Pre-sorted priority updates: {paths}")
         paths = sorted(set(paths), key=lambda x: x.count('/'))
 
         priority = []
@@ -370,7 +373,7 @@ class MSSQLConnection(DBConnection):
             # Skip if already covered by existing shallower path
             if not any(path.startswith(existing + '/') for existing in priority):
                 priority.append(path)
-
+        logger.debug(f"Sorted priority updates: {paths}")
         return priority
 
     def put_log(self, args_dict: dict) -> int | None:
@@ -380,7 +383,7 @@ class MSSQLConnection(DBConnection):
         This method inserts log entries into the local_database.
 
         Returns:
-            True if log entry was inserted, False if an error occurred
+            log_id number (int) if the log entry was inserted, None if an error occurred
         """
         # Check for required parameters
         if not args_dict.get('summary_message'):

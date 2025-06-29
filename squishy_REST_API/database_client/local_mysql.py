@@ -117,12 +117,14 @@ class MYSQLConnection(DBConnection):
                 ('links', existing_links, record.get('links', []))
             ]:
                 existing_list = parse_existing(existing_str)
-                # created.update(f"{path}/{x}" for x in set(request_list) - set(existing_list))
+                if not request_list:
+                    request_list = []
                 deleted.update(f"{path}/{x}" for x in set(existing_list) - set(request_list))
 
-        logger.debug(f"Prepared data for path {path}: hash={current_hash}, "
-                     f"dirs={len(record.get('dirs', []))}, files={len(record.get('files', []))}, "
-                     f"links={len(record.get('links', []))}")
+        logger.debug(f"Prepared data for path {path}: hash={current_hash}")
+        logger.debug(f"dirs={len(record.get('dirs')) if record.get('dirs') else 'None'}")
+        logger.debug(f"files={len(record.get('files'))if record.get('files') else 'None'}")
+        logger.debug(f"links={len(record.get('links'))if record.get('links') else 'None'}")
 
         # Determine operation and build query
         query_params = {'path': path, 'current_hash': current_hash, 'dirs': dirs, 'files': files, 'links': links}
@@ -285,12 +287,12 @@ class MYSQLConnection(DBConnection):
                     cursor.execute(query, (path,))
                     result = cursor.fetchone()
                     if result:
-                        logger.debug(f"Found hash for path: {path}")
+                        logger.debug(f"Found timestamp for path: {path}")
                     else:
-                        logger.debug(f"No hash found for path: {path}")
+                        logger.debug(f"No timestamp found for path: {path}")
                     return result[0] if result else None
         except Error as e:
-            logger.error(f"Error fetching hash: {e}")
+            logger.error(f"Error fetching timestamp: {e}")
             return None
 
     def get_oldest_updates(self, path: str, percent: int = 10) -> List[str]:
@@ -335,6 +337,7 @@ class MYSQLConnection(DBConnection):
         update_num = max(1, min(int(len(ordered_items) * percent / 100), len(ordered_items)))
 
         logger.info(f"Returning the {update_num} oldest items")
+        logger.debug(f"Oldest items: {ordered_items[:update_num]}")
         return ordered_items[:update_num]
 
     def get_priority_updates(self) -> List[str]:
@@ -361,10 +364,11 @@ class MYSQLConnection(DBConnection):
             return []
 
         if not paths:
-            logger.debug("All hashes in the db are in sync")
+            logger.info("All hashes in the db are in sync")
             return []
 
         # Sort by depth and remove paths covered by shallower ones
+        logger.debug(f"Pre-sorted priority updates: {paths}")
         paths = sorted(set(paths), key=lambda x: x.count('/'))
 
         priority = []
@@ -372,7 +376,7 @@ class MYSQLConnection(DBConnection):
             # Skip if already covered by existing shallower path
             if not any(path.startswith(existing + '/') for existing in priority):
                 priority.append(path)
-
+        logger.debug(f"Sorted priority updates: {paths}")
         return priority
 
     def put_log(self, args_dict: dict) -> int | None:

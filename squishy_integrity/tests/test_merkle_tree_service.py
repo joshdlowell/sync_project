@@ -26,7 +26,7 @@ class TestMerkleTreeService(unittest.TestCase):
         result = self.service.compute_merkle_tree("/root", "/invalid")
 
         # Assert
-        self.assertEqual(result, (None, None))
+        self.assertEqual(result, None)
         self.mock_path_validator.validate_root_and_dir_paths.assert_called_once_with("/root", "/invalid")
 
     def test_compute_merkle_tree_valid_path(self):
@@ -37,19 +37,13 @@ class TestMerkleTreeService(unittest.TestCase):
         }
         self.mock_file_hasher.hash_file.return_value = "file_hash_123"
         self.mock_file_hasher.hash_directory.return_value = "dir_hash_456"
-        self.mock_hash_storage.put_hashtable.return_value = {
-            'Created': set(), 'Deleted': set(), 'Modified': set()
-        }
+        self.mock_hash_storage.put_hashtable.return_value = 0
 
         # Act
-        dir_hash, changes = self.service.compute_merkle_tree("/test", "/test")
+        dir_hash = self.service.compute_merkle_tree("/test", "/test")
 
         # Assert
         self.assertEqual(dir_hash, "dir_hash_456")
-        self.assertIsInstance(changes, dict)
-        self.assertIn('Created', changes)
-        self.assertIn('Deleted', changes)
-        self.assertIn('Modified', changes)
 
     def test_remove_redundant_paths_no_change(self):
         # Arrange
@@ -324,7 +318,7 @@ class MockHashStorage:
 
     def put_hashtable(self, hash_info):
         self.storage.update(hash_info)
-        return {'Created': set(), 'Deleted': set(), 'Modified': set()}
+        return 0
 
     def get_hashtable(self, path):
         return self.storage.get(path)

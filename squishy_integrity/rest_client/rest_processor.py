@@ -1,6 +1,6 @@
 from squishy_integrity import config, logger
 from .http_client import HttpClient
-from .info_validator import HashInfoValidator
+from .hash_info_validator import HashInfoValidator
 from typing import Tuple, Any
 
 class RestProcessor:
@@ -23,9 +23,9 @@ class RestProcessor:
         self.http_client = http_client
         self.validator = validator or HashInfoValidator()
 
-    def put_hashtable(self, hash_info: dict) -> dict[str, set]:
+    def put_hashtable(self, hash_info: dict) -> int:
         """
-        Store hash information in the database and return changes.
+        Store hash information in the database.
 
         This method implements the HashStorageInterface.put_hashtable method
         required by the MerkleTreeService.
@@ -34,7 +34,7 @@ class RestProcessor:
             hash_info: Dictionary containing hash information for files and directories
 
         Returns:
-            Dictionary of changes categorized as 'Created', 'Deleted', and 'Modified'
+            int representing the number of updates sent to the REST API that were unsuccessful
         """
         # Validate input
         validation_errors = self.validator.validate(hash_info)
@@ -42,9 +42,7 @@ class RestProcessor:
             for error in validation_errors:
                 logger.error(f"Validation error: {error}")
 
-        # TODO push change processing back into REST
-        changes = []
-
+        send_errors = 0
         for path, item_data in hash_info.items():
             # Skip invalid items
             if self._has_validation_errors(path, item_data):
@@ -66,12 +64,13 @@ class RestProcessor:
             code, update = self._db_put("api/hashtable", request_data)
 
             if code != 200:
+                send_errors += 1
+                logger.debug(f"Unsuccessful update for path: {path}")
                 logger.error(f"REST API returned {code}: {update}")
                 continue
 
-            changes.append(update)
         logger.debug("Completed hashtable put request")
-        return self._process_changes(changes)
+        return send_errors
 
     def get_hashtable(self, path: str) -> dict | None:
         """
@@ -186,24 +185,24 @@ class RestProcessor:
             return True
         return False
 
-    def _process_changes(self, changes: list) -> dict[str, set]:
-        """
-        Process the changes returned by the REST API.
-
-        This method organizes the changes into categories: 'Created', 'Deleted', and 'Modified'.
-
-        Args:
-            changes: List of change dictionaries from the REST API
-
-        Returns:
-            Dictionary of changes categorized as 'Created', 'Deleted', and 'Modified'
-        """
-        sorted_changes = {'Created': set(), 'Deleted': set(), 'Modified': set()}
-        for change in changes:
-            for key in sorted_changes.keys():
-                if key in change:
-                    sorted_changes[key].update(set(change[key]))
-        return sorted_changes
+    # def _process_changes(self, changes: list) -> dict[str, set]:
+    #     """
+    #     Process the changes returned by the REST API.
+    #
+    #     This method organizes the changes into categories: 'Created', 'Deleted', and 'Modified'.
+    #
+    #     Args:
+    #         changes: List of change dictionaries from the REST API
+    #
+    #     Returns:
+    #         Dictionary of changes categorized as 'Created', 'Deleted', and 'Modified'
+    #     """
+    #     sorted_changes = {'Created': set(), 'Deleted': set(), 'Modified': set()}
+    #     for change in changes:
+    #         for key in sorted_changes.keys():
+    #             if key in change:
+    #                 sorted_changes[key].update(set(change[key]))
+    #     return sorted_changes
 
     def _process_response(self, response: Tuple[int, Any]) -> Any:
         """

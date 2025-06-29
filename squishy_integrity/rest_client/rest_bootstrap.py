@@ -1,6 +1,6 @@
 from .rest_processor import RestProcessor
 from .http_client import RequestsHttpClient
-from .info_validator import HashInfoValidator
+from .hash_info_validator import HashInfoValidator
 
 from squishy_integrity import logger
 

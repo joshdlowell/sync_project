@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Set, Tuple, Optional, Any
-from pathlib import Path
+from typing import Dict, Set, Tuple, Optional, Any, List
 
 
 class FileSystemInterface(ABC):
@@ -19,7 +18,7 @@ class FileSystemInterface(ABC):
         pass
 
     @abstractmethod
-    def walk(self, path: str):
+    def walk(self, path: str) -> List[Tuple[str | None, list[str] | None, list[str] | None]]:
         pass
 
     @abstractmethod
@@ -35,7 +34,7 @@ class HashStorageInterface(ABC):
     """Abstract interface for hash storage operations"""
 
     @abstractmethod
-    def put_hashtable(self, hash_info: Dict[str, Any]) -> Dict[str, Set[str]]:
+    def put_hashtable(self, hash_info: Dict[str, Any]) -> int:
         pass
 
     @abstractmethod

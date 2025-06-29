@@ -1,6 +1,8 @@
 import hashlib
 from pathlib import Path
-from typing import Dict, Set, Any, Optional
+from typing import Dict, Set, Any, Optional, Tuple, List
+
+from squishy_integrity import logger
 from .interfaces import FileSystemInterface, HashStorageInterface, HashFunction
 
 
@@ -16,8 +18,17 @@ class StandardFileSystem(FileSystemInterface):
     def is_dir(self, path: str) -> bool:
         return Path(path).is_dir()
 
-    def walk(self, path: str):
-        return Path(path).walk()
+    def walk(self, path: str) -> List[Tuple[str | None, list[str] | None, list[str] | None]]:
+        try:
+            path_obj = Path(path)
+            if not path_obj.exists():
+                raise OSError(f"Path does not exist: {path}")
+
+            # Convert generator to list
+            return list(path_obj.walk())
+        except OSError as e:
+            logger.error(f"Failed to walk path {path}: {e}")
+            return [(None, None, None)]
 
     def read_file_chunks(self, path: str, chunk_size: int = 65536):
         with open(path, 'rb') as f:
@@ -36,7 +47,7 @@ class RestHashStorage(HashStorageInterface):
     def __init__(self, rest_processor):
         self.rest_processor = rest_processor
 
-    def put_hashtable(self, hash_info: Dict[str, Any]) -> Dict[str, Set[str]]:
+    def put_hashtable(self, hash_info: Dict[str, Any]) -> int:
         return self.rest_processor.put_hashtable(hash_info)
 
     def get_hashtable(self, path: str) -> Optional[Dict[str, Any]]:

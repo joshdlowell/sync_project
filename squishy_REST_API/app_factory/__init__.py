@@ -1,3 +1,3 @@
-from .app_factory import create_app
+from .app_factory import RESTAPIFactory
 
-__all__ = ['create_app']
+__all__ = ['RESTAPIFactory']

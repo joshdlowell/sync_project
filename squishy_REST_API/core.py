@@ -30,12 +30,12 @@ Main entry point for the squishy_REST_API package.
 """
 import sys
 import os
-from squishy_REST_API.app_factory import create_app
+# from squishy_REST_API.app_factory import create_app
 # from squishy_REST_API.configuration.logging_config import logger
-from squishy_REST_API import config, logger
+from squishy_REST_API import config, logger, RESTAPIFactory
 
 # Create application instance for WSGI (at module level for Gunicorn)
-app = create_app()
+app = RESTAPIFactory.create_app()
 
 
 def run_with_gunicorn():

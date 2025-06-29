@@ -1,4 +1,4 @@
-from typing import Dict, Set, Tuple, Optional, Any
+from typing import Dict, Set, Tuple, Optional, Any, List
 from .interfaces import HashStorageInterface
 from .validators import PathValidator
 from .tree_walker import DirectoryTreeWalker
@@ -20,7 +20,7 @@ class MerkleTreeService:
         self.file_hasher = file_hasher
         self.path_validator = path_validator
 
-    def compute_merkle_tree(self, root_path: str, dir_path: str) -> Tuple[Optional[str], Optional[Dict[str, Set[str]]]]:
+    def compute_merkle_tree(self, root_path: str, dir_path: str) -> Optional[str]:
         """
         Create a Merkle tree hash for a directory and detect changes
 
@@ -29,32 +29,141 @@ class MerkleTreeService:
             dir_path: Directory to hash (must be within root_path)
 
         Returns:
-            Tuple of (directory_hash, changes_dict) or (None, None) if invalid
+            Directory hash string, or None if computation fails
         """
         # Validate paths
-        logger.error(f"Validating dir_path ({dir_path}) and root_path ({root_path})")
+        logger.debug(f"Validating dir_path ({dir_path}) and root_path ({root_path})")
         if not self.path_validator.validate_root_and_dir_paths(root_path, dir_path):
-            logger.error(f"Not a child of the given root_path ({root_path})")
-            return None, None
+            logger.error(f"dir_path ({dir_path}) is not a child of root_path ({root_path})")
+            return None
 
-        # TODO push change handling to rest
-        # Initialize change tracking
-        changes = {'Created': set(), 'Deleted': set(), 'Modified': set()}
-        # Get directory tree structure
-        # TODO add circuit breaker for empty baseline
-        tree_dict = self.tree_walker.get_tree_structure(dir_path)
+        # Find the deepest existing directory within the root path
+        target_dir = self._find_deepest_existing_directory(root_path, dir_path)
+        if target_dir is None:
+            logger.error(f"No valid directory found between root ({root_path}) and target ({dir_path})")
+            return None
+
+        # Get tree structure for the target directory
+        tree_dict = self.tree_walker.get_tree_structure(target_dir)
+        if tree_dict is False:
+            logger.error(f"Failed to get tree structure for {target_dir}")
+            return None
+
+        # Check if root is empty (only if we ended up at root)
+        if target_dir == root_path and self._is_directory_empty(tree_dict, target_dir):
+            logger.error(f"Root path ({root_path}) is empty")
+            return None
 
         # Compute Merkle tree hash
-        dir_hash = self._compute_merkle_recursive(dir_path, changes, tree_dict)
+        logger.debug(f"Computing Merkle hash for directory: {target_dir}")
+        dir_hash = self._compute_merkle_recursive(target_dir, tree_dict)
 
-        # Update parent hashes if necessary
-        logger.debug("Starting to recompute parent hashes")
-        if root_path != dir_path:
-            self._recompute_parent_hashes(root_path, dir_path)
+        # Update parent hashes if we're not at the root
+        if root_path != target_dir:
+            logger.debug("Recomputing parent hashes")
+            self._recompute_parent_hashes(root_path, target_dir)
 
-        return dir_hash, changes
+        logger.info(f"Successfully computed Merkle hash for {target_dir}")
+        return dir_hash
 
-    def _compute_merkle_recursive(self, dir_path: str, changes: Dict[str, Set[str]], tree_dict: Dict[str, Any]) -> str:
+    def _find_deepest_existing_directory(self, root_path: str, dir_path: str) -> Optional[str]:
+        """
+        Find the deepest existing directory by walking up from dir_path to root_path
+
+        Args:
+            root_path: Root directory boundary
+            dir_path: Starting directory path
+
+        Returns:
+            Path to deepest existing directory, or None if root doesn't exist
+        """
+        current_path = dir_path
+
+        while True:
+            logger.debug(f"Checking if directory exists: {current_path}")
+            tree_dict = self.tree_walker.get_tree_structure(current_path)
+
+            if tree_dict is not False:
+                logger.debug(f"Found existing directory: {current_path}")
+                return current_path
+
+            # If we've reached the root and it doesn't exist, that's an error
+            if current_path == root_path:
+                logger.error(f"Root path does not exist: {root_path}")
+                return None
+
+            # Move up one directory level
+            parent_path = current_path.rsplit('/', 1)[0]
+
+            # Prevent infinite loop - if rsplit doesn't change the path, we're at filesystem root
+            if parent_path == current_path or parent_path == '':
+                logger.error(f"Reached filesystem root without finding valid directory")
+                return None
+
+            current_path = parent_path
+
+    def _is_directory_empty(self, tree_dict: Dict[str, Dict[str, List[str]]], dir_path: str) -> bool:
+        """
+        Check if a directory is empty (no files, dirs, or links)
+
+        Args:
+            tree_dict: Tree structure dictionary
+            dir_path: Directory path to check
+
+        Returns:
+            True if directory is empty, False otherwise
+        """
+        if dir_path not in tree_dict:
+            return True
+
+        dir_contents = tree_dict[dir_path]
+        return (len(dir_contents.get('dirs', [])) == 0 and
+                len(dir_contents.get('files', [])) == 0 and
+                len(dir_contents.get('links', [])) == 0)
+
+    # def compute_merkle_tree(self, root_path: str, dir_path: str) -> Optional[str]:
+    #     """
+    #     Create a Merkle tree hash for a directory and detect changes
+    #
+    #     Args:
+    #         root_path: Root directory of the monitored tree
+    #         dir_path: Directory to hash (must be within root_path)
+    #
+    #     Returns:
+    #         Tuple of (directory_hash, changes_dict) or (None, None) if invalid
+    #     """
+    #     # Validate paths
+    #     logger.error(f"Validating dir_path ({dir_path}) and root_path ({root_path})")
+    #     if not self.path_validator.validate_root_and_dir_paths(root_path, dir_path):
+    #         logger.error(f"Not a child of the given root_path ({root_path})")
+    #         return None
+    #
+    #     # The root path is assumed to always exist since it is the directory
+    #     # in the container that the baseline is mounted to
+    #     while True:
+    #         tree_dict = self.tree_walker.get_tree_structure(dir_path)
+    #         # Case where dir_path does not exist
+    #         if tree_dict is False:
+    #             logger.warning(f"Given path: {dir_path} does not exist. Attempting parent")
+    #             dir_path = dir_path.rsplit('/', 1)[0]
+    #             continue
+    #         # Case where parent is empty
+    #         elif dir_path == root_path:
+    #             if len(tree_dict[dir_path]['dirs']) == 0 and len(tree_dict[dir_path]['files']) == 0 and len(tree_dict[dir_path]['links']) == 0:
+    #                 logger.error(f"Root path: {root_path} is empty. Terminating...")
+    #                 return None
+    #
+    #     # Compute Merkle tree hash
+    #     dir_hash = self._compute_merkle_recursive(dir_path, tree_dict)
+    #
+    #     # Update parent hashes if necessary
+    #     logger.debug("Starting to recompute parent hashes")
+    #     if root_path != dir_path:
+    #         self._recompute_parent_hashes(root_path, dir_path)
+    #
+    #     return dir_hash
+
+    def _compute_merkle_recursive(self, dir_path: str, tree_dict: Dict[str, Any]) -> str:
         """Recursively compute Merkle tree hashes"""
         # Initialize hash info for this directory
         hash_info = {dir_path: {}}
@@ -71,7 +180,7 @@ class MerkleTreeService:
         # Hash subdirectories recursively
         for item in tree_dict[dir_path]['dirs']:
             item_path = f"{dir_path}/{item}"
-            hash_info[item_path]["current_hash"] = self._compute_merkle_recursive(item_path, changes, tree_dict)
+            hash_info[item_path]["current_hash"] = self._compute_merkle_recursive(item_path, tree_dict)
 
         # Hash links
         for item in tree_dict[dir_path]['links']:
@@ -84,7 +193,7 @@ class MerkleTreeService:
             hash_info[item_path]["current_hash"] = self.file_hasher.hash_file(item_path)
 
         # Hash the directory itself and update changes
-        self._update_directory_hash(hash_info, dir_path, changes)
+        self._update_directory_hash(hash_info, dir_path)
         logger.debug(f"Returning from merkle recursive for {dir_path}")
         return hash_info[dir_path]["current_hash"]
 
@@ -128,11 +237,11 @@ class MerkleTreeService:
     def _remove_redundant_paths(self, items: list, min_depth: int = 1) -> list:
         """
         Returns a list of path strings containing only the deepest common parents
-        that are at least as deep as root + 1.
+        that are at deeper than given min_depth.
 
         Args:
             items: List of path strings
-            root_depth: Depth of the root path (default 0)
+            min_depth: Depth of the shallowest path consolidation (default 1)
 
         Returns:
             List of non-redundant path strings
@@ -176,19 +285,18 @@ class MerkleTreeService:
 
         return result
 
-    def _update_directory_hash(self, hash_info: Dict[str, Any], dir_path: str, changes: Dict[str, Set[str]]):
+    def _update_directory_hash(self, hash_info: Dict[str, Any], dir_path: str):
         """Update directory hash and track changes"""
         # Compute directory hash
         logger.debug(f"Updating directory hash for {dir_path}...")
         hash_info[dir_path]['current_hash'] = self.file_hasher.hash_directory(dir_path, hash_info)
 
-        # TODO push changes management to rest
-        # Store hash info and get changes
-        detected_changes = self.hash_storage.put_hashtable(hash_info)
+        # Store hash info
+        failed_updates = self.hash_storage.put_hashtable(hash_info)
+        if failed_updates > 0:
+            logger.error(f"Failed to update hash storage for {failed_updates} of {len(hash_info.keys())} records")
+            return
         logger.debug(f"Info sent to hash storage for {dir_path}")
-        # Merge changes
-        for category in changes.keys():
-            changes[category].update(detected_changes[category])
 
     def _recompute_parent_hashes(self, root_path: str, dir_path: str):
         """Recompute parent directory hashes up to root"""

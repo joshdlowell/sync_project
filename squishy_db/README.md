@@ -3,7 +3,8 @@
 A containerized MySQL database setup for SquishyBadger data management with automatic initialization.
 
 ## Quick Start
-
+There is a quick start for all the services in the root README.md, if you want to start just the MySQL 
+database use the instructions below.
 ### Using Docker Run
 
 ```bash
@@ -17,38 +18,9 @@ docker run -d \
   -p 3306:3306 \
   mysql:9.3
 ```
-
-### Using Docker Compose
-
-Create a `docker-compose.yml` file:
-
-```yaml
-services:
-  mysql:
-    image: mysql:9.3
-    container_name: mysql-squishy-db
-    environment:
-      MYSQL_ROOT_PASSWORD: your_root_password
-      MYSQL_DATABASE: squishy_db
-      MYSQL_USER: your_app_user
-      MYSQL_PASSWORD: your_user_password
-    volumes:
-      - ./init_scripts:/docker-entrypoint-initdb.d
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-
-volumes:
-  mysql_data:
-```
-**Note:** Both of these methods create a `docker volume` on the local machine and mount it at `/var/lib/mysql` 
-to hold the persistent database data. In a production environment this mount should be a true data
-store like a directory on the machine, or a network storage solution.
-
-Then run:
-```bash
-docker-compose up -d
-```
+**Note:** This method creates a `docker volume` on the local machine and mounts it at `/var/lib/mysql` 
+inside the container to hold the persistent database data. In a production environment this mount should 
+be a true data store like a directory on the machine, or a network storage solution.
 
 ## Required Files
 In the project directory there is subdirectory named `init_scripts` that contains the table

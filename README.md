@@ -6,6 +6,7 @@
 ## Base images
 python:3.12-alpine, mysql:9.3
 
+## Quick start to bring up using docker
 ## Create a container network for the pod containers
 ```bash
 docker network create --driver bridge squishy_db_default
@@ -179,13 +180,43 @@ Check the logs to ensure the service is running
 docker logs squishy-integrity
 ```
 
+## Quicker start to bring up using docker-compose
+This project contains a `docker-compose.yaml` file that consolidates all the Docker commands and Dockerfiles for better 
+orchestration. This allows all the services to be started using a single command. Using the `depends_on` command in the
+docker compose file ensures services start in the correct order:
+   - MySQL starts first
+   - REST API starts after MySQL
+   - Integrity service starts after REST API
+Docker Compose also automatically creates and manages the `squishy_db_default` network to ensure that the services
+can communicate with each other.
+### Usage:
+To start all services:
+```bash
+docker-compose up -d
+```
+To stop all services:
+```bash
+docker-compose down
+```
+To rebuild and start:
+```bash
+docker-compose up -d --build
+```
+To view logs:
+```bash
+docker-compose logs -f [service-name]
+```
 
 ## Project Status
 
 🟢 **Active Development** - This project is actively maintained and regularly updated.
 
 ### Roadmap
+- [ ] Implement session_id for merkle logging grouping in Rest API
+- [ ] Implement putting log entries in DB for merkle status
+- [ ] Implement putting log entries in DB for REST API
 - [ ] Move string handling (for files dirs links) in responses from rest_processor.py to REST API
+- [ ] More comprehensive tests to ensure stability of API during code updates
 - [ ] Performance optimization
 
 ---

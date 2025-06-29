@@ -26,8 +26,11 @@ def register_routes(app: Flask, db_instance):
         POST: Insert or update a hash record
         """
         if request.method == 'GET':
-            path = request.query_string.decode()
+            path = request.args.get('path')
             logger.debug(f"GET /api/hashtable for path: {path}")
+            if not path:
+                logger.warning("GET /api/hashtable missing required 'path' parameter")
+                return jsonify({"message": "path parameter is required"}), 400
 
             record = db_instance.get_hash_record(path)
             if not record:
@@ -42,15 +45,14 @@ def register_routes(app: Flask, db_instance):
                 return jsonify({"message": "path required but not found in your request json"}), 400
 
             logger.debug(f"POST /api/hashtable for path: {request.json.get('path')}")
+            logger.debug(f"request.json: {request.json}")
 
-            # Extract path from request
-            path = request.json.pop('path')
-
+            # TODO push changes handling to db client
             # Insert or update hash
-            changes = db_instance.insert_or_update_hash(path=path, **request.json)
+            changes = db_instance.insert_or_update_hash(record=request.json)
 
             if not changes:
-                logger.error(f"Database error for path: {path}")
+                logger.error(f"Database error for record: {request.json}")
                 return jsonify({"message": "Database error, see DB logs"}), 500
 
             return jsonify({"message": "Success", "data": changes})
@@ -62,7 +64,7 @@ def register_routes(app: Flask, db_instance):
     @app.route('/api/hash', methods=['GET'])
     def get_hash():
         """Get a single hash value for a path."""
-        path = request.query_string.decode()
+        path = request.args.get('path')
         logger.debug(f"GET /api/hash for path: {path}")
 
         hash_value = db_instance.get_single_hash_record(path)
@@ -75,7 +77,7 @@ def register_routes(app: Flask, db_instance):
     @app.route('/api/timestamp', methods=['GET'])
     def get_timestamp():
         """Get the latest timestamp for a path."""
-        path = request.query_string.decode()
+        path = request.args.get('path')
         logger.debug(f"GET /api/timestamp for path: {path}")
 
         record = db_instance.get_single_timestamp(path)
@@ -94,27 +96,10 @@ def register_routes(app: Flask, db_instance):
             root_path: The root directory to start from (required)
             percent: The percentage of directories to return (optional, default: 10)
         """
-        # Get query parameters
-        root_path = request.args.get('root_path')
-        percent_str = request.args.get('percent', '10')
-
-        # Validate parameters
-        if not root_path:
-            logger.warning("GET /api/priority missing required 'root_path' parameter")
-            return jsonify({"message": "root_path parameter is required"}), 400
-
-        try:
-            percent = int(percent_str)
-            if percent <= 0 or percent > 100:
-                raise ValueError("Percent must be between 1 and 100")
-        except ValueError as e:
-            logger.warning(f"Invalid percent parameter: {percent_str}")
-            return jsonify({"message": f"Invalid percent parameter: {e}"}), 400
-
-        logger.debug(f"GET /api/priority for root_path: {root_path}, percent: {percent}")
+        logger.debug(f"GET /api/priority")
 
         # Get oldest updates from database
-        priority = db_instance.get_oldest_updates(root_path, percent)
+        priority = db_instance.get_priority_updates()
 
         return jsonify({"message": "Success", "data": priority}), 200
 

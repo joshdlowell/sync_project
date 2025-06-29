@@ -7,7 +7,6 @@ with proper configuration and dependency injection.
 from flask import Flask
 
 from squishy_REST_API import config, logger
-# from squishy_REST_API.configuration.logging_config import logger
 from squishy_REST_API.database_client import DBClient
 from .api_routes import register_routes
 
@@ -23,8 +22,7 @@ def create_app(test_config=None):
         Configured Flask application
     """
     # Get db instance
-
-    db_instance = DBClient.database_client
+    db_instance = (DBClient()).database_client
     # Create Flask app
     app = Flask(__name__)
     

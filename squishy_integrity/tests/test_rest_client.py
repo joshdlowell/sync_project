@@ -4,7 +4,6 @@ from squishy_integrity.rest_client.rest_processor import RestProcessor
 from squishy_integrity import config
 from squishy_integrity.rest_client.http_client import HttpClient
 from squishy_integrity.rest_client.hash_info_validator import HashInfoValidator
-from squishy_integrity.rest_client import RestClient
 
 
 class TestRestProcessor(unittest.TestCase):
@@ -13,29 +12,78 @@ class TestRestProcessor(unittest.TestCase):
         config._set('rest_api_port', "8080")
         self.mock_http_client = Mock(spec=HttpClient)
         self.validator = HashInfoValidator()
-        self.rest_connector = RestProcessor(self.mock_http_client, self.validator)
+        self.rest_processor = RestProcessor(self.mock_http_client, self.validator)
 
-    def test_put_hashtable_validation_error(self):
-    # def put_hashtable(self, hash_info: dict) -> dict[str, set]:
+    def test_put_hashtable_validation_valid_1(self):
+    # def put_hashtable(self, hash_info: dict) -> int:
+        # Arrange
+        self.mock_http_client.post.return_value = (200, {"message": "Success", "data": 0})
+        valid_hash_info = {
+            "/test/path": {
+                "current_hash": "hash123"
+                # Minimum required for insertion
+            }
+        }
+        # Act
+        result = self.rest_processor.put_hashtable(valid_hash_info)
+        # Assert
+        self.assertEqual(result, 0)
+
+    def test_put_hashtable_validation_invalid(self):
+    # def put_hashtable(self, hash_info: dict) -> int:
         # Arrange
         invalid_hash_info = {
             "/test/path": {
                 "invalid_key": "value",
                 "current_hash": "hash123"
-                # Missing required 'current_dtg_latest'
             }
         }
-
         # Act
-        with patch('builtins.print') as mock_print:
-            result = self.rest_connector.put_hashtable(invalid_hash_info)
-
+        result = self.rest_processor.put_hashtable(invalid_hash_info)
         # Assert
-        self.assertEqual(result, {'Created': set(), 'Deleted': set(), 'Modified': set()})
-        mock_print.assert_called()
+        self.assertEqual(result, 1)
+
+    def test_put_hashtable_validation_valid_2(self):
+    # def put_hashtable(self, hash_info: dict) -> int:
+        # Arrange
+        self.mock_http_client.post.return_value = (200, {"message": "Success", "data": 0})
+        valid_hash_info = {
+            "/test/path": {
+                "current_hash": "hash123",
+                "dirs": [],
+                "files": [],
+                "links": [],
+            }
+        }
+        # Act
+        result = self.rest_processor.put_hashtable(valid_hash_info)
+        # Assert
+        self.assertEqual(result, 0)
+
+    def test_put_hashtable_validation_valid_3(self):
+    # def put_hashtable(self, hash_info: dict) -> int:
+        # Arrange
+        self.mock_http_client.post.return_value = (200, {"message": "Success", "data": 0})
+        valid_hash_info = {
+            "/test/path": {
+                "current_hash": "hash123",
+                "dirs": None,
+                "files": None,
+                "links": None,
+            }
+        }
+        # Act
+        result = self.rest_processor.put_hashtable(valid_hash_info)
+        # Assert
+        self.assertEqual(result, 0)
 
     def test_get_hashtable_validation_error(self):
         # def get_hashtable(self, path: str) -> dict | None:
+        self.mock_http_client.get.return_value = (400, {"message": "path parameter is required"})
+        path = " "
+        result = self.rest_processor.get_hashtable(path)
+        self.assertIsNone(result)
+
         pass
 
     def test_get_single_hash_success(self):
@@ -44,18 +92,18 @@ class TestRestProcessor(unittest.TestCase):
         self.mock_http_client.get.return_value = (200, {"message": "Success", "data": 'hash_value'})
 
         # Act
-        result = self.rest_connector.get_single_hash("/test/path")
+        result = self.rest_processor.get_single_hash("/test/path")
 
         # Assert
         self.assertEqual(result, 'hash_value')
-        self.mock_http_client.get.assert_called_once_with("http://test-api:8080/api/hash", "/test/path")
+        self.mock_http_client.get.assert_called_once_with("http://test-api:8080/api/hash", {'path': '/test/path'})
 
     def test_get_single_hash_not_found(self):
         # Arrange
         self.mock_http_client.get.return_value = (404, "Not found")
 
         # Act
-        result = self.rest_connector.get_single_hash("/test/path")
+        result = self.rest_processor.get_single_hash("/test/path")
 
         # Assert
         self.assertIsNone(result)
@@ -66,7 +114,15 @@ class TestRestProcessor(unittest.TestCase):
 
     def test_get_single_timestamp(self):
         # def get_single_timestamp(self, path: str) -> float | None:
-        pass
+        # Arrange
+        self.mock_http_client.get.return_value = (200, {"message": "Success", "data": 123456})
+
+        # Act
+        result = self.rest_processor.get_single_timestamp("/test/path")
+
+        # Assert
+        self.assertEqual(result, 123456)
+        self.mock_http_client.get.assert_called_once_with("http://test-api:8080/api/timestamp", {'path': '/test/path'})
 
     def test_get_priority_updates(self):
         # def get_priority_updates(self) -> list | None:

@@ -1,7 +1,10 @@
+from typing import Tuple, Any
+from time import time
+
 from squishy_integrity import config, logger
 from .http_client import HttpClient
 from .hash_info_validator import HashInfoValidator
-from typing import Tuple, Any
+
 
 class RestProcessor:
     """
@@ -46,6 +49,7 @@ class RestProcessor:
         for path, item_data in hash_info.items():
             # Skip invalid items
             if self._has_validation_errors(path, item_data):
+                send_errors += 1
                 logger.debug(f"Skipping put_hashtable for invalid item: {path} with data: {item_data}")
                 continue
 
@@ -84,10 +88,11 @@ class RestProcessor:
         """
         response = self._db_get("api/hashtable", {"path": path})
         content = self._process_response(response)
-        for key in ['dirs', 'files', 'links']:
-            if key in content and isinstance(content[key], str):
-                # Split by common delimiters (adjust as needed based on data format)
-                content[key] = [item.strip() for item in content[key].split(',') if item.strip()]
+        if content:
+            for key in ['dirs', 'files', 'links']:
+                if key in content and isinstance(content[key], str):
+                    # Split by common delimiters (adjust as needed based on data format)
+                    content[key] = [item.strip() for item in content[key].split(',') if item.strip()]
         return content
 
     def get_single_hash(self, path: str) -> str | None:
@@ -101,8 +106,8 @@ class RestProcessor:
             The hash value as a string, or None if not found or error
         """
         response = self._db_get("api/hash", {"path": path})
-        logger.debug("Returning single hash request")
-        return self._process_response(response)
+        content = self._process_response(response)
+        return content.get('data') if content else None
 
     def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
         """
@@ -132,7 +137,8 @@ class RestProcessor:
         # TODO develop test for only one directory, none, multiple
         dirs = [f"{root_path}/{relative_dir}" for relative_dir in dirs]
         # Build and sort by timestamp
-        dir_timestamps = [(self.get_single_timestamp(directory), directory) for directory in dirs]
+        dir_timestamps = [(self.get_single_timestamp(directory) or int(time()), directory)
+                          for directory in dirs]
         ordered_dirs = [directory for _, directory in sorted(dir_timestamps)]
 
         # Calculate number of directories to return
@@ -153,8 +159,11 @@ class RestProcessor:
             The timestamp as a float, or None if not found or error
         """
         response = self._db_get("api/timestamp", {"path": path})
+        content = self._process_response(response)
         logger.debug("Returning single timestamp request")
-        return self._process_response(response)
+        return content.get('data') if content else None
+
+        # return self._process_response(response)
 
     def get_priority_updates(self) -> list | None:
         """

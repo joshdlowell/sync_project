@@ -180,6 +180,19 @@ docker logs squishy-integrity
 ```
 
 
+## Project Status
+
+🟢 **Active Development** - This project is actively maintained and regularly updated.
+
+### Roadmap
+- [ ] Move string handling (for files dirs links) in responses from rest_processor.py to REST API
+- [ ] Performance optimization
+
+---
+
+**Made with 😠 by the SquishyBadger Team**
+
+
 
 
 

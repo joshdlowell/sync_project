@@ -306,6 +306,9 @@ class MerkleTreeService:
             # Collect hashes for the current level's parent
             current_path = (current_path.rsplit('/', 1))[0]
             parent_info = self.hash_storage.get_hashtable(current_path)
+            if not parent_info:
+                logger.error(f"Failed to get parent info from database for path {current_path}")
+                return
 
             # Collect parent hash information
             hash_string = ''
@@ -314,7 +317,7 @@ class MerkleTreeService:
                 if items:
                     for item in sorted(items):
                         item_path = f"{current_path}/{item}"
-                        hash_string += self.hash_storage.get_single_hash(item_path)
+                        hash_string += self.hash_storage.get_single_hash(item_path) or f"{item_path}:NOT_FOUND"
                 else:
                     hash_string += f"{current_path}/{category}: EMPTY "
             dir_hash = self.file_hasher.hash_string(hash_string)

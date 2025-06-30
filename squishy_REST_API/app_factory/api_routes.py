@@ -8,7 +8,7 @@ from flask import jsonify, request, Flask
 from squishy_REST_API import logger
 
 
-def register_routes(app: Flask, db_instance):
+def register_api_routes(app: Flask, db_instance):
     """
     Register API routes with the Flask application.
 

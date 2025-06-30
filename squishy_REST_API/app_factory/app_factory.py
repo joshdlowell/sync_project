@@ -8,7 +8,8 @@ from flask import Flask
 
 from squishy_REST_API import config, logger
 from squishy_REST_API.database_client import DBClient
-from .api_routes import register_routes
+from .api_routes import register_api_routes
+from .gui_routes import register_gui_routes
 
 
 class RESTAPIFactory:
@@ -28,8 +29,8 @@ class RESTAPIFactory:
         """
         # Get db instance
         db_instance = (DBClient()).database_client
-        # Create Flask app
-        app = Flask(__name__)
+        # Create Flask app (with location of web-gui templates)
+        app = Flask(__name__, template_folder='../web_templates')
 
         # Load configuration
         if test_config:
@@ -46,7 +47,8 @@ class RESTAPIFactory:
             logger.info("Application configured with default configuration")
 
         # Register routes
-        register_routes(app, db_instance)
+        register_api_routes(app, db_instance)
+        register_gui_routes(app, db_instance)
 
         # Log application startup
         logger.info(f"Application created with DEBUG={app.config['DEBUG']}")

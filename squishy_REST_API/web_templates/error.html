@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Error - Squishy REST API{% endblock %}
+
+{% block content %}
+<div class="error">
+    <h1>Error</h1>
+    <p>{{ error }}</p>
+    <a href="/">Return to Dashboard</a>
+</div>
+{% endblock %}

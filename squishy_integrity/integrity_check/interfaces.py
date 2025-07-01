@@ -53,6 +53,10 @@ class HashStorageInterface(ABC):
     def get_priority_updates(self) -> list[str] | None:
         pass
 
+    @abstractmethod
+    def get_lifecheck(self) -> dict | None:
+        pass
+
 
 class HashFunction(ABC):
     """Abstract interface for hash operations"""

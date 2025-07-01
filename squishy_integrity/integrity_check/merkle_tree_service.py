@@ -1,4 +1,5 @@
 from typing import Dict, Set, Tuple, Optional, Any, List
+from time import sleep
 from .interfaces import HashStorageInterface
 from .validators import PathValidator
 from .tree_walker import DirectoryTreeWalker
@@ -53,6 +54,10 @@ class MerkleTreeService:
         if target_dir == root_path and self._is_directory_empty(tree_dict, target_dir):
             logger.error(f"Root path ({root_path}) is empty")
             return None
+
+        # Check if database and API are reachable before starting
+        if not self._check_liveness():
+            raise Exception("Integrity Check unable to contact resources. Terminating...")
 
         # Compute Merkle tree hash
         logger.debug(f"Computing Merkle hash for directory: {target_dir}")
@@ -162,6 +167,20 @@ class MerkleTreeService:
     #         self._recompute_parent_hashes(root_path, dir_path)
     #
     #     return dir_hash
+    def _check_liveness(self):
+        repeats = 5
+        while repeats:
+            repeats -= 1
+            status = self.hash_storage.get_lifecheck()
+            if not status or not status.get('api'):
+                logger.critical(f"REST API is not reachable will attempt {repeats} more times")
+            elif not status.get('db'):
+                logger.critical(f"Database is not reachable will attempt {repeats} more times")
+            else:
+                logger.info("REST API and Database are reachable")
+                return True
+            sleep(30)
+        return False
 
     def _compute_merkle_recursive(self, dir_path: str, tree_dict: Dict[str, Any]) -> str:
         """Recursively compute Merkle tree hashes"""

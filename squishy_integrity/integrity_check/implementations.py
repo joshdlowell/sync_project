@@ -62,6 +62,9 @@ class RestHashStorage(HashStorageInterface):
     def get_priority_updates(self) -> list[str] | None:
         return self.rest_processor.get_priority_updates()
 
+    def get_lifecheck(self) -> dict | None:
+        return self.rest_processor.get_lifecheck()
+
 
 class SHA1HashFunction(HashFunction):
     """SHA-1 hash function implementation"""

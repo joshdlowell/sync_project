@@ -173,8 +173,16 @@ class RestProcessor:
             A string containing paths that need priority updates, or None if not found or error
         """
         response = self._db_get('api/priority')
+        content = self._process_response(response)
         logger.debug("Returning priority updates request")
-        return self._process_response(response)
+        return content.get('data') if content else None
+
+    def get_life_check(self) -> dict | None:
+        """Get the liveness of the rest api and database."""
+        response = self._db_get('api/lifecheck')
+        content = self._process_response(response)
+        logger.debug("Getting life check")
+        return content.get('data') if content else None
 
     def _has_validation_errors(self, path: str, item_data: dict) -> bool:
         """

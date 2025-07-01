@@ -26,7 +26,7 @@ class RestProcessor:
         self.http_client = http_client
         self.validator = validator or HashInfoValidator()
 
-    def put_hashtable(self, hash_info: dict) -> int:
+    def put_hashtable(self, hash_info: dict, session_id: str=None) -> int:
         """
         Store hash information in the database.
 
@@ -54,16 +54,13 @@ class RestProcessor:
                 continue
 
             request_data = {
+                'session_id': session_id,
                 'path': path,
                 'current_hash': item_data['current_hash'],
                 'dirs': item_data.get('dirs'),
                 'files': item_data.get('files'),
                 'links': item_data.get('links')
             }
-
-            # Add timestamp if available
-            if 'current_dtg_latest' in item_data:
-                request_data['current_dtg_latest'] = item_data['current_dtg_latest']
 
             code, update = self._db_put("api/hashtable", request_data)
 
@@ -133,8 +130,7 @@ class RestProcessor:
         dirs = base_response.get('dirs', [])
         if not dirs:
             logger.info("no child directories in database, requesting full hash")
-            return [root_path]  # TODO update this to circuit breaker if the baseline is empty
-        # TODO develop test for only one directory, none, multiple
+            return [root_path]
         dirs = [f"{root_path}/{relative_dir}" for relative_dir in dirs]
         # Build and sort by timestamp
         dir_timestamps = [(self.get_single_timestamp(directory) or int(time()), directory)
@@ -163,8 +159,6 @@ class RestProcessor:
         logger.debug("Returning single timestamp request")
         return content.get('data') if content else None
 
-        # return self._process_response(response)
-
     def get_priority_updates(self) -> list | None:
         """
         Get paths that need priority updates.
@@ -183,6 +177,44 @@ class RestProcessor:
         content = self._process_response(response)
         logger.debug("Getting life check")
         return content.get('data') if content else None
+
+    def put_log(self, message: str, detailed_message: str=None, log_level: str=None) -> int:
+        """
+        Store log information in the database.
+
+        This method implements the HashStorageInterface.put_log method
+        required by the MerkleTreeService.
+        Permitted log levels: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
+
+        Args:
+            message: string containing the log message
+            detailed_message: string containing the detailed log message
+            log_level: string containing the log level
+
+        Returns:
+            int representing the number of updates sent to the REST API that were unsuccessful
+        """
+        # Validate input
+        validation_errors = message and log_level.upper() in config.VALID_LOG_LEVELS if log_level else True
+        if validation_errors:
+            logger.debug(f"Skipping put_log for invalid item")
+            return 1
+
+        # Assemble the log entry
+        request_data = { 'summary_message': message }
+        if detailed_message: request_data['detailed_message'] = detailed_message
+        if log_level: request_data['log_level'] = log_level.upper()
+
+        code, update = self._db_put("api/hashtable", request_data)
+
+        if code != 200:
+            send_errors += 1
+            logger.debug(f"Unsuccessful update for path: {path}")
+            logger.error(f"REST API returned {code}: {update}")
+            continue
+
+        logger.debug("Completed hashtable put request")
+        return send_errors
 
     def _has_validation_errors(self, path: str, item_data: dict) -> bool:
         """

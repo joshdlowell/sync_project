@@ -5,7 +5,7 @@ from .validators import PathValidator
 from .tree_walker import DirectoryTreeWalker
 from .file_hasher import FileHasher
 
-from squishy_integrity import logger
+from squishy_integrity import config, logger
 
 
 class MerkleTreeService:
@@ -57,8 +57,10 @@ class MerkleTreeService:
 
         # Check if database and API are reachable before starting
         if not self._check_liveness():
-            raise Exception("Integrity Check unable to contact resources. Terminating...")
+            logger.error("Integrity Check unable to contact database or API.")
 
+        # Log start
+        self.hash_storage.put_log("Starting Merkle compute", f"Session ID: {config.session_id}")
         # Compute Merkle tree hash
         logger.debug(f"Computing Merkle hash for directory: {target_dir}")
         dir_hash = self._compute_merkle_recursive(target_dir, tree_dict)
@@ -69,7 +71,43 @@ class MerkleTreeService:
             self._recompute_parent_hashes(root_path, target_dir)
 
         logger.info(f"Successfully computed Merkle hash for {target_dir}")
+        # Log completion
+        self.hash_storage.put_log("Completed Merkle compute", f"Session ID: {config.session_id}")
         return dir_hash
+
+    def _compute_merkle_recursive(self, dir_path: str, tree_dict: Dict[str, Any]) -> str:
+        """Recursively compute Merkle tree hashes"""
+        # Initialize hash info for this directory
+        hash_info = {dir_path: {}}
+
+        # Add directory structure to hash info
+        for category in ['dirs', 'files', 'links']:
+            hash_info[dir_path][category] = tree_dict[dir_path][category]
+
+            # Initialize hash info for each item
+            for item in tree_dict[dir_path][category]:
+                item_path = f"{dir_path}/{item}"
+                hash_info[item_path] = {}
+
+        # Hash subdirectories recursively
+        for item in tree_dict[dir_path]['dirs']:
+            item_path = f"{dir_path}/{item}"
+            hash_info[item_path]["current_hash"] = self._compute_merkle_recursive(item_path, tree_dict)
+
+        # Hash links
+        for item in tree_dict[dir_path]['links']:
+            item_path = f"{dir_path}/{item}"
+            hash_info[item_path]["current_hash"] = self.file_hasher.hash_link(item_path)
+
+        # Hash files
+        for item in tree_dict[dir_path]['files']:
+            item_path = f"{dir_path}/{item}"
+            hash_info[item_path]["current_hash"] = self.file_hasher.hash_file(item_path)
+
+        # Hash the directory itself and update changes
+        self._update_directory_hash(hash_info, dir_path)
+        logger.debug(f"Returning from merkle recursive for {dir_path}")
+        return hash_info[dir_path]["current_hash"]
 
     def _find_deepest_existing_directory(self, root_path: str, dir_path: str) -> Optional[str]:
         """
@@ -126,46 +164,6 @@ class MerkleTreeService:
                 len(dir_contents.get('files', [])) == 0 and
                 len(dir_contents.get('links', [])) == 0)
 
-    # def compute_merkle_tree(self, root_path: str, dir_path: str) -> Optional[str]:
-    #     """
-    #     Create a Merkle tree hash for a directory and detect changes
-    #
-    #     Args:
-    #         root_path: Root directory of the monitored tree
-    #         dir_path: Directory to hash (must be within root_path)
-    #
-    #     Returns:
-    #         Tuple of (directory_hash, changes_dict) or (None, None) if invalid
-    #     """
-    #     # Validate paths
-    #     logger.error(f"Validating dir_path ({dir_path}) and root_path ({root_path})")
-    #     if not self.path_validator.validate_root_and_dir_paths(root_path, dir_path):
-    #         logger.error(f"Not a child of the given root_path ({root_path})")
-    #         return None
-    #
-    #     # The root path is assumed to always exist since it is the directory
-    #     # in the container that the baseline is mounted to
-    #     while True:
-    #         tree_dict = self.tree_walker.get_tree_structure(dir_path)
-    #         # Case where dir_path does not exist
-    #         if tree_dict is False:
-    #             logger.warning(f"Given path: {dir_path} does not exist. Attempting parent")
-    #             dir_path = dir_path.rsplit('/', 1)[0]
-    #             continue
-    #         # Case where parent is empty
-    #         elif dir_path == root_path:
-    #             if len(tree_dict[dir_path]['dirs']) == 0 and len(tree_dict[dir_path]['files']) == 0 and len(tree_dict[dir_path]['links']) == 0:
-    #                 logger.error(f"Root path: {root_path} is empty. Terminating...")
-    #                 return None
-    #
-    #     # Compute Merkle tree hash
-    #     dir_hash = self._compute_merkle_recursive(dir_path, tree_dict)
-    #
-    #     # Update parent hashes if necessary
-    #     logger.debug("Starting to recompute parent hashes")
-    #     if root_path != dir_path:
-    #         self._recompute_parent_hashes(root_path, dir_path)
-    #
     #     return dir_hash
     def _check_liveness(self):
         repeats = 5
@@ -181,40 +179,6 @@ class MerkleTreeService:
                 return True
             sleep(30)
         return False
-
-    def _compute_merkle_recursive(self, dir_path: str, tree_dict: Dict[str, Any]) -> str:
-        """Recursively compute Merkle tree hashes"""
-        # Initialize hash info for this directory
-        hash_info = {dir_path: {}}
-
-        # Add directory structure to hash info
-        for category in ['dirs', 'files', 'links']:
-            hash_info[dir_path][category] = tree_dict[dir_path][category]
-
-            # Initialize hash info for each item
-            for item in tree_dict[dir_path][category]:
-                item_path = f"{dir_path}/{item}"
-                hash_info[item_path] = {}
-
-        # Hash subdirectories recursively
-        for item in tree_dict[dir_path]['dirs']:
-            item_path = f"{dir_path}/{item}"
-            hash_info[item_path]["current_hash"] = self._compute_merkle_recursive(item_path, tree_dict)
-
-        # Hash links
-        for item in tree_dict[dir_path]['links']:
-            item_path = f"{dir_path}/{item}"
-            hash_info[item_path]["current_hash"] = self.file_hasher.hash_link(item_path)
-
-        # Hash files
-        for item in tree_dict[dir_path]['files']:
-            item_path = f"{dir_path}/{item}"
-            hash_info[item_path]["current_hash"] = self.file_hasher.hash_file(item_path)
-
-        # Hash the directory itself and update changes
-        self._update_directory_hash(hash_info, dir_path)
-        logger.debug(f"Returning from merkle recursive for {dir_path}")
-        return hash_info[dir_path]["current_hash"]
 
     def remove_redundant_paths_with_priority(self, priority: list, routine: list):
         """
@@ -311,7 +275,7 @@ class MerkleTreeService:
         hash_info[dir_path]['current_hash'] = self.file_hasher.hash_directory(dir_path, hash_info)
 
         # Store hash info
-        failed_updates = self.hash_storage.put_hashtable(hash_info)
+        failed_updates = self.hash_storage.put_hashtable(hash_info, config.session_id)
         if failed_updates > 0:
             logger.error(f"Failed to update hash storage for {failed_updates} of {len(hash_info.keys())} records")
             return
@@ -350,6 +314,6 @@ class MerkleTreeService:
                 }
             }
             logger.debug(f"Collected parent hashes for {dir_path}")
-            self.hash_storage.put_hashtable(new_parent_info)
+            self.hash_storage.put_hashtable(new_parent_info, config.session_id)
 
         logger.debug(f"Updated hashtable with parent hashes for {dir_path}")

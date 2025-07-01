@@ -57,6 +57,9 @@ class LocalMemoryConnection(DBConnection):
             logger.debug(f"Received update request missing keys: {missing_keys}")
             raise ValueError(f"{missing_keys} value(s) must be provided")
 
+        # Extract session_id if present
+        session_id = record.get('session_id')
+
         path = record['path'].strip()
         current_hash = record['current_hash'].strip()
         logger.debug(f"Inserting or updating hash for path: {path}")
@@ -137,7 +140,12 @@ class LocalMemoryConnection(DBConnection):
 
         changes = {field: sorted(paths) for field, paths in
                    [('modified', modified), ('created', created), ('deleted', deleted)]}
-        self._log_changes(changes)
+        log_entry = {
+            'session_id': session_id,
+            'summary_message': f"Hash for {path} has been updated",
+            'detailed_message': changes
+        }
+        self.put_log(log_entry)
 
         logger.debug(f"Changes: modified={len(modified)}, created={len(created)}, deleted={len(deleted)}")
         return True
@@ -164,11 +172,6 @@ class LocalMemoryConnection(DBConnection):
         except Exception as e:
             logger.error(f"Error deleting hash entry for path {path}: {e}")
             return False
-
-    def _log_changes(self, changes: dict[str, list[str]]) -> None:
-        # Send change logs to db
-        # TODO complete this method
-        pass
 
     def get_hash_record(self, path: str) -> Optional[Dict[str, Any]]:
         """
@@ -345,6 +348,7 @@ class LocalMemoryConnection(DBConnection):
             log_entry = {
                 'log_id': self._next_log_id,
                 'site_id': args_dict.get('site_id', 'local'),
+                'session_id': args_dict.get('session_id', None),
                 'log_level': args_dict.get('log_level', 'INFO'),
                 'timestamp': int(time.time()),
                 'summary_message': args_dict.get('summary_message'),

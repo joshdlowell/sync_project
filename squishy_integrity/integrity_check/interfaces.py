@@ -34,7 +34,7 @@ class HashStorageInterface(ABC):
     """Abstract interface for hash storage operations"""
 
     @abstractmethod
-    def put_hashtable(self, hash_info: Dict[str, Any]) -> int:
+    def put_hashtable(self, hash_info: Dict[str, Any], session_id: str=None) -> int:
         pass
 
     @abstractmethod
@@ -55,6 +55,10 @@ class HashStorageInterface(ABC):
 
     @abstractmethod
     def get_lifecheck(self) -> dict | None:
+        pass
+
+    @abstractmethod
+    def put_log(self, message: str, detailed_message: str=None, log_level: str=None) -> int:
         pass
 
 

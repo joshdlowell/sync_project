@@ -108,6 +108,27 @@ def register_routes(app: Flask, db_instance):
                         "data": {'api': True,
                                  'db': db_instance.life_check()}}), 200
 
+    @app.route('/api/logs', methods=['GET'])
+    def put_logs():
+        """Put a log entry in the database."""
+        if request.method == 'POST':
+            if 'summary_message' not in request.json.keys():
+                logger.warning("POST /api/logs missing required 'summary_message' field")
+                return jsonify({"message": "message required but not found in your request json"}), 400
+
+            logger.debug(f"POST /api/logs")
+
+            # Insert log entry
+            if not (db_instance.put_log_entry(record=request.json)):
+                logger.error(f"Database error adding log entry")
+                return jsonify({"message": "Database error, see DB logs"}), 500
+
+            return jsonify({"message": "Success", 'data': 1})
+
+        else:
+            logger.warning(f"Method not allowed: {request.method}")
+            return jsonify({"message": f"'{request.method}' Method not allowed"}), 405
+
     # Register error handlers
     register_error_handlers(app)
 

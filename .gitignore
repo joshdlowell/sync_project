@@ -1,7 +1,4 @@
 /.venv/
-/classed_versions/
-/tests/
-/integrity/tests/
-/archive/
-/k8s/
-/misc_readme/
+archive/*
+k8s/*
+misc_readme/*

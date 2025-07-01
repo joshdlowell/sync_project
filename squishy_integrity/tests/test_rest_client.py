@@ -128,6 +128,55 @@ class TestRestProcessor(unittest.TestCase):
         # def get_priority_updates(self) -> list | None:
         pass
 
+    def test_put_logs_valid_min(self):
+        # Arrange
+        self.mock_http_client.post.return_value = (200, {"message": "Success", "data": 0})
+
+        # Act
+        result = self.rest_processor.put_log("test_message")
+
+        # Assert
+        self.assertEqual(result, 0)
+        self.mock_http_client.post.assert_called_once_with("http://test-api:8080/api/logs", {'summary_message': 'test_message'})
+
+    def test_put_logs_valid_complete(self):
+        # Arrange
+        self.mock_http_client.post.return_value = (200, {"message": "Success", "data": 0})
+        log_message = {
+            'message': 'test_message',
+            'detailed_message': "This is the real message",
+            'log_level': "WARNING"}
+        processor_message = {
+            'summary_message': 'test_message',
+            'detailed_message': 'This is the real message',
+            'log_level': 'WARNING'}
+        # Act
+        result = self.rest_processor.put_log(
+            log_message['message'],
+            log_message['detailed_message'],
+            log_message["log_level"]
+        )
+
+        # Assert
+        self.assertEqual(result, 0)
+        self.mock_http_client.post.assert_called_once_with("http://test-api:8080/api/logs", processor_message )
+
+    def test_put_logs_invalid_1(self):
+        # Arrange
+        self.mock_http_client.post.return_value = 400, {"message": "message required but not found in your request json"}
+        log_message = {
+            'message': 'test_message',
+            'detailed_message': "This is the real message",
+            'log_level': "WARNING"}
+        # Act
+        result = self.rest_processor.put_log(
+            '',
+            log_message['detailed_message'],
+            log_message["log_level"]
+        )
+        # Assert
+        self.assertEqual(result, 1)
+        self.mock_http_client.post.assert_not_called()
 
 class TestHashInfoValidator(unittest.TestCase):
     def setUp(self):
@@ -154,17 +203,3 @@ class TestHashInfoValidator(unittest.TestCase):
 
         errors = self.validator.validate(invalid_data)
         self.assertIn("Missing required key 'current_hash' in item '/test'", errors)
-
-
-# # For mock http client
-# class RequestsHttpClient(HttpClient):
-#     def __init__(self):
-#         self.max_retries = config.get('max_retries')
-#         self.retry_delay = config.get('retry_delay')
-#         self.long_delay = config.get('long_delay')
-#
-#     def post(self, url: str, json_data: dict) -> Tuple[int, Any]:
-#         return self._make_request('post', url, json_data)
-#
-#     def get(self, url: str, params: dict = None) -> Tuple[int, Any]:
-#         return self._make_request('get', url, params)

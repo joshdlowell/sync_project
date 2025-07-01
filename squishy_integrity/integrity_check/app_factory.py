@@ -1,6 +1,5 @@
 from squishy_integrity import logger
 from squishy_integrity.rest_client import RestClient
-
 from .merkle_tree_service import MerkleTreeService
 from .implementations import StandardFileSystem, RestHashStorage, SHA1HashFunction
 from .validators import PathValidator

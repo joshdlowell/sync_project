@@ -123,7 +123,7 @@ def register_routes(app: Flask, db_instance):
                 logger.error(f"Database error adding log entry")
                 return jsonify({"message": "Database error, see DB logs"}), 500
 
-            return jsonify({"message": "Success", 'data': 1})
+            return jsonify({"message": "Success", 'data': 0})
 
         else:
             logger.warning(f"Method not allowed: {request.method}")

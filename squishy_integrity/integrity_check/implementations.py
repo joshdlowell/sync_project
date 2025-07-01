@@ -1,6 +1,6 @@
 import hashlib
 from pathlib import Path
-from typing import Dict, Set, Any, Optional, Tuple, List
+from typing import Dict, Any, Optional, Tuple, List
 
 from squishy_integrity import logger
 from .interfaces import FileSystemInterface, HashStorageInterface, HashFunction

@@ -195,8 +195,11 @@ class RestProcessor:
             int representing the number of updates sent to the REST API that were unsuccessful
         """
         # Validate input
-        validation_errors = message and log_level.upper() in config.VALID_LOG_LEVELS if log_level else True
-        if validation_errors:
+        if log_level and log_level.upper() not in config.VALID_LOG_LEVELS:
+            log_level = None
+
+        if not message:
+            # if validation_errors:
             logger.debug(f"Skipping put_log for invalid item")
             return 1
 
@@ -205,16 +208,11 @@ class RestProcessor:
         if detailed_message: request_data['detailed_message'] = detailed_message
         if log_level: request_data['log_level'] = log_level.upper()
 
-        code, update = self._db_put("api/hashtable", request_data)
-
-        if code != 200:
-            send_errors += 1
-            logger.debug(f"Unsuccessful update for path: {path}")
-            logger.error(f"REST API returned {code}: {update}")
-            continue
-
-        logger.debug("Completed hashtable put request")
-        return send_errors
+        response = self._db_put("api/logs", request_data)
+        if not self._process_response(response):
+            return 1
+        else:
+            return 0
 
     def _has_validation_errors(self, path: str, item_data: dict) -> bool:
         """
@@ -233,25 +231,6 @@ class RestProcessor:
                 logger.error(error)
             return True
         return False
-
-    # def _process_changes(self, changes: list) -> dict[str, set]:
-    #     """
-    #     Process the changes returned by the REST API.
-    #
-    #     This method organizes the changes into categories: 'Created', 'Deleted', and 'Modified'.
-    #
-    #     Args:
-    #         changes: List of change dictionaries from the REST API
-    #
-    #     Returns:
-    #         Dictionary of changes categorized as 'Created', 'Deleted', and 'Modified'
-    #     """
-    #     sorted_changes = {'Created': set(), 'Deleted': set(), 'Modified': set()}
-    #     for change in changes:
-    #         for key in sorted_changes.keys():
-    #             if key in change:
-    #                 sorted_changes[key].update(set(change[key]))
-    #     return sorted_changes
 
     def _process_response(self, response: Tuple[int, Any]) -> Any:
         """

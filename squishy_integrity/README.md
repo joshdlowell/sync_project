@@ -339,6 +339,8 @@ Abstract interface for hash storage operations.
 - `get_single_hash(path: str) -> Optional[str]`: Get single hash value
 - `get_oldest_updates(root_path: str, percent: int = 10) -> list[str]`: Get oldest updates
 - `get_priority_updates() -> list[str] | None`: Get priority updates
+- `get_lifecheck() -> dict | None`: Get the liveness status of REST and DB services
+- `put_log() -> int`: Put a log entry in the database
 
 ### HashFunction
 
@@ -586,6 +588,23 @@ if priority_paths:
     for path in priority_paths:
         print(f"Priority update needed: {path}")
 ```
+
+ ##### `get_life_check() -> dict | None`
+
+Retrieves the liveness of the rest api and database.
+
+**Returns:**
+- `dict | None`: dict of boolean values with the keys `api` and `db`, or None if an error occurs in processing
+
+
+##### `put_log() -> int`
+
+Store log information in the database.
+
+**Paremeters:**
+- `message` (str): The log message (required)
+- `detailed_message` (str): a detailed version of the message
+- `log_level` (str): The level of the log entry, defaults to INFO in not provided or an invalid level is specified
 
 ---
 
@@ -854,7 +873,7 @@ except Exception as e:
 ### Project Structure
 
 ```
-squishy_REST_API/
+squishy_integrity/
 ├── core.py                          # Application entry point
 ├── integrity_check/
 │   ├── file_hasher.py               # Methods for consistent hashes
@@ -865,17 +884,16 @@ squishy_REST_API/
 │   ├── implementations.py           # Concrete implementations of interfaces.py
 │   └── app_factory.py               # Integrity application factory
 ├── rest_client/                 
-│   ├── bootstrap.py                 # Produces configured RestClient instances
+│   ├── rest_bootstrap.py            # Produces configured RestClient instances
 │   ├── http_client.py               # Get and Post methods with robust error handling
 │   ├── rest_processor.py            # Connector for interacting with the REST API
-│   └── info_validator.py            # Validate hash info formatting before sending to REST
-├── tests/                           # Test suite
+│   └── hash_info_validator.py       # Validate hash info formatting before sending to REST
+├── configuration/                   # Test suite (not included in container)
+│   ├── config.py                    # Main configuration
+│   ├── logging_config.py            # System logging configuration
+├── tests/                           # Test suite (not included in container)
 │   ├── test_merkle_tree_service.py  # Merkle tests
 │   └── test_rest_connector.py       # Validate functionallity of connector
-├── config.py                        # Main configuration
-├── logging_config.py                # System logging configuration
-├── docker-compose.yaml              # Docker compose file
-├── Dockerfile                       # Container build instructions
 ├── requirements.txt                 # Python dependencies
 └── README.md
 ```
@@ -928,7 +946,18 @@ python -m unittest discover squishy_integrity/tests/ -v
 
 ## Version
 
-Current version: 1.0.0
+Current version: 1.0.5
+
+## Changelog
+
+**v1.0.5 - 2025-07-01**
+
+-   **Changed:** Core.py entrypoint to exit on 'suspicious' conditions (like empty baseline)
+-   **Removed:** Added 'session_id' fingerprint for tracking and grouping log entries.
+
+**v1.0.0 - 2025-06-26**
+
+-   Baseline of current project state.
 
 ### Roadmap
 - [ ] Comprehensive logging and monitoring
@@ -937,7 +966,7 @@ Current version: 1.0.0
 ## Support
 
 - **Issues**: Report bugs and request features by contacting us
-- **Documentation**: Detailed API docs available in `integrity_check/README.md` and `rest_client/README.md`
+- **Documentation**: Less detailed docs available on the [confluence space](http://confluence)
 
 ## Acknowledgments
 
@@ -947,3 +976,4 @@ Current version: 1.0.0
 ---
 
 **Made with 😠 by the SquishyBadger Team**
+Feel free to bring us a coffee from the cafeteria!

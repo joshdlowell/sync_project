@@ -1,10 +1,10 @@
-from typing import Dict, Set, Tuple, Optional, Any, List
+from typing import Dict, Optional, Any, List
 from time import sleep
+
 from .interfaces import HashStorageInterface
 from .validators import PathValidator
 from .tree_walker import DirectoryTreeWalker
 from .file_hasher import FileHasher
-
 from squishy_integrity import config, logger
 
 

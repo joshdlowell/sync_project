@@ -1,4 +1,4 @@
-__version__ = "1.0.0"
+__version__ = "1.0.5"
 
 from .app_factory import IntegrityCheckFactory
 

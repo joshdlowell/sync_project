@@ -90,6 +90,14 @@ def register_gui_routes(app: Flask, db_instance):
             logger.error(f"Error rendering hashtable detail: {e}")
             return render_template('error.html', error="Failed to load record details"), 500
 
+    @app.route('/web/logs')
+    def logs():
+        return jsonify({"message": "Success", "data": "Logs"})
+
+    @app.route('/web/status')
+    def status():
+        return jsonify({"message": "Success", "data": "Status"})
+
     register_error_handlers(app)
 
     logger.info("web-gui routes registered")

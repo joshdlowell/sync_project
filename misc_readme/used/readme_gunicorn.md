@@ -135,7 +135,7 @@ def create_app(test_config=None):
     """
     # Create Flask app
     app = Flask(__name__)
-    
+
     # Load configuration
     if test_config:
         # Load test configuration if provided
@@ -152,19 +152,19 @@ def create_app(test_config=None):
             'JSONIFY_PRETTYPRINT_REGULAR': False,
         })
         logger.info("Application configured with default configuration")
-    
+
     # Disable Flask's development server warning in production
     if not app.config['DEBUG']:
         import logging
         logging.getLogger('werkzeug').setLevel(logging.WARNING)
-    
+
     # Register routes
-    from squishy_REST_API.app_factory.api_routes import register_routes
-    register_routes(app)
-    
+    from squishy_REST_API.app_factory.api_routes import register_api_routes
+    register_api_routes(app)
+
     # Log application startup
     logger.info(f"Application created with DEBUG={app.config['DEBUG']}")
-    
+
     return app
 ```
 

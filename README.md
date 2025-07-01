@@ -212,6 +212,7 @@ docker-compose logs -f [service-name]
 🟢 **Active Development** - This project is actively maintained and regularly updated.
 
 ### Roadmap
+- [ ] Implement web-gui for viewing db data
 - [ ] Implement session_id for merkle logging grouping in Rest API
 - [ ] Implement putting log entries in DB for merkle status
 - [ ] Implement putting log entries in DB for REST API

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Dashboard</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-lg border-b-2 border-blue-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-md">
+                        <!-- Badger in Tupperware SVG -->
+                        <img src="static/images/SB.svg" alt="Badger in tupperware container">
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">DataBadger</h1>
+                        <p class="text-sm text-gray-500">SquishyBadger Status Monitoring</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Items -->
+                <div class="flex space-x-1">
+                    <button onclick="showPage('dashboard')" class="nav-item px-4 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-all duration-200 font-medium shadow-md">
+                        Dashboard
+                    </button>
+                    <button onclick="showPage('status')" class="nav-item px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-all duration-200 font-medium">
+                        Site Status
+                    </button>
+                    <button onclick="showPage('hashtable')" class="nav-item px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-all duration-200 font-medium">
+                        Hashtable
+                    </button>
+                    <button onclick="showPage('logs')" class="nav-item px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-all duration-200 font-medium">
+                        Logs
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+<main>
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

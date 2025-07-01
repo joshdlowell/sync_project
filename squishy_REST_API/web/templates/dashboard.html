@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block dashboard %}Dashboard - Squishy REST API{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <h2 class="text-3xl font-bold text-gray-800 mb-8">Dashboard Overview</h2>
+
+    <!-- Key Metrics Tiles -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="tile bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-xl shadow-lg cursor-pointer transition-all duration-300" onclick="showFilteredPage('status', 'inactive')">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-red-100 text-sm font-medium">Inactive Sites</p>
+                    <p class="text-3xl font-bold">23</p>
+                </div>
+                <div class="bg-red-400 p-3 rounded-full">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="tile bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg cursor-pointer transition-all duration-300" onclick="showFilteredPage('logs', 'critical')">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-orange-100 text-sm font-medium">Critical Errors (24h)</p>
+                    <p class="text-3xl font-bold">7</p>
+                </div>
+                <div class="bg-orange-400 p-3 rounded-full">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="tile bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg cursor-pointer transition-all duration-300" onclick="showFilteredPage('status', 'current')">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm font-medium">Up to Date</p>
+                    <p class="text-3xl font-bold">156</p>
+                </div>
+                <div class="bg-green-400 p-3 rounded-full">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="tile bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg cursor-pointer transition-all duration-300" onclick="showPage('hashtable')">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium">Total Records</p>
+                    <p class="text-3xl font-bold">1,247</p>
+                </div>
+                <div class="bg-blue-400 p-3 rounded-full">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+      <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Status Distribution Chart -->
+        <div class="chart-container bg-white p-6 rounded-xl shadow-lg cursor-pointer" onclick="window.location.href='{{ url_for('status') }}'">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Site Status Distribution</h3>
+            <div class="relative h-64">
+                <canvas id="statusDistribution" width="726" height="256"></canvas>
+            </div>
+        </div>
+
+        <!-- Update Status Chart -->
+        <div class="chart-container bg-white p-6 rounded-xl shadow-lg cursor-pointer" onclick="window.location.href='{{ url_for('status') }}'">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Update Status Overview</h3>
+            <div class="relative h-64">
+                <canvas id="updateChart" width="726" height="256"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Scripts -->
+<script src="{{ url_for('static', filename='js/minimal-chart.js') }}"></script>
+<script>
+    // Status Distribution Chart
+    const statusCtx = document.getElementById('statusDistribution').getContext('2d');
+    const statusChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Red', 'Blue', 'Yellow', 'Green'],
+            datasets: [{
+                data: [12, 19, 3, 5],
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
+            }]
+        }
+    });
+
+    // Update Status Chart
+    const updateCtx = document.getElementById('updateChart').getContext('2d');
+    const updateChart = new Chart(updateCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Red', 'Blue', 'Yellow', 'Green'],
+            datasets: [{
+                data: [12, 19, 3, 5],
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
+            }]
+        }
+    });
+</script>
+{% endblock %}

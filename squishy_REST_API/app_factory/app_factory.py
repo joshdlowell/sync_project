@@ -30,7 +30,7 @@ class RESTAPIFactory:
         # Get db instance
         db_instance = (DBClient()).database_client
         # Create Flask app (with location of web-gui templates)
-        app = Flask(__name__, template_folder='../web_templates')
+        app = Flask(__name__, template_folder='../web/templates', static_folder='../web/static')
 
         # Load configuration
         if test_config:

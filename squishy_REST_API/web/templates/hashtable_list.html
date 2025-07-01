@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Hashtable Records - Squishy REST API{% endblock %}
+{% block hashlist %}Hashtable Records - Squishy REST API{% endblock %}
 
-{% block content %}
+{% block hashlist_content %}
 <h1>Hashtable Records</h1>
 
 <form method="GET" style="margin-bottom: 20px;">
     <input type="text" name="search" value="{{ search }}" placeholder="Search paths...">
     <button type="submit">Search</button>
     {% if search %}
-        <a href="/web/hashtable">Clear Search</a>
+        <a href="{{ url_for('index') }}">Clear Search</a>
     {% endif %}
 </form>
 

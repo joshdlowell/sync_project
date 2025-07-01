@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block topbar %}Database Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-lg border-b-2 border-blue-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-md">
+                        <img src="{{ url_for('static', filename='images/SB.svg') }}" alt="Badger in tupperware container">
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">DataBadger</h1>
+                        <p class="text-sm text-gray-500">SquishyBadger Status Monitoring</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Items -->
+                <div class="flex space-x-1">
+                    <a href="{{ url_for('index') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'dashboard' %}text-white bg-blue-600{% else %}text-gray-700 hover:bg-gray-100{% endif %} transition-all duration-200 font-medium shadow-md">
+                        Dashboard
+                    </a>
+                    <a href="{{ url_for('status') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'status' %}text-white bg-blue-600{% else %}text-gray-700 hover:bg-gray-100{% endif %} transition-all duration-200 font-medium">
+                        Site Status
+                    </a>
+                    <a href="{{ url_for('web_hashtable_list') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'hashtable' %}text-white bg-blue-600{% else %}text-gray-700 hover:bg-gray-100{% endif %} transition-all duration-200 font-medium">
+                        Hashtable
+                    </a>
+                    <a href="{{ url_for('logs') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'logs' %}text-white bg-blue-600{% else %}text-gray-700 hover:bg-gray-100{% endif %} transition-all duration-200 font-medium">
+                        Logs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

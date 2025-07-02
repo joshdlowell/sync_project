@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from squishy_integrity import logger
 
 

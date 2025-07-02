@@ -27,6 +27,7 @@ class Config:
             # Session id for grouping log updates
             cls._session_id = os.urandom(16).hex()
         return cls._instance
+
     # Define required keys as class constants
     REQUIRED_KEYS = []
     SENSITIVE_KEYS = []

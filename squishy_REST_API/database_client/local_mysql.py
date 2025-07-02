@@ -84,6 +84,9 @@ class MYSQLConnection(DBConnection):
             logger.debug(f"Received update request missing keys: {missing_keys}")
             raise ValueError(f"{missing_keys} value(s) must be provided")
 
+        # Extract session_id if present
+        session_id = record.get('session_id')
+
         path = record['path'].strip()
         current_hash = record['current_hash'].strip()
         logger.debug(f"Inserting or updating hash for path: {path}")
@@ -184,7 +187,12 @@ class MYSQLConnection(DBConnection):
 
         changes = {field: sorted(paths) for field, paths in
                    [('modified', modified), ('created', created), ('deleted', deleted)]}
-        self._log_changes(changes)
+        log_entry = {
+            'session_id': session_id,
+            'summary_message': f"Hash for {path} has been updated",
+            'detailed_message': changes
+        }
+        self.put_log(log_entry)
 
         logger.debug(f"Changes: modified={len(modified)}, created={len(created)}, deleted={len(deleted)}")
         return True
@@ -217,11 +225,6 @@ class MYSQLConnection(DBConnection):
             # Log the error
             logger.error(f"Error deleting hash entry for path {path}: {e}")
             return False
-
-    def _log_changes(self, changes: dict[str, list[str]]) -> None:
-        # Send change logs to db
-        # TODO complete this method
-        pass
 
     def get_hash_record(self, path: str) -> Optional[Dict[str, Any]]:
         """
@@ -403,12 +406,13 @@ class MYSQLConnection(DBConnection):
         params = {
             'site_id': args_dict.get('site_id', 'local'),
             'log_level': args_dict.get('log_level', 'INFO'),
+            'session_id': args_dict.get('session_id', None),
             'summary_message': args_dict.get('summary_message'),
             'detailed_message': args_dict.get('detailed_message', None)
         }
 
-        query = """INSERT INTO logs (site_id, log_level, summary_message, detailed_message)
-                   VALUES (%(site_id)s, %(log_level)s, %(summary_message)s, %(detailed_message)s)"""
+        query = """INSERT INTO logs (site_id, log_level, session_id, summary_message, detailed_message)
+                   VALUES (%(site_id)s, %(log_level)s, %(session_id)s %(summary_message)s, %(detailed_message)s)"""
 
         try:
             with self._get_connection() as conn:

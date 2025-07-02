@@ -1,6 +1,6 @@
 import hashlib
 from pathlib import Path
-from typing import Dict, Set, Any, Optional, Tuple, List
+from typing import Dict, Any, Optional, Tuple, List
 
 from squishy_integrity import logger
 from .interfaces import FileSystemInterface, HashStorageInterface, HashFunction
@@ -47,7 +47,7 @@ class RestHashStorage(HashStorageInterface):
     def __init__(self, rest_processor):
         self.rest_processor = rest_processor
 
-    def put_hashtable(self, hash_info: Dict[str, Any]) -> int:
+    def put_hashtable(self, hash_info: Dict[str, Any], session_id: str=None) -> int:
         return self.rest_processor.put_hashtable(hash_info)
 
     def get_hashtable(self, path: str) -> Optional[Dict[str, Any]]:
@@ -61,6 +61,12 @@ class RestHashStorage(HashStorageInterface):
 
     def get_priority_updates(self) -> list[str] | None:
         return self.rest_processor.get_priority_updates()
+
+    def get_lifecheck(self) -> dict | None:
+        return self.rest_processor.get_lifecheck()
+
+    def put_log(self, message: str, detailed_message: str=None, log_level: str=None) -> int:
+        return self.rest_processor.put_log(message, detailed_message, log_level)
 
 
 class SHA1HashFunction(HashFunction):

@@ -26,7 +26,7 @@ class RestProcessor:
         self.http_client = http_client
         self.validator = validator or HashInfoValidator()
 
-    def put_hashtable(self, hash_info: dict) -> int:
+    def put_hashtable(self, hash_info: dict, session_id: str=None) -> int:
         """
         Store hash information in the database.
 
@@ -54,16 +54,13 @@ class RestProcessor:
                 continue
 
             request_data = {
+                'session_id': session_id,
                 'path': path,
                 'current_hash': item_data['current_hash'],
                 'dirs': item_data.get('dirs'),
                 'files': item_data.get('files'),
                 'links': item_data.get('links')
             }
-
-            # Add timestamp if available
-            if 'current_dtg_latest' in item_data:
-                request_data['current_dtg_latest'] = item_data['current_dtg_latest']
 
             code, update = self._db_put("api/hashtable", request_data)
 
@@ -133,8 +130,7 @@ class RestProcessor:
         dirs = base_response.get('dirs', [])
         if not dirs:
             logger.info("no child directories in database, requesting full hash")
-            return [root_path]  # TODO update this to circuit breaker if the baseline is empty
-        # TODO develop test for only one directory, none, multiple
+            return [root_path]
         dirs = [f"{root_path}/{relative_dir}" for relative_dir in dirs]
         # Build and sort by timestamp
         dir_timestamps = [(self.get_single_timestamp(directory) or int(time()), directory)
@@ -163,8 +159,6 @@ class RestProcessor:
         logger.debug("Returning single timestamp request")
         return content.get('data') if content else None
 
-        # return self._process_response(response)
-
     def get_priority_updates(self) -> list | None:
         """
         Get paths that need priority updates.
@@ -173,8 +167,52 @@ class RestProcessor:
             A string containing paths that need priority updates, or None if not found or error
         """
         response = self._db_get('api/priority')
+        content = self._process_response(response)
         logger.debug("Returning priority updates request")
-        return self._process_response(response)
+        return content.get('data') if content else None
+
+    def get_life_check(self) -> dict | None:
+        """Get the liveness of the rest api and database."""
+        response = self._db_get('api/lifecheck')
+        content = self._process_response(response)
+        logger.debug("Getting life check")
+        return content.get('data') if content else None
+
+    def put_log(self, message: str, detailed_message: str=None, log_level: str=None) -> int:
+        """
+        Store log information in the database.
+
+        This method implements the HashStorageInterface.put_log method
+        required by the MerkleTreeService.
+        Permitted log levels: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
+
+        Args:
+            message: string containing the log message
+            detailed_message: string containing the detailed log message
+            log_level: string containing the log level
+
+        Returns:
+            int representing the number of updates sent to the REST API that were unsuccessful
+        """
+        # Validate input
+        if log_level and log_level.upper() not in config.VALID_LOG_LEVELS:
+            log_level = None
+
+        if not message:
+            # if validation_errors:
+            logger.debug(f"Skipping put_log for invalid item")
+            return 1
+
+        # Assemble the log entry
+        request_data = { 'summary_message': message }
+        if detailed_message: request_data['detailed_message'] = detailed_message
+        if log_level: request_data['log_level'] = log_level.upper()
+
+        response = self._db_put("api/logs", request_data)
+        if not self._process_response(response):
+            return 1
+        else:
+            return 0
 
     def _has_validation_errors(self, path: str, item_data: dict) -> bool:
         """
@@ -193,25 +231,6 @@ class RestProcessor:
                 logger.error(error)
             return True
         return False
-
-    # def _process_changes(self, changes: list) -> dict[str, set]:
-    #     """
-    #     Process the changes returned by the REST API.
-    #
-    #     This method organizes the changes into categories: 'Created', 'Deleted', and 'Modified'.
-    #
-    #     Args:
-    #         changes: List of change dictionaries from the REST API
-    #
-    #     Returns:
-    #         Dictionary of changes categorized as 'Created', 'Deleted', and 'Modified'
-    #     """
-    #     sorted_changes = {'Created': set(), 'Deleted': set(), 'Modified': set()}
-    #     for change in changes:
-    #         for key in sorted_changes.keys():
-    #             if key in change:
-    #                 sorted_changes[key].update(set(change[key]))
-    #     return sorted_changes
 
     def _process_response(self, response: Tuple[int, Any]) -> Any:
         """

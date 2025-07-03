@@ -1,5 +1,5 @@
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
-from .db_bootstrap import DBClient
+from .db_bootstrap import DBClient, CoreDBClient
 
-__all__ = ['DBClient']
+__all__ = ['DBClient', 'CoreDBClient']

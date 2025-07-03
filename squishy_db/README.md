@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS hashtable (
     links TEXT
 );
 ```
-and a `logs_init.sql` file with the following content:
+A `logs_init.sql` file with the following content:
 
 ```sql
 CREATE TABLE IF NOT EXISTS logs (
@@ -55,6 +55,67 @@ CREATE TABLE IF NOT EXISTS logs (
     summary_message TEXT NOT NULL,
     detailed_message TEXT
 );
+```
+
+And `sites_state_init.sql` file with the following content:
+
+```sql
+-- Authoritative list of sites
+CREATE TABLE site_list (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    site_name VARCHAR(5) NOT NULL UNIQUE,
+    online BOOLEAN DEFAULT 1,
+
+    INDEX idx_site_name (site_name)
+);
+
+-- History of hash states
+CREATE TABLE state_history (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    update_id TEXT NOT NULL,
+    hash_value VARCHAR(40) NOT NULL UNIQUE,
+    record_count INT,
+    created_at INT UNSIGNED DEFAULT (UNIX_TIMESTAMP()),
+
+    -- Index for performance
+    INDEX idx_hash_value (hash_value),
+    INDEX idx_created_at (created_at)
+);
+
+-- Sites and their current hash states - references site_list, state_history
+CREATE TABLE sites (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    site_name VARCHAR(5) NOT NULL UNIQUE,
+    current_hash VARCHAR(40),
+    last_updated INT UNSIGNED DEFAULT (UNIX_TIMESTAMP()),
+
+    -- Foreign key to authoritative list
+    FOREIGN KEY (site_name) REFERENCES site_list(site_name) ON DELETE CASCADE,
+    FOREIGN KEY (current_hash) REFERENCES state_history(hash_value),
+
+    INDEX idx_site_name (site_name),
+    INDEX idx_current_hash (current_hash),
+    INDEX idx_last_updated (last_updated)
+);
+-- Procedure to sync operational tables when site_list changes
+DELIMITER //
+CREATE PROCEDURE SyncSiteOperationalData()
+BEGIN
+    -- Add new sites to operational table
+    INSERT IGNORE INTO sites (site_name)
+    SELECT site_name FROM site_list
+    WHERE site_name NOT IN (SELECT site_name FROM sites);
+END //
+DELIMITER ;
+-- Create a trigger to auto-update the timestamp
+DELIMITER //
+CREATE TRIGGER sites_update_timestamp
+    BEFORE UPDATE ON sites
+    FOR EACH ROW
+BEGIN
+    SET NEW.last_updated = UNIX_TIMESTAMP();
+END//
+DELIMITER ;
 ```
 
 ## Environment Variables
@@ -77,6 +138,12 @@ The database will be automatically initialized on the first run with the tables:
 `hashtable`: Tracks file paths and their associated hash values, timestamps, and directory contents.
 
 `logs`: Stores log entries for review or forwarding to a core site
+
+`site_list`: Authoritative list of sites with online status
+
+`state_history`: Historical record of hash states and updates
+
+`sites`: Current hash state for each site with foreign key relationships
 
 ## Connection
 
@@ -103,6 +170,19 @@ primary key (Uniqueness can't be enforced directly on the path column because it
 3. `log_level` is `INFO` by default. If this value is included in an insert or update 
 operation it must be one of `ERROR`, `STATUS`, `WARNING`, or `INFO`
 
+`site_list`:
+1. Minimum required values are `site_name` (max 5 characters, must be unique)
+2. `online` defaults to `1` (true)
+
+`state_history`:
+1. Minimum required values are `update_id` and `hash_value`
+2. `created_at` defaults to current timestamp
+
+`sites`:
+1. Must reference valid `site_name` from `site_list` (foreign key constraint)
+2. If `current_hash` is specified, must reference valid `hash_value` from `state_history`
+3. `last_updated` auto-updates on record modification
+
 
 ## Unit testing
 This package also includes tests, in the form of SQL scripts, which can be used to verify that the 
@@ -122,6 +202,9 @@ To run the scripts in your MySQL 9.3 container:
    ```bash
    docker exec -it mysql-squishy-db mysql -u root -pyour_root_password -e "source /tmp/test_logs.sql"
    ```
+   ```bash
+   docker exec -it mysql-squishy-db mysql -u root -pyour_root_password -e "source /tmp/test_sites_state.sql"
+   ```
 
 Or run them directly:
 ```bash
@@ -129,6 +212,9 @@ docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_
 ```
 ```bash
 docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_logs.sql
+```
+```bash
+docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_sites_state.sql
 ```
 
 ### **What the test_hashtable.sql script tests:**
@@ -158,3 +244,11 @@ docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_
 7. **ENUM enforcement** Verifies 'log_levels' must be from table's list.
 8. **Full field insertion** - Tests full record insertion.
 9. **Case in-sensitivity** - Verifies site_id and log_level are case-insensitive.
+
+### **What the test_sites_state.sql script tests:**
+
+1. **site_list table** - Basic inserts, defaults, constraints, and unique enforcement
+2. **state_history table** - Required fields, timestamp generation, and data integrity
+3. **sites table** - Foreign key constraints, cascade deletes, and update triggers
+4. **Stored procedure** - SyncSiteOperationalData functionality
+5. **Data relationships** - Cross-table consistency and referential integrity

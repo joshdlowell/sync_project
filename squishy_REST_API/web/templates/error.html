@@ -1,11 +1,130 @@
 {% extends "base.html" %}
 
-{% block error %}Error - Squishy REST API{% endblock %}
+{% block error %}Oops! - Squishy REST API{% endblock %}
 
-{% block error_content %}
+{% block content %}
 <div class="error">
-    <h1>Error</h1>
-    <p>{{ error }}</p>
-    <a href="{{ url_for('index') }}">Return to Dashboard</a>
+    <div class="error-illustration">
+        <svg viewBox="0 0 40 40" width="120" height="120" xmlns="http://www.w3.org/2000/svg">
+            <!-- Tupperware container (slightly tilted/broken) -->
+            <rect x="8" y="22" width="24" height="14" rx="2" fill="#e5e7eb" stroke="#9ca3af" stroke-width="1" transform="rotate(2 20 29)"></rect>
+            <rect x="6" y="18" width="28" height="4" rx="2" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1" transform="rotate(-1 20 20)"></rect>
+
+            <!-- Crack in container -->
+            <path d="M 15 25 L 17 30 L 19 27 L 21 32" stroke="#ef4444" stroke-width="2" fill="none"></path>
+
+            <!-- Badger head (dizzy expression) -->
+            <ellipse cx="20" cy="18" rx="8" ry="6" fill="#4b5563"></ellipse>
+
+            <!-- White stripes -->
+            <ellipse cx="16" cy="16" rx="2" ry="4" fill="white"></ellipse>
+            <ellipse cx="24" cy="16" rx="2" ry="4" fill="white"></ellipse>
+
+            <!-- Dizzy eyes (X's instead of circles) -->
+            <g stroke="black" stroke-width="1.5" stroke-linecap="round">
+                <line x1="15.5" y1="13.5" x2="18.5" y2="16.5"></line>
+                <line x1="18.5" y1="13.5" x2="15.5" y2="16.5"></line>
+                <line x1="21.5" y1="13.5" x2="24.5" y2="16.5"></line>
+                <line x1="24.5" y1="13.5" x2="21.5" y2="16.5"></line>
+            </g>
+
+            <!-- Droopy nose -->
+            <ellipse cx="20" cy="19" rx="1" ry="0.8" fill="black"></ellipse>
+
+            <!-- Ears (slightly drooped) -->
+            <ellipse cx="14" cy="13" rx="2" ry="3" fill="#4b5563" transform="rotate(-10 14 13)"></ellipse>
+            <ellipse cx="26" cy="13" rx="2" ry="3" fill="#4b5563" transform="rotate(10 26 13)"></ellipse>
+
+            <!-- Sweat drops -->
+            <ellipse cx="12" cy="10" rx="0.8" ry="1.2" fill="#60a5fa"></ellipse>
+            <ellipse cx="28" cy="11" rx="0.6" ry="1" fill="#60a5fa"></ellipse>
+
+            <!-- Dizzy stars -->
+            <g fill="#fbbf24" transform="translate(8, 8)">
+                <polygon points="0,0 1,3 4,3 2,5 3,8 0,6 -3,8 -2,5 -4,3 -1,3"></polygon>
+            </g>
+            <g fill="#fbbf24" transform="translate(30, 6) scale(0.7)">
+                <polygon points="0,0 1,3 4,3 2,5 3,8 0,6 -3,8 -2,5 -4,3 -1,3"></polygon>
+            </g>
+        </svg>
+    </div>
+
+    <h1>Oops! Something went wrong!</h1>
+    <p class="error-message">Looks like our badger broke out of its container and caused some chaos!</p>
+    <p class="error-details">{{ error }}</p>
+
+    <div class="error-actions">
+        <a href="{{ url_for('index') }}" class="btn-primary">Help the badger get back home</a>
+        <p class="error-hint">Don't worry, no badgers were harmed in the making of this error.</p>
+    </div>
 </div>
+
+<style>
+.error {
+    text-align: center;
+    padding: 2rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.error-illustration {
+    margin: 2rem 0;
+    animation: wobble 2s infinite;
+}
+
+.error h1 {
+    color: #ef4444;
+    font-size: 2rem;
+    margin: 1rem 0;
+}
+
+.error-message {
+    font-size: 1.2rem;
+    color: #6b7280;
+    margin: 1rem 0;
+    font-style: italic;
+}
+
+.error-details {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1.5rem 0;
+    color: #dc2626;
+    font-family: monospace;
+}
+
+.error-actions {
+    margin-top: 2rem;
+}
+
+.btn-primary {
+    display: inline-block;
+    background: #3b82f6;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+}
+
+.error-hint {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #9ca3af;
+    font-style: italic;
+}
+
+@keyframes wobble {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-2deg); }
+    75% { transform: rotate(2deg); }
+}
+</style>
 {% endblock %}

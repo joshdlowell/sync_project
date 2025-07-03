@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block dashboard %}Dashboard - Squishy REST API{% endblock %}
+{% block title %}Dashboard - Squishy webgui{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8">
@@ -12,7 +12,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-red-100 text-sm font-medium">Inactive Sites</p>
-                    <p class="text-3xl font-bold">23</p>
+                    <p class="text-3xl font-bold">{{ dashboard_data.live_inactive }}</p>
                 </div>
                 <div class="bg-red-400 p-3 rounded-full">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -22,11 +22,11 @@
             </div>
         </div>
 
-        <div class="tile bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg cursor-pointer transition-all duration-300" onclick="showFilteredPage('logs', 'critical')">
+        <div class="tile bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg cursor-pointer transition-all duration-300" onclick="window.location.href='{{ url_for('logs', log_level='CRITICAL') }}'">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-orange-100 text-sm font-medium">Critical Errors (24h)</p>
-                    <p class="text-3xl font-bold">7</p>
+                    <p class="text-3xl font-bold">{{ dashboard_data.crit_error_count }}</p>
                 </div>
                 <div class="bg-orange-400 p-3 rounded-full">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -40,7 +40,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-green-100 text-sm font-medium">Up to Date</p>
-                    <p class="text-3xl font-bold">156</p>
+                    <p class="text-3xl font-bold">{{ dashboard_data.sync_current }}</p>
                 </div>
                 <div class="bg-green-400 p-3 rounded-full">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -54,7 +54,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-blue-100 text-sm font-medium">Total Records</p>
-                    <p class="text-3xl font-bold">1,247</p>
+                    <p class="text-3xl font-bold">{{ "{:,}".format(dashboard_data.hash_record_count) }}</p>
                 </div>
                 <div class="bg-blue-400 p-3 rounded-full">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -64,21 +64,60 @@
             </div>
         </div>
     </div>
-      <!-- Charts Section -->
+
+    <!-- Charts Section -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Status Distribution Chart -->
-        <div class="chart-container bg-white p-6 rounded-xl shadow-lg cursor-pointer" onclick="window.location.href='{{ url_for('status') }}'">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">Site Status Distribution</h3>
+        <!-- Live Status Distribution Chart -->
+        <div class="chart-container bg-white p-6 rounded-xl shadow-lg cursor-pointer" onclick="window.location.href='{{ url_for('hash_status') }}'">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Site Live Status Distribution</h3>
             <div class="relative h-64">
-                <canvas id="statusDistribution" width="726" height="256"></canvas>
+                <canvas id="liveStatusDistribution" width="726" height="256"></canvas>
             </div>
         </div>
 
-        <!-- Update Status Chart -->
-        <div class="chart-container bg-white p-6 rounded-xl shadow-lg cursor-pointer" onclick="window.location.href='{{ url_for('status') }}'">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">Update Status Overview</h3>
+        <!-- Sync Status Chart -->
+        <div class="chart-container bg-white p-6 rounded-xl shadow-lg cursor-pointer" onclick="window.location.href='{{ url_for('hash_status') }}'">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Baseline Sync Status Overview</h3>
             <div class="relative h-64">
-                <canvas id="updateChart" width="726" height="256"></canvas>
+                <canvas id="syncStatusChart" width="726" height="256"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Metrics Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-center">
+                <p class="text-sm text-gray-600">Live Current</p>
+                <p class="text-2xl font-bold text-green-600">{{ dashboard_data.live_current }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-center">
+                <p class="text-sm text-gray-600">1 Behind</p>
+                <p class="text-2xl font-bold text-yellow-600">{{ dashboard_data.sync_1_behind }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-center">
+                <p class="text-sm text-gray-600">&lt;24h Behind</p>
+                <p class="text-2xl font-bold text-orange-600">{{ dashboard_data.sync_l24_behind }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-center">
+                <p class="text-sm text-gray-600">&gt;24h Behind</p>
+                <p class="text-2xl font-bold text-red-600">{{ dashboard_data.sync_g24_behind }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-center">
+                <p class="text-sm text-gray-600">Unknown Status</p>
+                <p class="text-2xl font-bold text-gray-600">{{ dashboard_data.sync_unknown }}</p>
             </div>
         </div>
     </div>
@@ -87,29 +126,66 @@
 <!-- Chart Scripts -->
 <script src="{{ url_for('static', filename='js/minimal-chart.js') }}"></script>
 <script>
-    // Status Distribution Chart
-    const statusCtx = document.getElementById('statusDistribution').getContext('2d');
-    const statusChart = new Chart(statusCtx, {
+    // Live Status Distribution Chart
+    const liveStatusCtx = document.getElementById('liveStatusDistribution').getContext('2d');
+    const liveStatusChart = new Chart(liveStatusCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Red', 'Blue', 'Yellow', 'Green'],
+            labels: ['Current', 'Recently Active', 'Last 24h', 'Inactive'],
             datasets: [{
-                data: [12, 19, 3, 5],
-                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
+                data: [
+                    {{ dashboard_data.live_current }},
+                    {{ dashboard_data.live_1_behind }},
+                    {{ dashboard_data.live_l24_behind }},
+                    {{ dashboard_data.live_inactive }}
+                ],
+                backgroundColor: ['#10B981', '#F59E0B', '#F97316', '#EF4444']
             }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
         }
     });
 
-    // Update Status Chart
-    const updateCtx = document.getElementById('updateChart').getContext('2d');
-    const updateChart = new Chart(updateCtx, {
+    // Sync Status Chart
+    const syncStatusCtx = document.getElementById('syncStatusChart').getContext('2d');
+    const syncStatusChart = new Chart(syncStatusCtx, {
         type: 'bar',
         data: {
-            labels: ['Red', 'Blue', 'Yellow', 'Green'],
+            labels: ['Current', '1 Behind', '<24h Behind', '>24h Behind', 'Unknown'],
             datasets: [{
-                data: [12, 19, 3, 5],
-                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
+                data: [
+                    {{ dashboard_data.sync_current }},
+                    {{ dashboard_data.sync_1_behind }},
+                    {{ dashboard_data.sync_l24_behind }},
+                    {{ dashboard_data.sync_g24_behind }},
+                    {{ dashboard_data.sync_unknown }}
+                ],
+                backgroundColor: ['#10B981', '#F59E0B', '#F97316', '#EF4444', '#6B7280']
             }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
         }
     });
 </script>

@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Logs - Squishy webgui{% endblock %}
+
+{% block content %}
+<div class="logs-container">
+    <h1>System Logs</h1>
+
+    <!-- Filter form -->
+    <form method="GET" action="{{ url_for('logs') }}" class="filter-form">
+        <div class="filters">
+            <div class="filter-group">
+                <label for="log_level">Log Level:</label>
+                <select name="log_level" id="log_level">
+                    <option value="">All Levels</option>
+                    {% for level in valid_log_levels %}
+                        <option value="{{ level }}"
+                                {% if current_log_level == level %}selected{% endif %}>
+                            {{ level }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="site_id">Site ID:</label>
+                <select name="site_id" id="site_id">
+                    <option value="">All Sites</option>
+                    {% for site in valid_site_ids %}
+                        <option value="{{ site }}"
+                                {% if current_site_id == site %}selected{% endif %}>
+                            {{ site }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <a href="{{ url_for('logs') }}" class="btn btn-secondary">Clear Filters</a>
+            </div>
+        </div>
+    </form>
+
+    <!-- Results summary -->
+    <div class="results-summary">
+        <p>Showing {{ logs|length }} log entries
+        {% if current_log_level or current_site_id %}
+            (filtered by
+            {% if current_log_level %}level: <strong>{{ current_log_level }}</strong>{% endif %}
+            {% if current_log_level and current_site_id %}, {% endif %}
+            {% if current_site_id %}site: <strong>{{ current_site_id }}</strong>{% endif %}
+            )
+        {% endif %}
+        </p>
+    </div>
+
+    <!-- Display logs -->
+    {% if logs %}
+        <div class="table-container">
+            <table class="logs-table">
+                <thead>
+                    <tr>
+                        <th>Site</th>
+                        <th>Level</th>
+                        <th>Timestamp</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                        <tr class="log-row log-level-{{ log.log_level|lower }}">
+                            <td class="site-cell">{{ log.site_id or 'local' }}</td>
+                            <td class="level-cell">
+                                <span class="log-level-badge level-{{ log.log_level|lower }}">
+                                    {{ log.log_level }}
+                                </span>
+                            </td>
+                            <td class="timestamp-cell">{{ log.formatted_timestamp }}</td>
+                            <td class="message-cell">
+                                <div class="message-wrapper"
+                                     {% if log.detailed_message and log.detailed_message != log.summary_message %}
+                                     title="{{ log.detailed_message }}"
+                                     {% endif %}>
+                                    {{ log.summary_message or 'No message' }}
+                                    {% if log.detailed_message and log.detailed_message != log.summary_message %}
+                                        <span class="detail-indicator">⋯</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="no-results">
+            <p>No logs found matching the current filters.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+/* Filter form styles */
+.logs-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.filter-form {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.filters {
+    display: flex;
+    gap: 20px;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filter-group label {
+    font-weight: bold;
+    color: #333;
+}
+
+.filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    min-width: 150px;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+/* Results summary */
+.results-summary {
+    margin-bottom: 15px;
+    color: #231d1d;
+}
+
+/* Table styles */
+.table-container {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.logs-table th {
+    background: #f8f9fa;
+    padding: 12px;
+    text-align: left;
+    font-weight: bold;
+    color: #333;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.logs-table td {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: top;
+}
+
+.log-row:hover {
+    background-color: #f8f9fa;
+}
+
+/* Log level specific styling */
+.log-level-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.level-error {
+    background: #dc3545;
+    color: white;
+}
+
+.level-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.level-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.level-debug {
+    background: #6c757d;
+    color: white;
+}
+
+.level-critical {
+    background: #721c24;
+    color: white;
+}
+
+/* Column specific styles */
+.site-cell {
+    font-weight: 500;
+    min-width: 100px;
+}
+
+.level-cell {
+    min-width: 80px;
+}
+
+.timestamp-cell {
+    font-family: monospace;
+    min-width: 170px;
+    color: #666;
+}
+
+.message-cell {
+    max-width: 400px;
+}
+
+/* Message hover functionality */
+.message-wrapper {
+    position: relative;
+    cursor: help;
+    word-wrap: break-word;
+}
+
+.detail-indicator {
+    color: #007bff;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+.message-wrapper[title]:hover {
+    background-color: #e3f2fd;
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+}
+
+/* No results message */
+.no-results {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-group select {
+        min-width: auto;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .logs-table {
+        min-width: 600px;
+    }
+}
+</style>
+{% endblock %}

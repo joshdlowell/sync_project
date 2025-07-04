@@ -412,7 +412,7 @@ class MYSQLConnection(DBConnection):
         }
 
         query = """INSERT INTO logs (site_id, log_level, session_id, summary_message, detailed_message)
-                   VALUES (%(site_id)s, %(log_level)s, %(session_id)s %(summary_message)s, %(detailed_message)s)"""
+                   VALUES (%(site_id)s, %(log_level)s, %(session_id)s, %(summary_message)s, %(detailed_message)s)"""
 
         try:
             with self._get_connection() as conn:

@@ -18,11 +18,11 @@
     <div class="breadcrumb-nav">
         <h1>Path:
             {% set path_parts = file_path.split('/') %}
-            {% set current_path = '' %}
+            {% set ns = namespace(current_path='') %}
             {% for part in path_parts %}
                 {% if part %}
-                    {% set current_path = current_path + '/' + part %}
-                    <a href="{{ url_for('web_hashtable_detail', file_path=current_path[1:]) }}" class="breadcrumb-link">{{ part }}</a>
+                    {% set ns.current_path = ns.current_path + '/' + part %}
+                    <a href="{{ url_for('web_hashtable_detail', file_path=ns.current_path[1:]) }}" class="breadcrumb-link">{{ part }}</a>
                     {% if not loop.last %}<span class="breadcrumb-separator">/</span>{% endif %}
                 {% endif %}
             {% endfor %}

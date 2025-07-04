@@ -18,11 +18,9 @@ class RestProcessor:
         Initialize the RestConnector.
 
         Args:
-            config: Configuration for the REST API
             http_client: HTTP client for making requests
             validator: Validator for hash information (optional)
         """
-        # self.config = config
         self.http_client = http_client
         self.validator = validator or HashInfoValidator()
 
@@ -35,6 +33,7 @@ class RestProcessor:
 
         Args:
             hash_info: Dictionary containing hash information for files and directories
+            session_id: Optional session ID for grouping batches of updates
 
         Returns:
             int representing the number of updates sent to the REST API that were unsuccessful
@@ -171,12 +170,12 @@ class RestProcessor:
         logger.debug("Returning priority updates request")
         return content.get('data') if content else None
 
-    def get_life_check(self) -> dict | None:
+    def get_lifecheck(self) -> dict | None:
         """Get the liveness of the rest api and database."""
         response = self._db_get('api/lifecheck')
         content = self._process_response(response)
         logger.debug("Getting life check")
-        return content.get('data') if content else None
+        return content if content else None
 
     def put_log(self, message: str, detailed_message: str=None, log_level: str=None) -> int:
         """

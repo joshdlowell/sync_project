@@ -5,7 +5,7 @@ This module defines the API routes and registers them with the Flask application
 """
 from flask import jsonify, request, Flask
 
-from squishy_REST_API import logger
+from squishy_REST_API import logger, config
 
 
 def register_api_routes(app: Flask, db_instance):
@@ -116,6 +116,10 @@ def register_api_routes(app: Flask, db_instance):
             if 'summary_message' not in request.json.keys():
                 logger.warning("POST /api/logs missing required 'summary_message' field")
                 return jsonify({"message": "message required but not found in your request json"}), 400
+
+            # Update site_id if unknown or 'local'
+            if not request.json.get('site_id') or request.json.get('site_id').lower() == 'local':
+                request.json['site_id'] = config.get('site_name')  # site_name is required to boot
 
             logger.debug(f"POST /api/logs")
 

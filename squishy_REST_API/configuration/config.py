@@ -27,6 +27,7 @@ class Config:
 
     # Define required keys as class constants
     REQUIRED_KEYS = ['db_user', 'db_password', 'secret_key', 'site_name']
+    MAX_LENGTHS = {'site_name': 5}
     SENSITIVE_KEYS = ['db_password', 'secret_key']
 
     # Default values for configuration
@@ -173,6 +174,12 @@ class Config:
 
         if missing_keys:
             raise ConfigError(f"Missing required configuration keys: {', '.join(missing_keys)}")
+
+        for key, max_length in self.MAX_LENGTHS.items():
+            if self._config[key] and len(self._config[key]) > max_length:
+                raise ConfigError(f"Configuration value for {key} must be {max_length} or fewer characters")
+
+        self._config['site_name'] = self._config['site_name'].upper()
 
         self._config['log_level'] = self._config['log_level'].upper()
         if self._config['log_level'].upper() not in self.VALID_LOG_LEVELS:

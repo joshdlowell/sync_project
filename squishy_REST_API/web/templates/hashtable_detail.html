@@ -1,28 +1,375 @@
 {% extends "base.html" %}
 
-{% block hashtable %}{{ file_path }} - Hashtable Detail{% endblock %}
+{% block title %}Hashtable Detail - {{ file_path }} - Squishy webgui{% endblock %}
 
-{% block hashtable_content %}
-<h1>Hashtable Record Detail</h1>
+{% block content %}
+<!-- Live Clock Display -->
+<!--<div class="clock-container">-->
+<!--    <div class="clock-section">-->
+<!--        <span class="clock-label">UTC:</span>-->
+<!--        <span id="utc-clock" class="clock-display"></span>-->
+<!--        <span class="clock-separator">|</span>-->
+<!--        <span class="clock-label">Local:</span>-->
+<!--        <span id="local-clock" class="clock-display"></span>-->
+<!--    </div>-->
+<!--</div>-->
+<div class="hashtable-detail-container">
+    <!-- Breadcrumb navigation -->
+    <div class="breadcrumb-nav">
+        <h1>Path:
+            {% set path_parts = file_path.split('/') %}
+            {% set current_path = '' %}
+            {% for part in path_parts %}
+                {% if part %}
+                    {% set current_path = current_path + '/' + part %}
+                    <a href="{{ url_for('web_hashtable_detail', file_path=current_path[1:]) }}" class="breadcrumb-link">{{ part }}</a>
+                    {% if not loop.last %}<span class="breadcrumb-separator">/</span>{% endif %}
+                {% endif %}
+            {% endfor %}
+        </h1>
+    </div>
 
-<div class="record-detail">
-    <h2>{{ file_path }}</h2>
+    {% if record %}
+        <!-- Record metadata -->
+        <div class="record-metadata">
+            <div class="metadata-section">
+                <h2>Record Information</h2>
+                <div class="metadata-grid">
+                    <div class="metadata-item">
+                        <label>Current Hash:</label>
+                        <span class="hash-value" title="{{ record.current_hash }}">{{ record.current_hash }}</span>
+                    </div>
+<!--                    <div class="metadata-item">-->
+<!--                        <label>Target Hash:</label>-->
+<!--                        <span class="hash-value" title="{{ record.target_hash or 'None' }}">-->
+<!--                            {{ record.target_hash or 'None' }}-->
+<!--                        </span>-->
+<!--                    </div>-->
+                    <div class="metadata-item">
+                        <label>Matches Target Hash:</label>
+                        <span class="hash-value" title="{{ record.target_hash or 'None' }}">
+                            {% if record.target_hash %}
+                                {% if record.target_hash == record.current_hash %}
+                                    Match
+                                {% else %}
+                                    Mismatch
+                                {% endif %}
+                            {% else %}
+                                No Target Hash: Unknown
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="metadata-item">
+                        <label>Previous Hash:</label>
+                        <span class="hash-value" title="{{ record.prev_hash or 'None' }}">
+                            {{ record.prev_hash or 'None' }}
+                        </span>
+                    </div>
+                    <div class="metadata-item">
+                        <label>Current Last Verified:</label>
+                        <span class="timestamp">
+                            {% if record.current_dtg_latest %}
+                                {{ moment(record.current_dtg_latest).format('YYYY-MM-DD HH:mm:ss') }} UTC
+                                <span class="time-ago">({{ moment(record.current_dtg_latest).fromNow() }})</span>
+                            {% else %}
+                                Unknown
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="metadata-item">
+                        <label>Current First Seen:</label>
+                        <span class="timestamp">
+                            {% if record.current_dtg_first %}
+                                {{ moment(record.current_dtg_first).format('YYYY-MM-DD HH:mm:ss') }} UTC
+                                <span class="time-ago">({{ moment(record.current_dtg_first).fromNow() }})</span>
+                            {% else %}
+                                Unknown
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="metadata-item">
+                        <label>Previous Last Seen:</label>
+                        <span class="timestamp">
+                            {% if record.prev_dtg_latest %}
+                                {{ moment(record.prev_dtg_latest).format('YYYY-MM-DD HH:mm:ss') }} UTC
+                                <span class="time-ago">({{ moment(record.prev_dtg_latest).fromNow() }})</span>
+                            {% else %}
+                                Unknown
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <table>
-        <tr>
-            <th>Field</th>
-            <th>Value</th>
-        </tr>
-        {% for key, value in record.items() %}
-        <tr>
-            <td><strong>{{ key }}</strong></td>
-            <td>{{ value }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+        <!-- Directory contents -->
+        <div class="contents-section">
+            <!-- Directories -->
+            {% if record.dirs %}
+                {% set dir_list = record.dirs.split(',') %}
+                <div class="content-type-section">
+                    <h2>Directories ({{ dir_list|length }})</h2>
+                    <div class="content-grid">
+                        {% for dir in dir_list %}
+                            {% if dir.strip() %}
+                                {% set dir_path = file_path + '/' + dir.strip() %}
+                                <div class="content-item directory-item">
+                                    <a href="{{ url_for('web_hashtable_detail', file_path=dir_path) }}" class="content-link">
+                                        <span class="content-icon">📁</span>
+                                        <span class="content-name">{{ dir.strip() }}</span>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Files -->
+            {% if record.files %}
+                {% set file_list = record.files.split(',') %}
+                <div class="content-type-section">
+                    <h2>Files ({{ file_list|length }})</h2>
+                    <div class="content-grid">
+                        {% for file in file_list %}
+                            {% if file.strip() %}
+                                {% set file_path_full = file_path + '/' + file.strip() %}
+                                <div class="content-item file-item">
+                                    <a href="{{ url_for('web_hashtable_detail', file_path=file_path_full) }}" class="content-link">
+                                        <span class="content-icon">📄</span>
+                                        <span class="content-name">{{ file.strip() }}</span>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Links -->
+            {% if record.links %}
+                {% set link_list = record.links.split(',') %}
+                <div class="content-type-section">
+                    <h2>Links ({{ link_list|length }})</h2>
+                    <div class="content-grid">
+                        {% for link in link_list %}
+                            {% if link.strip() %}
+                                {% set link_path = file_path + '/' + link.strip() %}
+                                <div class="content-item link-item">
+                                    <a href="{{ url_for('web_hashtable_detail', file_path=link_path) }}" class="content-link">
+                                        <span class="content-icon">🔗</span>
+                                        <span class="content-name">{{ link.strip() }}</span>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- No contents message -->
+            {% if not record.dirs and not record.files and not record.links %}
+                <div class="no-contents">
+                    <p>No directories, files, or links found in this location.</p>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="no-results">
+            <p>No record found for the specified path.</p>
+        </div>
+    {% endif %}
 </div>
+<!--<script>-->
+<!--function updateClocks() {-->
+<!--    const now = new Date();-->
 
-<div style="margin-top: 20px;">
-    <a href="{{ url_for('logs') }}">← Back to List</a>
-</div>
+<!--    // UTC time-->
+<!--    const utcTime = now.toISOString().slice(0, 19).replace('T', ' ');-->
+<!--    document.getElementById('utc-clock').textContent = utcTime;-->
+
+<!--    // Local time-->
+<!--    const localTime = now.toLocaleString('en-CA', {-->
+<!--        year: 'numeric',-->
+<!--        month: '2-digit',-->
+<!--        day: '2-digit',-->
+<!--        hour: '2-digit',-->
+<!--        minute: '2-digit',-->
+<!--        second: '2-digit',-->
+<!--        hour12: false-->
+<!--    }).replace(',', '');-->
+<!--    document.getElementById('local-clock').textContent = localTime;-->
+<!--}-->
+
+<!--// Update clocks immediately and then every second-->
+<!--updateClocks();-->
+<!--setInterval(updateClocks, 1000);-->
+<!--</script>-->
+
+<style>
+.hashtable-detail-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.breadcrumb-nav h1 {
+    margin: 0 0 20px 0;
+    font-size: 1.5em;
+    color: #333;
+}
+
+.breadcrumb-link {
+    color: #007bff;
+    text-decoration: none;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.breadcrumb-link:hover {
+    background-color: #f8f9fa;
+    text-decoration: underline;
+}
+
+.breadcrumb-separator {
+    margin: 0 5px;
+    color: #6c757d;
+}
+
+.record-metadata {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.metadata-section h2 {
+    margin-top: 0;
+    color: #495057;
+}
+
+.metadata-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.metadata-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.metadata-item label {
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 5px;
+}
+
+.hash-value {
+    font-family: monospace;
+    font-size: 0.9em;
+    word-break: break-all;
+    padding: 5px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+}
+
+.timestamp {
+    font-size: 0.9em;
+}
+
+.time-ago {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.contents-section {
+    margin-top: 30px;
+}
+
+.content-type-section {
+    margin-bottom: 30px;
+}
+
+.content-type-section h2 {
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 10px;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.content-item {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.content-item:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    transform: translateY(-1px);
+}
+
+.content-link {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    text-decoration: none;
+    color: #495057;
+}
+
+.content-icon {
+    margin-right: 10px;
+    font-size: 1.2em;
+}
+
+.content-name {
+    word-break: break-word;
+}
+
+.directory-item:hover {
+    background-color: #e3f2fd;
+    border-color: #2196f3;
+}
+
+.file-item:hover {
+    background-color: #e8f5e8;
+    border-color: #4caf50;
+}
+
+.link-item:hover {
+    background-color: #fff3e0;
+    border-color: #ff9800;
+}
+
+.no-contents, .no-results {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .metadata-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .breadcrumb-nav h1 {
+        font-size: 1.2em;
+        word-break: break-word;
+    }
+}
+</style>
 {% endblock %}

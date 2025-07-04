@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Hash Status - Squishy webgui{% endblock %}
+
+{% block content %}
+<div class="hash-status-container">
+    <h1>Site Hash Synchronization Status</h1>
+
+    <!-- Sort controls -->
+    <div class="sort-controls">
+        <div class="sort-group">
+            <label for="sort-select">Sort by:</label>
+            <select id="sort-select" onchange="sortTable(this.value)">
+                <option value="name">Site Name (A-Z)</option>
+                <option value="name-desc">Site Name (Z-A)</option>
+                <option value="timestamp">Last Updated (Newest)</option>
+                <option value="timestamp-desc">Last Updated (Oldest)</option>
+                <option value="sync-status">Sync Status</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Results summary -->
+    <div class="results-summary">
+        <p>Showing {{ hash_sync_data|length }} active sites</p>
+        <div class="sync-summary">
+            {% set sync_counts = {} %}
+            {% for site in hash_sync_data %}
+                {% set _ = sync_counts.update({site.sync_category: sync_counts.get(site.sync_category, 0) + 1}) %}
+            {% endfor %}
+
+            <div class="sync-badges">
+                {% for status, count in sync_counts.items() %}
+                    <span class="sync-badge sync-{{ status.replace('_', '-') }}">
+                        {{ status.replace('_', ' ').title() }}: {{ count }}
+                    </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Display hash synchronization status -->
+    {% if hash_sync_data %}
+        <div class="table-container">
+            <table class="hash-status-table" id="hash-status-table">
+                <thead>
+                    <tr>
+                        <th data-sort="name">Site Name</th>
+                        <th data-sort="hash">Current Hash</th>
+                        <th data-sort="timestamp">Last Updated</th>
+                        <th data-sort="sync-status">Sync Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for site in hash_sync_data %}
+                        <tr class="hash-status-row sync-{{ site.sync_category.replace('_', '-') }}">
+                            <td class="site-cell">{{ site.site_name }}</td>
+                            <td class="hash-cell">
+                                {% if site.current_hash %}
+                                    <span class="hash-value" title="{{ site.current_hash }}">
+                                        {{ site.current_hash[:8] }}...
+                                    </span>
+                                {% else %}
+                                    <span class="no-hash">No Hash</span>
+                                {% endif %}
+                            </td>
+                            <td class="timestamp-cell" data-timestamp="{{ site.last_updated or 0 }}">
+                                {% if site.last_updated %}
+                                    {{ moment(site.last_updated).format('YYYY-MM-DD HH:mm:ss') }}
+                                    <span class="time-ago">({{ moment(site.last_updated).fromNow() }})</span>
+                                {% else %}
+                                    <span class="never-updated">Never</span>
+                                {% endif %}
+                            </td>
+                            <td class="sync-cell">
+                                <span class="sync-badge sync-{{ site.sync_category.replace('_', '-') }}">
+                                    {% if site.sync_category == 'sync_current' %}
+                                        Current
+                                    {% elif site.sync_category == 'sync_1_behind' %}
+                                        1 Behind
+                                    {% elif site.sync_category == 'sync_l24_behind' %}
+                                        < 24h Behind
+                                    {% elif site.sync_category == 'sync_g24_behind' %}
+                                        > 24h Behind
+                                    {% elif site.sync_category == 'sync_unknown' %}
+                                        Unknown
+                                    {% else %}
+                                        {{ site.sync_category.replace('_', ' ').title() }}
+                                    {% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="no-results">
+            <p>No active sites found in the database.</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function sortTable(sortBy) {
+    const table = document.getElementById('hash-status-table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.sort((a, b) => {
+        let aValue, bValue;
+
+        switch(sortBy) {
+            case 'name':
+                aValue = a.querySelector('.site-cell').textContent.toLowerCase();
+                bValue = b.querySelector('.site-cell').textContent.toLowerCase();
+                return aValue.localeCompare(bValue);
+
+            case 'name-desc':
+                aValue = a.querySelector('.site-cell').textContent.toLowerCase();
+                bValue = b.querySelector('.site-cell').textContent.toLowerCase();
+                return bValue.localeCompare(aValue);
+
+            case 'hash':
+                aValue = a.querySelector('.hash-cell').textContent.toLowerCase();
+                bValue = b.querySelector('.hash-cell').textContent.toLowerCase();
+                return aValue.localeCompare(bValue);
+
+            case 'timestamp':
+                aValue = parseInt(a.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
+                bValue = parseInt(b.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
+                return bValue - aValue; // Newest first
+
+            case 'timestamp-desc':
+                aValue = parseInt(a.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
+                bValue = parseInt(b.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
+                return aValue - bValue; // Oldest first
+
+            case 'sync-status':
+                // Define sync status priority order (best to worst)
+                const syncOrder = {
+                    'sync-current': 0,
+                    'sync-1-behind': 1,
+                    'sync-l24-behind': 2,
+                    'sync-g24-behind': 3,
+                    'sync-unknown': 4
+                };
+
+                aValue = a.className.match(/sync-([^\s]+)/)?.[1] || 'unknown';
+                bValue = b.className.match(/sync-([^\s]+)/)?.[1] || 'unknown';
+
+                return (syncOrder[aValue] || 999) - (syncOrder[bValue] || 999);
+
+            default:
+                return 0;
+        }
+    });
+
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Set default sort on page load
+document.addEventListener('DOMContentLoaded', function() {
+    sortTable('name');
+});
+</script>
+{% endblock %}

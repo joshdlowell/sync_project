@@ -3,37 +3,41 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block topbar %}Database Dashboard{% endblock %}</title>
+    <title>{% block title %}Squishy webgui{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
+    <!-- Flask-Moment includes -->
+    {{ moment.include_moment() }}
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-300 min-h-screen">
     <!-- Navigation Bar -->
-    <nav class="bg-white shadow-lg border-b-2 border-blue-500">
+    <nav class="bg-gray-400 shadow-lg border-b-2 border-blue-500">
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between items-center py-4">
                 <!-- Logo -->
                 <div class="flex items-center space-x-3">
                     <div class="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-md">
-                        <img src="{{ url_for('static', filename='images/SB.svg') }}" alt="Badger in tupperware container">
+                        <img src="{{ url_for('static', filename='images/badger_tupperware.svg') }}" alt="Badger in tupperware container">
                     </div>
                     <div>
                         <h1 class="text-xl font-bold text-gray-800">DataBadger</h1>
-                        <p class="text-sm text-gray-500">SquishyBadger Status Monitoring</p>
+                        <p class="text-sm text-gray-400">SquishyBadger Status Monitoring</p>
                     </div>
                 </div>
 
                 <!-- Navigation Items -->
                 <div class="flex space-x-1">
-                    <a href="{{ url_for('index') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'dashboard' %}text-white bg-blue-600{% else %}text-gray-700 hover:bg-gray-100{% endif %} transition-all duration-200 font-medium shadow-md">
+                    <a href="{{ url_for('dashboard') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'dashboard' %}text-white bg-blue-600{% else %}text-gray-700 hover: bg-blue-400{% endif %} transition-all duration-200 font-medium shadow-md">
                         Dashboard
                     </a>
-                    <a href="{{ url_for('status') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'status' %}text-white bg-blue-600{% else %}text-gray-700 hover:bg-gray-100{% endif %} transition-all duration-200 font-medium">
-                        Site Status
+                    <a href="{{ url_for('hash_status') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'hash_status' %}text-white bg-blue-600{% else %}text-gray-700 hover: bg-blue-400{% endif %} transition-all duration-200 font-medium shadow-md">
+                        Site Hash Status
                     </a>
-                    <a href="{{ url_for('web_hashtable_list') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'hashtable' %}text-white bg-blue-600{% else %}text-gray-700 hover:bg-gray-100{% endif %} transition-all duration-200 font-medium">
-                        Hashtable
+                    <a href="{{ url_for('site_liveness') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'site_liveness' %}text-white bg-blue-600{% else %}text-gray-700 hover: bg-blue-400{% endif %} transition-all duration-200 font-medium shadow-md">
+                        Site Liveness
                     </a>
-                    <a href="{{ url_for('logs') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'logs' %}text-white bg-blue-600{% else %}text-gray-700 hover:bg-gray-100{% endif %} transition-all duration-200 font-medium">
+                    <a href="{{ url_for('logs') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'logs' %}text-white bg-blue-600{% else %}text-gray-700 hover: bg-blue-400{% endif %} transition-all duration-200 font-medium shadow-md">
                         Logs
                     </a>
                 </div>
@@ -41,8 +45,54 @@
         </div>
     </nav>
 
+    <!-- Path Navigation Form -->
+    <div class="bg-gray-200 border-b border-gray-300 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <form id="path-navigation-form" class="flex items-center space-x-3">
+                <label for="path-input" class="text-sm font-medium text-gray-700 whitespace-nowrap">
+                    Navigate to path:
+                </label>
+                <div class="flex-1 max-w-md">
+                    <input type="text"
+                           id="path-input"
+                           name="path"
+                           value="/baseline"
+                           placeholder="/baseline/product..."
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono">
+                </div>
+                <button type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 text-sm font-medium shadow-sm">
+                    Go
+                </button>
+            </form>
+        </div>
+    </div>
+
     <main>
         {% block content %}{% endblock %}
     </main>
+
+    <script>
+        document.getElementById('path-navigation-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const pathInput = document.getElementById('path-input');
+            let path = pathInput.value.trim();
+
+            // Remove leading slash if present (since url_for will handle the routing)
+            if (path.startsWith('/')) {
+                path = path.substring(1);
+            }
+
+            // Validate that we have a path
+            if (!path) {
+                alert('Please enter a valid path');
+                return;
+            }
+
+            // Navigate to the hashtable detail page
+            window.location.href = "{{ url_for('web_hashtable_detail', file_path='') }}" + path;
+        });
+    </script>
 </body>
 </html>

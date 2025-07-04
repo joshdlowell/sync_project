@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Site Liveness - Squishy webgui{% endblock %}
+
+{% block content %}
+<div class="liveness-container">
+    <h1>Site Liveness Status</h1>
+
+    <!-- Sort controls -->
+    <div class="sort-controls">
+        <div class="sort-group">
+            <label for="sort-select">Sort by:</label>
+            <select id="sort-select" onchange="sortTable(this.value)">
+                <option value="name">Site Name (A-Z)</option>
+                <option value="name-desc">Site Name (Z-A)</option>
+                <option value="timestamp">Last Updated (Newest)</option>
+                <option value="timestamp-desc">Last Updated (Oldest)</option>
+                <option value="status">Status Category</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Results summary -->
+    <div class="results-summary">
+        <p>Showing {{ liveness_data|length }} sites</p>
+        <div class="status-summary">
+            {% set status_counts = {} %}
+            {% for site in liveness_data %}
+                {% set _ = status_counts.update({site.status_category: status_counts.get(site.status_category, 0) + 1}) %}
+            {% endfor %}
+
+            <div class="status-badges">
+                {% for status, count in status_counts.items() %}
+                    <span class="status-badge status-{{ status.replace('_', '-') }}">
+                        {{ status.replace('_', ' ').title() }}: {{ count }}
+                    </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Display site liveness -->
+    {% if liveness_data %}
+        <div class="table-container">
+            <table class="liveness-table" id="liveness-table">
+                <thead>
+                    <tr>
+                        <th data-sort="name">Site Name</th>
+                        <th data-sort="timestamp">Last Updated</th>
+                        <th data-sort="status">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for site in liveness_data %}
+                        <tr class="liveness-row status-{{ site.status_category.replace('_', '-') }}">
+                            <td class="site-cell">{{ site.site_name }}</td>
+                            <td class="timestamp-cell" data-timestamp="{{ site.last_updated or 0 }}">
+                                {% if site.last_updated %}
+                                    {{ moment(site.last_updated).format('YYYY-MM-DD HH:mm:ss') }}
+                                    <span class="time-ago">({{ moment(site.last_updated).fromNow() }})</span>
+                                {% else %}
+                                    <span class="never-updated">Never</span>
+                                {% endif %}
+                            </td>
+                            <td class="status-cell">
+                                <span class="status-badge status-{{ site.status_category.replace('_', '-') }}">
+                                    {% if site.status_category == 'live_current' %}
+                                        Live - Current
+                                    {% elif site.status_category == 'live_1_behind' %}
+                                        Live - 1+ Hours Behind
+                                    {% elif site.status_category == 'live_l24_behind' %}
+                                        Live - 24+ Hours Behind
+                                    {% elif site.status_category == 'live_inactive' %}
+                                        Live - Inactive
+                                    {% elif site.status_category == 'marked_inactive' %}
+                                        Marked Inactive
+                                    {% else %}
+                                        {{ site.status_category.replace('_', ' ').title() }}
+                                    {% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="no-results">
+            <p>No sites found in the database.</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function sortTable(sortBy) {
+    const table = document.getElementById('liveness-table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.sort((a, b) => {
+        let aValue, bValue;
+
+        switch(sortBy) {
+            case 'name':
+                aValue = a.querySelector('.site-cell').textContent.toLowerCase();
+                bValue = b.querySelector('.site-cell').textContent.toLowerCase();
+                return aValue.localeCompare(bValue);
+
+            case 'name-desc':
+                aValue = a.querySelector('.site-cell').textContent.toLowerCase();
+                bValue = b.querySelector('.site-cell').textContent.toLowerCase();
+                return bValue.localeCompare(aValue);
+
+            case 'timestamp':
+                aValue = parseInt(a.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
+                bValue = parseInt(b.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
+                return bValue - aValue; // Newest first
+
+            case 'timestamp-desc':
+                aValue = parseInt(a.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
+                bValue = parseInt(b.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
+                return aValue - bValue; // Oldest first
+
+            case 'status':
+                // Define status priority order
+                const statusOrder = {
+                    'live-current': 0,
+                    'live-1-behind': 1,
+                    'live-l24-behind': 2,
+                    'live-inactive': 3,
+                    'marked-inactive': 4
+                };
+
+                aValue = a.className.match(/status-([^\s]+)/)?.[1] || 'unknown';
+                bValue = b.className.match(/status-([^\s]+)/)?.[1] || 'unknown';
+
+                return (statusOrder[aValue] || 999) - (statusOrder[bValue] || 999);
+
+            default:
+                return 0;
+        }
+    });
+
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Set default sort on page load
+document.addEventListener('DOMContentLoaded', function() {
+    sortTable('name');
+});
+</script>
+{% endblock %}

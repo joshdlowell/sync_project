@@ -488,12 +488,29 @@ RestProcessor(http_client: HttpClient, validator: HashInfoValidator = None)
 
 #### Methods
 
-##### `put_hashtable(hash_info: dict) -> int`
+##### `put_hashtable(hash_info: dict, session_id: str=None) -> int`
+
+    def put_hashtable(self, hash_info: dict, session_id: str=None) -> int:
+        """
+        Store hash information in the database.
+
+        This method implements the HashStorageInterface.put_hashtable method
+        required by the MerkleTreeService.
+
+        Args:
+            hash_info: Dictionary containing hash information for files and directories
+            session_id: Optional session ID for grouping batches of updates
+
+        Returns:
+            int representing the number of updates sent to the REST API that were unsuccessful
+        """
+
 
 Stores hash information in the database via REST API.
 
 **Parameters:**
 - `hash_info` (dict): Dictionary containing hash information for files and directories
+- `session_id` (int): Optional session ID for grouping batches of updates
 
 **Returns:**
 - `int`: Number of unsuccessful updates

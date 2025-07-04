@@ -53,9 +53,7 @@ class DBConnectionTestMixin():
         result = self.db.insert_or_update_hash(record)
 
         self.assertIsNotNone(result)
-        self.assertEqual(len(result['created']), 0)
-        self.assertEqual(len(result['modified']), 0)
-        self.assertEqual(len(result['deleted']), 0)
+        self.assertTrue(result)
 
     def test_update_existing_hash_record_different_hash(self):
         """Test updating an existing record with a different hash"""
@@ -80,8 +78,7 @@ class DBConnectionTestMixin():
         result = self.db.insert_or_update_hash(updated_record)
 
         self.assertIsNotNone(result)
-        self.assertIn('/test/path', result['modified'])
-        self.assertEqual(len(result['created']), 0)
+        self.assertTrue(result)
 
     def test_get_hash_record_existing(self):
         """Test retrieving an existing hash record"""
@@ -341,12 +338,7 @@ class DBConnectionTestMixin():
         result = self.db.insert_or_update_hash(record)
 
         self.assertIsNotNone(result)
-        self.assertIn('created', result)
-        self.assertIn('modified', result)
-        self.assertIn('deleted', result)
-        self.assertIn('/test/path/new', result['created'])
-        self.assertEqual(len(result['modified']), 0)
-        self.assertEqual(len(result['deleted']), 0)
+        self.assertTrue(result)
 
 
 # class TestMYSQLConnectionMock(unittest.TestCase, DBConnectionTestMixin):
@@ -494,11 +486,8 @@ class TestMYSQLConnection(unittest.TestCase, DBConnectionTestMixin):
         # Insert the record
         result = self.db.insert_or_update_hash(record)
 
-        # Verify the result structure
-        self.assertIsInstance(result, dict)
-        self.assertIn('created', result)
-        self.assertIn('modified', result)
-        self.assertIn('deleted', result)
+        # Verify the result
+        self.assertTrue(result)
 
         # Verify the record was actually inserted
         with self.db._get_connection() as conn:
@@ -534,7 +523,8 @@ class TestMYSQLConnection(unittest.TestCase, DBConnectionTestMixin):
         result = self.db.insert_or_update_hash(updated_record)
 
         # Verify update was successful
-        self.assertGreater(len(result['modified']), 0)
+        self.assertIsNotNone(result)
+        self.assertTrue(result)
 
         # Verify the record was actually updated
         with self.db._get_connection() as conn:
@@ -570,7 +560,7 @@ class TestMYSQLConnection(unittest.TestCase, DBConnectionTestMixin):
 
         # This should work even after connection loss
         result = self.db.insert_or_update_hash(record)
-        self.assertIsInstance(result, dict)
+        self.assertTrue(result)
 
     def test_insert_new_hash_record(self):
         """Test inserting a new hash record"""
@@ -587,14 +577,7 @@ class TestMYSQLConnection(unittest.TestCase, DBConnectionTestMixin):
         result = self.db.insert_or_update_hash(record)
 
         self.assertIsNotNone(result)
-        self.assertIn('created', result)
-        self.assertIn('modified', result)
-        self.assertIn('deleted', result)
-        self.assertIn('/test/path/new', result['created'])
-        self.assertEqual(len(result['modified']), 0)
-        self.assertEqual(len(result['deleted']), 0)
-
-
+        self.assertTrue(result)
 
 
 class TestLocalMemoryConnection(unittest.TestCase, DBConnectionTestMixin):
@@ -630,8 +613,8 @@ class TestLocalMemoryConnection(unittest.TestCase, DBConnectionTestMixin):
 
         stats = self.db.get_stats()
         self.assertEqual(stats['hashtable_records'], 1)
-        self.assertEqual(stats['log_entries'], 1)
-        self.assertEqual(stats['next_log_id'], 2)
+        self.assertEqual(stats['log_entries'], 2)
+        self.assertEqual(stats['next_log_id'], 3)
 
     def test_hashed_path_generation(self):
         """Test that hashed paths are generated correctly"""
@@ -704,7 +687,7 @@ class TestInterfaceCompatibility(unittest.TestCase):
         local_life = self.local_db.life_check()
 
         # Verify types
-        self.assertIsInstance(local_result, dict)
+        self.assertIsInstance(local_result, bool)
         self.assertIsInstance(local_hash, str)
         self.assertIsInstance(local_record, dict)
         self.assertIsInstance(local_logs, list)

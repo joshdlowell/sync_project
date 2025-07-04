@@ -26,7 +26,7 @@ class Config:
         return cls._instance
 
     # Define required keys as class constants
-    REQUIRED_KEYS = ['db_user', 'db_password', 'secret_key']
+    REQUIRED_KEYS = ['db_user', 'db_password', 'secret_key', 'site_name']
     SENSITIVE_KEYS = ['db_password', 'secret_key']
 
     # Default values for configuration
@@ -37,6 +37,9 @@ class Config:
         'db_user': None,
         'db_password': None,
         'db_port': 3306,
+        'site_name': None,
+        'core_host': 'core',  # TODO update this and in README
+        'core_top_level_domain': 'home',  # TODO update this and in README
         'api_host': '0.0.0.0',
         'api_port': 5000,
         'debug': False,
@@ -62,6 +65,9 @@ class Config:
         'db_user': 'LOCAL_MYSQL_USER',
         'db_password': 'LOCAL_MYSQL_PASSWORD',
         'db_port': 'LOCAL_MYSQL_PORT',
+        'site_name': 'SITE_NAME',
+        'core_host': 'CORE_HOST',
+        'core_top_level_domain': 'CORE_TOP_LEVEL_DOMAIN',
         'api_host': 'API_HOST',
         'api_port': 'API_PORT',
         'debug': 'DEBUG',
@@ -105,8 +111,23 @@ class Config:
             'proc_name': self._config["proc_name"],
         }
 
+        # Get sites data
+        site_name = self._config.get('site_name')
+        self.site = site_name.upper() if site_name else None
+        core_host = self._config.get('core_host')
+
+        if core_host is None or self.site is None:
+            self.is_core = False
+        else:
+            self.is_core = self.site in core_host.upper()
+
+        self.is_core = True  # TODO remove this hardcoding
         # Create logger
         self.logger = configure_logging(self._config.get('log_level'))
+
+    @property
+    def core_api_url(self) -> str:
+        return f"https://{self._config.get('core_host')}.{self._config.get('core_top_level_domain')}"
 
     def _load_from_environment(self) -> None:
         """Load configuration from environment variables."""
@@ -129,7 +150,7 @@ class Config:
         Raises:
             ConfigError: If conversion fails
         """
-        if key in ('db_port', 'api_port'):
+        if key in ('db_port', 'api_port', 'workers', 'timeout', 'keepalive', 'max_requests', 'max_requests_jitter'):
             try:
                 return int(value)
             except ValueError:
@@ -210,17 +231,3 @@ class Config:
 config = Config()
 # Default logger instance
 logger = config.logger
-# class RESTConfig:
-#     _instance = None
-#     _config = None
-#
-#     def __new__(cls):
-#         if cls._instance is None:
-#             cls._instance = super(RESTConfig, cls).__new__(cls)
-#         return cls._instance
-#
-#     @property
-#     def config(self) -> Config:
-#         if self._config is None:
-#             self._config = Config()
-#         return self._config

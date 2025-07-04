@@ -16,6 +16,7 @@ def register_api_routes(app: Flask, db_instance):
         app: Flask application instance
         db_instance: The DBConnection instance to use for API requests
     """
+    db_instance = db_instance
 
     @app.route('/api/hashtable', methods=['GET', 'POST'])
     def get_put_hashes():
@@ -52,7 +53,7 @@ def register_api_routes(app: Flask, db_instance):
                 logger.error(f"Database error for record: {request.json}")
                 return jsonify({"message": "Database error, see DB logs"}), 500
 
-            return jsonify({"message": "Success"})
+            return jsonify({"message": "Success", 'data': True})
 
         else:
             logger.warning(f"Method not allowed: {request.method}")
@@ -108,7 +109,7 @@ def register_api_routes(app: Flask, db_instance):
                         "data": {'api': True,
                                  'db': db_instance.life_check()}}), 200
 
-    @app.route('/api/logs', methods=['GET'])
+    @app.route('/api/logs', methods=['POST'])
     def put_logs():
         """Put a log entry in the database."""
         if request.method == 'POST':
@@ -119,7 +120,7 @@ def register_api_routes(app: Flask, db_instance):
             logger.debug(f"POST /api/logs")
 
             # Insert log entry
-            if not (db_instance.put_log_entry(record=request.json)):
+            if not (db_instance.put_log(request.json)):
                 logger.error(f"Database error adding log entry")
                 return jsonify({"message": "Database error, see DB logs"}), 500
 

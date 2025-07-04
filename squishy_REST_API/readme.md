@@ -4,16 +4,29 @@ A containerized REST API for SquishyBadger that provides seamless integration be
 
 ## Table of Contents
 
+- [Service Operation](#service-operation)
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
 - [API Reference](#api-reference)
   - [RESTAPIFactory](#restapifactory)
-  - [DBClient](#database-client-package-api-documentation)
+  - [Database Client Package](#database-client-package-api-documentation)
+    - [DBClient](#dbconnection-interface)
+    - [CoreDBClient](#coredbconnection-interface)
 - [Development](#development)
 - [Project Structure](#project-structure)
 - [Testing](#testing)
-- [Contributing](#contributing)
-- [License](#license)
+- [Error Handling](#error-handling)
+- [Project Status](#project-status)
+- [Version and Change Log](#version)
+- [Roadmap](#roadmap)
+
+## Service Operation
+The squishy-REST-API service requires serves as the central service for
+accessing and updating the local and core databases. It requires several
+enviroment variables (see [config](#configuration)). Once started it will: 
+1. Listen for `GET` and `POST` requests at it's defined endpoints
+2. Process serve and update data from the core and local databases.
+3. Return results from database operations
 
 ## Quick Start
 There is a quick start for all the services in the root README.md, if you want to start just the 
@@ -33,39 +46,10 @@ docker run -d \
   -e LOCAL_MYSQL_USER=your_app_user \
   -e LOCAL_MYSQL_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
+  -e SITE_NAME=SIT0
   -p 5000:5000 \
   squishy-rest-api
 ```
-
-#### Run with Docker Compose
-Create a `docker-compose.yml` file:
-
-```yaml
-services:
-   squishy-api:
-      build:
-         context: .
-         dockerfile: ../Dockerfile_rest
-      container_name: squishy-rest-api
-      environment:
-         LOCAL_MYSQL_USER: your_app_user
-         LOCAL_MYSQL_PASSWORD: your_user_password
-         API_SECRET_KEY: squishy_key_12345
-      ports:
-         - "5000:5000"
-      networks:
-         - squishy_db_default
-
-networks:
-   squishy_db_default:
-      external: true
-```
-
-Then run:
-```bash
-docker-compose up -d
-```
-
 ### Local Development
 
 ```bash
@@ -81,6 +65,7 @@ export LOCAL_DB_TYPE: mysql
 export LOCAL_MYSQL_HOST: mysql-squishy-db
 export LOCAL_MYSQL_DATABASE: squishy_db
 export LOCAL_MYSQL_PORT: 3306
+export SITE_NAME: SIT0
 export API_HOST: 0.0.0.0
 export API_PORT: 5000
 export DEBUG: False
@@ -97,37 +82,40 @@ python -m squishy_REST_API
 ## Configuration
 
 ### Required Environment Variables
-| Variable      | Description     | Default Value |
-|---------------|-----------------|-----------|
-| `LOCAL_MYSQL_USER`     | MySQL username  | `None` |
-| `LOCAL_MYSQL_PASSWORD` | MySQL password  | `None` |
-| `API_SECRET_KEY`      | API session key | `None` |
+| Variable               | Description              | Default Value |
+|------------------------|--------------------------|---------------|
+| `LOCAL_MYSQL_USER`     | MySQL username           | `None`        |
+| `LOCAL_MYSQL_PASSWORD` | MySQL password           | `None`        |
+| `API_SECRET_KEY`       | API session key          | `None`        |
+| `SITE_NAME`            | Site id of current site  | `None`        |
 
 ### Other configurable Environment Variables
-| Variable               | Description            | Default              |
-|------------------------|------------------------|----------------------|
-| `LOCAL_DB_TYPE`        | Type of storage to use | `mysql` |
-| `LOCAL_MYSQL_HOST`     | MySQL hostname         | `mysql-squishy-db` |
-| `LOCAL_MYSQL_DATABASE` | MySQL database name    | `squishy_db`       |
-| `LOCAL_MYSQL_PORT`     | MySQL server port      | `3306`               |
-| `API_HOST`             | REST API address       | `0.0.0.0`          |
-| `API_PORT`             | REST API port          | `5000`               |
-| `DEBUG`                | REST API debugging     | `False`              |
-| `LOG_LEVEL`            | REST API logging level | `'INFO'`              | 
+| Variable                | Description               | Default            |
+|-------------------------|---------------------------|--------------------|
+| `LOCAL_DB_TYPE`         | Type of storage to use    | `mysql`            |
+| `LOCAL_MYSQL_HOST`      | MySQL hostname            | `mysql-squishy-db` |
+| `LOCAL_MYSQL_DATABASE`  | MySQL database name       | `squishy_db`       |
+| `LOCAL_MYSQL_PORT`      | MySQL server port         | `3306`             |
+| `CORE_HOST`             | Hostname of core server   | `hqs0-drsl-t002`   |
+| `CORE_TOP_LEVEL_DOMAIN` | Top level domain of core  | `home`             |
+| `API_HOST`              | REST API address          | `0.0.0.0`          |
+| `API_PORT`              | REST API port             | `5000`             |
+| `DEBUG`                 | REST API debugging        | `False`            |
+| `LOG_LEVEL`             | REST API logging level    | `'INFO'`           | 
 
 ### Non-configurable variables
-| Variable                      | Description                            | Default |
-|-------------------------------|----------------------------------------|--------|
-| `workers`                     | number of gunicorn workers             | `4`      |
-| `worker_class`                | gunicorn request handling              | `sync` |
-| `timeout`                     | Time before resetting idle workers     | `30`     |
-| `keepalive`                   | Seconds to wait for requests           | `2`      |
-| `max_requests`                | Maximum requests before worker reset   | `1000`   |
-| `max_requests_jitter`         | jitter tolerance to add to requests    | `100`    |
-| `accesslog` | log write to location (default syslog) |  `-`   |
-| `errorlog` | log write to location (default errorlog) | `-` |                
-| `proc_name` | The name given to the process in the system | `squishy_rest_api` | 
-| `use_gunicorn` | Run the application with gunicorn (not dev) | `True` | 
+| Variable              | Description                                 | Default            |
+|-----------------------|---------------------------------------------|--------------------|
+| `workers`             | number of gunicorn workers                  | `4`                |
+| `worker_class`        | gunicorn request handling                   | `sync`             |
+| `timeout`             | Time before resetting idle workers          | `30`               |
+| `keepalive`           | Seconds to wait for requests                | `2`                |
+| `max_requests`        | Maximum requests before worker reset        | `1000`             |
+| `max_requests_jitter` | jitter tolerance to add to requests         | `100`              |
+| `accesslog`           | log write to location (default syslog)      | `-`                |
+| `errorlog`            | log write to location (default errorlog)    | `-`                |                
+| `proc_name`           | The name given to the process in the system | `squishy_rest_api` | 
+| `use_gunicorn`        | Run the application with gunicorn (not dev) | `True`             | 
 
 
 ### Connection Details
@@ -515,6 +503,7 @@ The `database_client` package provides a flexible database abstraction layer wit
 
 ```python
 from database_client import DBClient
+from database_client import CoreDBClient
 ```
 
 ## Quick Start
@@ -533,6 +522,17 @@ record = {
     'timestamp': 1234567890
 }
 success = db.insert_or_update_hash(record)
+```
+
+```python
+# Create a core database client
+core_db_client = CoreDBClient()
+
+# Get database connection (uses configuration)
+db = core_db_client.database_client
+
+# Get all log entries in the last 30 days from the logs table
+logs_list = db.get_recent_logs()
 ```
 
 ## API Reference
@@ -853,6 +853,244 @@ Microsoft SQL Server implementation (if available).
 
 ---
 
+## CoreDBConnection Interface
+
+Abstract base class defining the database interface for core site operations. This interface provides specialized methods for core sites that need to monitor and manage distributed hash integrity systems.
+
+### Dashboard Operations
+
+#### `get_dashboard_content() -> Dict[str, Any]`
+
+Retrieves comprehensive dashboard metrics for site monitoring system.
+
+Executes a complex query to gather site synchronization status, live status, and critical error counts across all sites in the site_list. Uses current and previous baselines from state_history to categorize sync status.
+
+**Returns:**
+- `Dict[str, Any]`: Dashboard metrics dictionary containing:
+  - `crit_error_count` (int): Critical errors in last 24 hours
+  - `hash_record_count` (int): Record count from current baseline
+  - `sync_current` (int): Sites with current baseline sync
+  - `sync_1_behind` (int): Sites one baseline behind
+  - `sync_l24_behind` (int): Sites with hash from last 24 hours
+  - `sync_g24_behind` (int): Sites with hash older than 24 hours
+  - `sync_unknown` (int): Sites with unknown baseline hash
+  - `live_current` (int): Sites active in last 35 minutes
+  - `live_1_behind` (int): Sites active between 35m-24h ago
+  - `live_l24_behind` (int): Sites active in last 24 hours
+  - `live_inactive` (int): Sites inactive for over 24 hours
+
+**Note:**
+Returns dictionary with zero values for all metrics if query fails. Only includes sites that exist in the authoritative site_list table.
+
+**Example:**
+```python
+core_db = core_db_client.database_client
+dashboard_data = core_db.get_dashboard_content()
+
+print(f"Sites in sync: {dashboard_data['sync_current']}")
+print(f"Critical errors: {dashboard_data['crit_error_count']}")
+print(f"Live sites: {dashboard_data['live_current']}")
+```
+
+### Logging Operations
+
+#### `get_recent_logs() -> List[Dict[str, Any]]`
+
+Retrieves all log entries from the last 30 days.
+
+**Returns:**
+- `List[Dict[str, Any]]`: List of log record dictionaries from the last 30 days, or empty list if no records found or an error occurred
+
+**Example:**
+```python
+recent_logs = core_db.get_recent_logs()
+print(f"Found {len(recent_logs)} log entries in the last 30 days")
+
+for log in recent_logs:
+    print(f"{log['timestamp']}: {log['level']} - {log['message']}")
+```
+
+#### `get_log_count_last_24h(log_level: str) -> int`
+
+Counts log entries for a specific log level in the last 24 hours.
+
+This method counts log entries from the local database for a given log level that occurred within the last 24 hours based on unix timestamp.
+
+**Parameters:**
+- `log_level` (str): The log level to count. Must be one of: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
+
+**Returns:**
+- `int`: Count of matching log records in the last 24 hours. Returns 0 if no records found or on error.
+
+**Raises:**
+- `ValueError`: If invalid log_level is provided
+
+**Example:**
+```python
+# Count critical errors in last 24 hours
+critical_count = core_db.get_log_count_last_24h('CRITICAL')
+print(f"Critical errors in last 24h: {critical_count}")
+
+# Count all warning levels
+warning_count = core_db.get_log_count_last_24h('WARNING')
+error_count = core_db.get_log_count_last_24h('ERROR')
+total_issues = warning_count + error_count + critical_count
+print(f"Total issues in last 24h: {total_issues}")
+```
+
+### Statistics Operations
+
+#### `get_hash_record_count() -> int`
+
+Retrieves the total count of records in the hashtable.
+
+**Returns:**
+- `int`: Total count of records in the hashtable, or 0 if an error occurred
+
+**Example:**
+```python
+total_records = core_db.get_hash_record_count()
+print(f"Total hash records in database: {total_records}")
+```
+
+---
+
+## Core Site Database Implementation
+
+### CoreMySQLConnection
+
+MySQL database implementation of the `CoreDBConnection` interface for core site operations.
+
+**Constructor:**
+```python
+CoreMySQLConnection(
+    host: str,
+    database: str,
+    user: str,
+    password: str,
+    port: int = 3306
+)
+```
+
+**Features:**
+- Specialized queries for multi-site monitoring
+- Dashboard metrics aggregation
+- Site synchronization status tracking
+- Advanced log analysis capabilities
+
+**Example:**
+```python
+from database_client import CoreMySQLConnection
+
+# Create core site database connection
+core_db = CoreMySQLConnection(
+    host="core-db-server",
+    database="integrity_core",
+    user="core_admin",
+    password="secure_password",
+    port=3306
+)
+
+# Get dashboard overview
+dashboard = core_db.get_dashboard_content()
+print(f"System overview: {dashboard['sync_current']} sites in sync")
+```
+
+---
+
+## Core Site Usage Examples
+
+### Dashboard Monitoring
+
+```python
+from database_client import DBClient
+
+# Create core site client
+core_client = DBClient()
+core_db = core_client.create_db_service('core_mysql')
+
+# Get comprehensive dashboard data
+dashboard = core_db.get_dashboard_content()
+
+# Display sync status
+print("=== Site Synchronization Status ===")
+print(f"Current sync: {dashboard['sync_current']}")
+print(f"1 baseline behind: {dashboard['sync_1_behind']}")
+print(f"Last 24h sync: {dashboard['sync_l24_behind']}")
+print(f"Over 24h behind: {dashboard['sync_g24_behind']}")
+print(f"Unknown status: {dashboard['sync_unknown']}")
+
+# Display live status
+print("\n=== Site Live Status ===")
+print(f"Currently active: {dashboard['live_current']}")
+print(f"Recently active: {dashboard['live_1_behind']}")
+print(f"Last 24h active: {dashboard['live_l24_behind']}")
+print(f"Inactive: {dashboard['live_inactive']}")
+
+# Display system health
+print(f"\n=== System Health ===")
+print(f"Critical errors (24h): {dashboard['crit_error_count']}")
+print(f"Total hash records: {dashboard['hash_record_count']}")
+```
+
+### Log Analysis
+
+```python
+# Analyze recent system activity
+recent_logs = core_db.get_recent_logs()
+print(f"Total logs in last 30 days: {len(recent_logs)}")
+
+# Count different log levels in last 24 hours
+log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+print("\n=== Log Level Summary (Last 24h) ===")
+for level in log_levels:
+    count = core_db.get_log_count_last_24h(level)
+    print(f"{level}: {count}")
+
+# Check for critical issues
+critical_errors = core_db.get_log_count_last_24h('CRITICAL')
+if critical_errors > 0:
+    print(f"\n⚠️  {critical_errors} critical errors need attention!")
+```
+
+### System Statistics
+
+```python
+# Get system scale metrics
+hash_count = core_db.get_hash_record_count()
+recent_logs = core_db.get_recent_logs()
+
+print("=== System Scale ===")
+print(f"Total hash records: {hash_count:,}")
+print(f"Recent log entries: {len(recent_logs):,}")
+
+# Calculate activity rate
+if recent_logs:
+    daily_log_rate = len(recent_logs) / 30
+    print(f"Average daily log rate: {daily_log_rate:.1f} entries/day")
+```
+
+---
+
+## Core Site Configuration
+
+Core site database connections require additional configuration:
+
+### Core MySQL Configuration
+```python
+# Required for core sites
+db_type = "core_mysql"
+db_host = "core-database-server"
+db_name = "integrity_core_db"
+db_user = "core_admin"
+db_password = "secure_core_password"
+
+# Optional
+db_port = 3306
+```
+
+The core site interface is designed for centralized monitoring and management of distributed hash integrity systems, providing specialized metrics and analytics not available in the standard `DBConnection` interface.
+
 ## Configuration
 
 The package uses the `squishy_REST_API.config` module for configuration. Required configuration keys depend on the database type:
@@ -982,25 +1220,30 @@ for db in [mysql_db, test_db]:
 
 ```
 squishy_REST_API/
-├── core.py                      # Application entry point
+├── core.py                         # Application entry point
 ├── app_factory/
-│   ├── api_routes.py            # API endpoint definitions
-│   └── app_factory.py           # Flask application factory
-├── configuration/               # Application configurations
-│   ├── config.py                # Main configuration
-│   ├── logging_config.py        # System logging configuration
-│   └── database_config.py       # Database implementation config
-├── storage_service/             # Database interface implementations
-│   ├── local_DB_interface.py    # Abstract interface
-│   ├── local_memory.py          # In-memory implementation
-│   ├── local_mysql.py           # MySQL implementation
-│   └── local_mssql_untested.py  # SQL Server (experimental)
-├── tests/                       # Test suite
-│   ├── test_api.py              # API endpoint tests
-│   └── test_storage_service.py  # Database tests
-├── docker-compose.yaml          # Docker compose file
-├── Dockerfile                   # Container build instructions
-├── requirements.txt             # Python dependencies
+│   ├── api_routes.py               # API endpoint definitions
+│   ├── gui_routes.py               # web-gui endpoint definitions
+│   └── app_factory.py              # Flask application factory
+├── configuration/                  # Application configurations
+│   ├── config.py                   # Main configuration
+│   └── logging_config.py           # System logging configuration
+├── database_client/                # Database interface implementations
+│   ├── db_bootstrap.py             # Create and configure db implementations
+│   ├── core_site_DB_interface.py   # Abstract interface
+│   ├── core_site_mysql.py          # MySQL implementation
+│   ├── local_DB_interface.py       # Abstract interface
+│   ├── local_memory.py             # In-memory implementation
+│   ├── local_mysql.py              # MySQL implementation
+│   └── local_mssql_untested.py     # MSSQL Server (experimental)
+├── web/                            # Web-gui assets
+│   ├── static/                     # static web page elements
+│   └── templates/                  # flask web page templates
+├── tests/                          # Test suite
+│   ├── test_api_and_gui_routes.py  # API endpoint tests
+│   ├── test_core_db_client.py      # Database tests
+│   └── test_local_db_client.py     # Database tests
+├── requirements.txt                # Python dependencies
 └── README.md
 ```
 
@@ -1050,6 +1293,22 @@ python -m unittest discover squishy_REST_API/tests/ -v
 
 🟢 **Active Development** - This project is actively maintained and regularly updated.
 
+## Version
+
+Current version: 2.0.0
+
+## Changelog
+
+**v2.0.0 - 2025-07-03**
+
+-   **Added:** Web-GUI for core sites
+-   **Added:** core site DB interface for Core only operations
+-   **Modified:** Changed app factory to create core assets if and only if current site is core
+
+**v1.0.0 - 2025-06-26**
+
+-   Baseline of current project state.
+
 ### Roadmap
 - [ ] Comprehensive logging and monitoring
 - [ ] Web GUI to easily access status
@@ -1073,3 +1332,4 @@ python -m unittest discover squishy_REST_API/tests/ -v
 ---
 
 **Made with 😠 by the SquishyBadger Team**
+Feel free to bring us a coffee from the cafeteria!

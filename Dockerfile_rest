@@ -25,14 +25,7 @@ WORKDIR /app
 COPY squishy_REST_API /app/squishy_REST_API/
 
 # Set environment variables
-ENV LOCAL_DB_TYPE=mysql
-ENV LOCAL_MYSQL_HOST=mysql-squishy-db
-ENV LOCAL_MYSQL_DATABASE=squishy_db
-ENV LOCAL_MYSQL_PORT=3306
-ENV API_HOST=0.0.0.0
-ENV API_PORT=5000
-ENV DEBUG=False
-ENV LOG_LEVEL=INFO
+# All non-required env vars are running v2 defaults
 
 # Expose port
 EXPOSE 5000

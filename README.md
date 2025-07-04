@@ -61,6 +61,7 @@ docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < /mnt/c/User
 ```bash
 docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/tests/test_hashtable.sql
 docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/tests/test_logs.sql
+docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/tests/test_sites_state.sql
 ```
 
 ### Run REST API container detached
@@ -80,6 +81,7 @@ docker run -it --rm \
   -e LOCAL_MYSQL_USER=your_app_user \
   -e LOCAL_MYSQL_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
+  -e SITE_NAME=SIT0 \
   -e LOG_LEVEL=DEBUG \
   -v $(pwd)/squishy_REST_API/tests:/app/squishy_REST_API/tests \
   -p 5000:5000 \
@@ -94,6 +96,7 @@ docker run -it --rm \
   -e LOCAL_MYSQL_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
   -e LOG_LEVEL=DEBUG \
+  -e SITE_NAME=SIT0 \
   -p 5000:5000 \
   -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_REST_API:/app/squishy_REST_API \
   squishy-rest-api:v1.0 /bin/sh
@@ -112,6 +115,7 @@ docker run -d \
   -e LOCAL_MYSQL_USER=your_app_user \
   -e LOCAL_MYSQL_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
+  -e SITE_NAME=SIT0 \
   -p 5000:5000 \
   squishy-rest-api:v1.0
 ```
@@ -223,6 +227,7 @@ docker-compose logs -f [service-name]
 ---
 
 **Made with 😠 by the SquishyBadger Team**
+Feel free to bring us a coffee from the cafeteria!
 
 
 

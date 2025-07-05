@@ -33,6 +33,8 @@ class Config:
     DEFAULTS = {
         'rest_api_host': 'squishy-rest-api',
         'rest_api_port': 5000,
+        'core_api_host': False,
+        'core_api_port': 443,
         'debug': False,
         'log_level': 'INFO',
         'max_retries': 3,
@@ -43,7 +45,8 @@ class Config:
     ENV_MAPPING = {
         'rest_api_host': 'REST_API_HOST',
         'rest_api_port': 'REST_API_PORT',
-        'root_path': 'BASELINE',
+        'core_api_host': 'CORE_API_HOST',
+        'core_api_port': 'CORE_API_PORT',
         'debug': 'DEBUG',
         'log_level': 'LOG_LEVEL'
     }
@@ -77,8 +80,8 @@ class Config:
         return f"http://{self._config.get('rest_api_host')}:{self._config.get('rest_api_port')}"
 
     @property
-    def session_id(self) -> str:
-        return self._session_id
+    def core_api_url(self) -> str:
+        return f"https://{self._config.get('core_api_host')}:{self._config.get('core_api_port')}"
 
     def _load_from_environment(self) -> None:
         """Load configuration from environment variables."""
@@ -101,7 +104,7 @@ class Config:
         Raises:
             ConfigError: If conversion fails
         """
-        if key in ['rest_api_port', 'max_retries', 'retry_delay', 'long_delay', 'max_runtime_minutes']:
+        if key in ['rest_api_port', 'core_api_port', 'max_retries', 'retry_delay', 'long_delay', 'max_runtime_minutes']:
             try:
                 return int(value)
             except ValueError:

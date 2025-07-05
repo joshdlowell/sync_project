@@ -25,7 +25,7 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
         log_level = 'INFO'
 
     # Create logger
-    logger = logging.getLogger('integrity')
+    logger = logging.getLogger('coordinator')
 
     # Set log level
     numeric_level = getattr(logging, log_level, None)

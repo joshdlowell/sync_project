@@ -24,6 +24,8 @@ verification rather than expensive byte-by-byte comparisons.
 - [Project Status](#project-status)
 - [Version and Change Log](#version)
 - [Roadmap](#roadmap)
+- [Support](#support)
+- [Acknowledgments](#acknowledgments)
 
 ## Service Operation
 The squishy-integrity service requires no local input. Each time the service or container is started

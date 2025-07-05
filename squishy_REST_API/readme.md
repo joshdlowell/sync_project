@@ -19,6 +19,8 @@ A containerized REST API for SquishyBadger that provides seamless integration be
 - [Project Status](#project-status)
 - [Version and Change Log](#version)
 - [Roadmap](#roadmap)
+- [Support](#support)
+- [Acknowledgments](#acknowledgments)
 
 ## Service Operation
 The squishy-REST-API service requires serves as the central service for

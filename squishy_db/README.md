@@ -1,9 +1,39 @@
 # Containerized MySQL Database
 
-A containerized MySQL database setup for SquishyBadger data management with automatic initialization.
+A lightweight MySQL database container built on the official MySQL image, pre-configured 
+with initialization scripts and environment variables for seamless SquishyBadger integration.
+
+## Table of Contents
+
+- [Service Operation](#service-operation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Required Files](#required-files)
+- [API Reference](#api-reference)
+- [Development](#development)
+- [Project Structure](#project-structure)
+- [Testing](#testing)
+- [Project Status](#project-status)
+- [Version and Change Log](#version)
+- [Roadmap](#roadmap)
+- [Support](#support)
+- [Acknowledgments](#acknowledgments)
+
+## Service Operation
+The squishy-db service requires the provided [initialization scripts](#required-files) and 
+specific [environment variables](#environment-variables) on the first run to
+construct the expected database for the SquishyBadger pod.
+
+On first time run (no database found) it will: 
+1. Use environment variables to define usernames and passwords
+2. Use environment variables to initialize a named database
+3. Create the tables and procedures defined in .sql scripts found in the `/docker-entrypoint-initdb.d` directory
+
+On subsequent runs it will
+1. Utilize the configuration found in the existing database
 
 ## Quick Start
-There is a quick start for all the services in the root README.md, if you want to start just the MySQL 
+There is a quick start for all the services in the root README.md, if you want to start only the MySQL 
 database use the instructions below.
 ### Using Docker Run
 
@@ -21,6 +51,20 @@ docker run -d \
 **Note:** This method creates a `docker volume` on the local machine and mounts it at `/var/lib/mysql` 
 inside the container to hold the persistent database data. In a production environment this mount should 
 be a true data store like a directory on the machine, or a network storage solution.
+
+## Configuration
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `MYSQL_ROOT_PASSWORD` | Root user password | Yes |
+| `MYSQL_DATABASE` | Initial database name | Yes |
+| `MYSQL_USER` | Application user name | Yes |
+| `MYSQL_PASSWORD` | Application user password | Yes |
+
+**NOTE** The environment variables are only used when no existing database/configuration
+is found. When mysql finds an existing configuration at `/var/lib/mysql`, it will ignore 
+the environment variables.
 
 ## Required Files
 In the project directory there is subdirectory named `init_scripts` that contains the table
@@ -118,20 +162,9 @@ END//
 DELIMITER ;
 ```
 
-## Environment Variables
+## API reference
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `MYSQL_ROOT_PASSWORD` | Root user password | Yes |
-| `MYSQL_DATABASE` | Initial database name | Yes |
-| `MYSQL_USER` | Application user name | Yes |
-| `MYSQL_PASSWORD` | Application user password | Yes |
-
-**NOTE** The environment variables are only used when no existing database/configuration
-is found. When mysql finds an existing configuration at `/var/lib/mysql`, it will ignore 
-the environment variables.
-
-## Database Schema
+### Database Schema
 
 The database will be automatically initialized on the first run with the tables:
 
@@ -145,7 +178,7 @@ The database will be automatically initialized on the first run with the tables:
 
 `sites`: Current hash state for each site with foreign key relationships
 
-## Connection
+### Connection
 
 - **Host**: localhost (or container name if using Docker network)
 - **Port**: 3306
@@ -154,7 +187,7 @@ The database will be automatically initialized on the first run with the tables:
 - **Password**: Value of `MYSQL_PASSWORD`
 
 
-## Interface
+### Interface
 This container enforces the DB schema(s) it is initialized with
 
 `hashtable`: 
@@ -183,8 +216,35 @@ operation it must be one of `ERROR`, `STATUS`, `WARNING`, or `INFO`
 2. If `current_hash` is specified, must reference valid `hash_value` from `state_history`
 3. `last_updated` auto-updates on record modification
 
+## Development
 
-## Unit testing
+### Project Structure
+
+```
+squishy_db/
+├── init_scripts/               # Initialzation script for required tables and procedures
+│   ├── hashtable_init.sql
+│   ├── logs_init.sql
+│   └── sites_states_init.sql   
+├── tests/                      # Test suite (ensures desired table schema enforcement)
+│   ├── test_hashtable.sql
+│   ├── test_logs.sql
+│   └── test_sites_state.sql
+└── README.md
+```
+
+### Local Development Setup
+Start by cloning the repository to your workspace.
+```bash
+# Clone the repository
+git clone <repository-url>
+cd squishy-db
+```
+1. **Prerequisites**: mysql:9.3, initialization scripts
+2**Environment**: [Environment variables](#environment-variables) are required to set usernames and passwords on first run
+3**Run**: see [quick start](#quick-start)
+
+## Testing
 This package also includes tests, in the form of SQL scripts, which can be used to verify that the 
 tables exist and are configured in compliance with the Database interface. The scripts use 
 transactions that get rolled back at the end, so they won't leave test data in your table.
@@ -252,3 +312,35 @@ docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < tests/test_
 3. **sites table** - Foreign key constraints, cascade deletes, and update triggers
 4. **Stored procedure** - SyncSiteOperationalData functionality
 5. **Data relationships** - Cross-table consistency and referential integrity
+
+## Project Status
+
+🟢 **Completed/Done** - This project will be updated as required.
+
+## Version
+
+Current version: 1.0
+
+## Changelog
+
+**v1.0 - 2025-06-26**
+
+-   Baseline of current project state.
+
+### Roadmap
+N/A
+
+## Support
+
+- **Issues**: Report bugs and request features by contacting us
+- **Documentation**: Less detailed docs available on the [confluence space](http://confluence)
+
+## Acknowledgments
+
+- Containerization with Docker
+- MySQL container maintained by the Docker Community and the MySQL Team
+
+---
+
+**Made with 😠 by the SquishyBadger Team**
+Feel free to bring us a coffee from the cafeteria!

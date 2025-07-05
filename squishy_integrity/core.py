@@ -6,15 +6,19 @@ from squishy_integrity import IntegrityCheckFactory, config, logger
 
 
 @contextmanager
-def performance_monitor(operation_name: str):
+def performance_monitor(merkle_service, operation_name: str):
     """Context manager to monitor operation performance."""
     start_time = time()
+    # Log start
+    merkle_service.hash_storage.put_log("Starting Merkle compute", f"Session ID: {config.session_id}")
     try:
         yield
     finally:
         duration = time() - start_time
         minutes = int(duration // 60)
         seconds = duration % 60
+        # Log completion
+        merkle_service.hash_storage.put_log("Completed Merkle compute", f"Session ID: {config.session_id}")
         if minutes > 0:
             logger.info(f"{operation_name} completed in {minutes}m {seconds:.2f}s")
         else:
@@ -24,9 +28,9 @@ def performance_monitor(operation_name: str):
 def get_paths_to_process(merkle_service, root_path: str) -> List[str]:
     """Get and deduplicate paths that need processing."""
     priority = merkle_service.hash_storage.get_priority_updates()
-    logger.debug(f"Priority updates: {priority}")
+    logger.info(f"Priority updates: {priority}")
     routine = merkle_service.hash_storage.get_oldest_updates(root_path)
-    logger.debug(f"Oldest updates: {routine}")
+    logger.info(f"Oldest updates: {routine}")
     return merkle_service.remove_redundant_paths_with_priority(priority, routine)
 
 
@@ -43,12 +47,13 @@ def process_paths(merkle_service, paths_list: List[str], root_path: str,
 
     for dir_path in paths_list:
         if time() > finish_time:
+            logger.info(f"Time limit reached, stopping processing")
             break
-
+        logger.info(f"Processing path: {dir_path}")
         try:
             merkle_service.compute_merkle_tree(root_path, dir_path)
             processed_count += 1
-            logger.debug(f"Processed path: {dir_path}")
+            logger.info(f"Processed path: {dir_path}")
         except Exception as e:
             logger.error(f"Failed to process path {dir_path}: {e}")
             continue
@@ -62,17 +67,18 @@ def main() -> int:
     Returns:
         int: Exit code (0 for success, non-zero for failure)
     """
-    with performance_monitor("Integrity check routine"):
+
+    logger.info("Starting integrity check routine")
+
+    merkle_service = IntegrityCheckFactory.create_service()
+    root_path = config.get('root_path')
+    logger.info(f"Discovered root path {root_path}")
+    max_runtime_min = config.get('max_runtime_min', 10)
+
+    with performance_monitor(merkle_service, "Integrity check routine"):
 
         try:
-            logger.info("Starting integrity check routine")
-
-            merkle_service = IntegrityCheckFactory.create_service()
-            root_path = config.get('root_path')
-            logger.info(f"Discovered root path {root_path}")
-            max_runtime_min = config.get('max_runtime_min', 10)
-
-            logger.info(f"Collecting paths to process paths")
+            logger.info(f"Collecting paths to process")
             paths_list = get_paths_to_process(merkle_service, root_path)
             logger.info(f"Processing {len(paths_list)} paths")
 

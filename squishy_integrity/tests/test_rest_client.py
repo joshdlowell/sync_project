@@ -89,7 +89,7 @@ class TestRestProcessor(unittest.TestCase):
     def test_get_single_hash_success(self):
         # def get_single_hash(self, path: str) -> str | None:
         # Arrange
-        self.mock_http_client.get.return_value = (200, {"message": "Success", "data": 'hash_value'})
+        self.mock_http_client.get.return_value = (200, 'hash_value')
 
         # Act
         result = self.rest_processor.get_single_hash("/test/path")
@@ -115,7 +115,7 @@ class TestRestProcessor(unittest.TestCase):
     def test_get_single_timestamp(self):
         # def get_single_timestamp(self, path: str) -> float | None:
         # Arrange
-        self.mock_http_client.get.return_value = (200, {"message": "Success", "data": 123456})
+        self.mock_http_client.get.return_value = 200, 123456
 
         # Act
         result = self.rest_processor.get_single_timestamp("/test/path")

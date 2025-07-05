@@ -190,47 +190,31 @@ class TestFileHasher(unittest.TestCase):
 
     def test_hash_directory(self):
         root_path = '/squishy/tests'
-        test_hash_info = {'/squishy/tests':
-                                   {'dirs': ['dir1', 'dir2', 'dir3', 'dir4', 'dir5', 'empty'],
-                                    'files': ['boot.yaml', 'test_integrity_check.py'],
-                                    'links': [],
-                                    'current_hash': '7e85a7fabb5fd2692986a7ac78fb043ee6d4e4a8',
-                                    'current_dtg_latest': '1750125976.93499'},
-                               '/squishy/tests/dir1':
-                                   {'current_hash': '30ec31703247d07b9142f722086416a84704ad53',
-                                    'current_dtg_latest': '1750125976.8928897'},
-                               '/squishy/tests/dir2':
-                                   {'current_hash': '56312a0620d3c21d9beb29ba2df493bf88106601',
-                                    'current_dtg_latest': '1750125976.898024'},
-                               '/squishy/tests/dir3':
-                                   {'current_hash': '30ec31703247d07b9142f722086416a84704ad53',
-                                    'current_dtg_latest': '1750125976.904361'},
-                               '/squishy/tests/dir4':
-                                   {'current_hash': '10a34637ad661d98ba3344717656fcc76209c2f8',
-                                    'current_dtg_latest': '1750125976.909718'},
-                               '/squishy/tests/dir5':
-                                   {'current_hash': 'cd22ff842dfb51981bf96090c52702f4cdc82e4a',
-                                    'current_dtg_latest': '1750125976.929444'},
-                               '/squishy/tests/empty':
-                                   {'current_hash': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
-                                    'current_dtg_latest': '1750125976.931147'},
-                               '/squishy/tests/boot.yaml':
-                                   {'current_hash': 'fb72f2e4e9b5a44650a4dd4ca2c27067ad3a2bc0',
-                                    'current_dtg_latest': '1750125976.9331563'},
-                               '/squishy/tests/test_integrity_check.py':
-                                   {'current_hash': '5c0a6c568d946fd1722cbfe8a06b061c7ea4f870',
-                                    'current_dtg_latest': '1750125976.9349732'}}
+        test_hash_info = {'path': '/squishy/tests',
+                          'dirs': ['dir1', 'dir2', 'dir3', 'dir4', 'dir5', 'empty'],
+                          'files': ['boot.yaml', 'test_integrity_check.py'],
+                          'links': [],
+                          'current_hash': '7e85a7fabb5fd2692986a7ac78fb043ee6d4e4a8',
+                          'current_dtg_latest': '1750125976.93499',
+                          'current_content_hashes': {'dir1': '30ec31703247d07b9142f722086416a84704ad53',
+                                                     'dir2': '56312a0620d3c21d9beb29ba2df493bf88106601',
+                                                     'dir3': '30ec31703247d07b9142f722086416a84704ad53',
+                                                     'dir4': '10a34637ad661d98ba3344717656fcc76209c2f8',
+                                                     'dir5': 'cd22ff842dfb51981bf96090c52702f4cdc82e4a',
+                                                     'empty': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+                                                     'boot.yaml': 'fb72f2e4e9b5a44650a4dd4ca2c27067ad3a2bc0',
+                                                     'test_integrity_check.py': '5c0a6c568d946fd1722cbfe8a06b061c7ea4f870'}}
         hash_info_result = '2063b1b72c8212b15121be4a73bc77343353a17f'
-        test_hash_info_2 = {'/squishy/tests/empty':
-                                    {'dirs': [],
-                                     'files': [],
-                                     'links': [],
-                                     'current_hash': '7e85a7fabb5fd2692986a7ac78fb043ee6d4e4a8',
-                                     'current_dtg_latest': '1750125976.93499'}}
+        test_hash_info_2 = {'path': '/squishy/tests/empty',
+                            'dirs': [],
+                            'files': [],
+                            'links': [],
+                            'current_hash': '7e85a7fabb5fd2692986a7ac78fb043ee6d4e4a8',
+                            'current_dtg_latest': 1750125976.9}
         hash_info_result_2 = 'b93bd91d6f80da4c57215471d70883823c462247'
 
-        self.assertEqual(hash_info_result, self.file_hasher.hash_directory(root_path, test_hash_info), "Return values didn't match")
-        self.assertEqual(hash_info_result_2, self.file_hasher.hash_directory(f"{root_path}/empty", test_hash_info_2), "Return values didn't match")
+        self.assertEqual(hash_info_result, self.file_hasher.hash_directory(test_hash_info), "Return values didn't match")
+        self.assertEqual(hash_info_result_2, self.file_hasher.hash_directory(test_hash_info_2), "Return values didn't match")
 
 
 class TestDirectoryTreeWalker(unittest.TestCase):

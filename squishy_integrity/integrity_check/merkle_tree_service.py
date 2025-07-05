@@ -58,56 +58,54 @@ class MerkleTreeService:
         # Check if database and API are reachable before starting
         if not self._check_liveness():
             logger.error("Integrity Check unable to contact database or API.")
+        logger.info(f"Integrity Check passed all startup checks.")
 
-        # Log start
-        self.hash_storage.put_log("Starting Merkle compute", f"Session ID: {config.session_id}")
         # Compute Merkle tree hash
-        logger.debug(f"Computing Merkle hash for directory: {target_dir}")
+        logger.info(f"Computing Merkle hash for directory: {target_dir}")
         dir_hash = self._compute_merkle_recursive(target_dir, tree_dict)
 
         # Update parent hashes if we're not at the root
         if root_path != target_dir:
-            logger.debug("Recomputing parent hashes")
+            logger.info("Recomputing parent hashes")
             self._recompute_parent_hashes(root_path, target_dir)
 
-        logger.info(f"Successfully computed Merkle hash for {target_dir}")
-        # Log completion
-        self.hash_storage.put_log("Completed Merkle compute", f"Session ID: {config.session_id}")
+        logger.info(f"Successfully computed Merkle hash for {dir_path}")
         return dir_hash
 
     def _compute_merkle_recursive(self, dir_path: str, tree_dict: Dict[str, Any]) -> str:
         """Recursively compute Merkle tree hashes"""
-        # Initialize hash info for this directory
-        hash_info = {dir_path: {}}
+        # create list to hold all hashtable entries generated
+        hash_info_list = []
+        dir_hash_info = {'path': dir_path, 'current_content_hashes': {}}
+        hash_info_list.append(dir_hash_info)
 
-        # Add directory structure to hash info
+        # Add current directory structure to hash info
         for category in ['dirs', 'files', 'links']:
-            hash_info[dir_path][category] = tree_dict[dir_path][category]
-
-            # Initialize hash info for each item
-            for item in tree_dict[dir_path][category]:
-                item_path = f"{dir_path}/{item}"
-                hash_info[item_path] = {}
+            dir_hash_info[category] = tree_dict[dir_path][category]
 
         # Hash subdirectories recursively
         for item in tree_dict[dir_path]['dirs']:
             item_path = f"{dir_path}/{item}"
-            hash_info[item_path]["current_hash"] = self._compute_merkle_recursive(item_path, tree_dict)
+            dir_hash_info["current_content_hashes"][item] = self._compute_merkle_recursive(item_path, tree_dict)
 
         # Hash links
         for item in tree_dict[dir_path]['links']:
             item_path = f"{dir_path}/{item}"
-            hash_info[item_path]["current_hash"] = self.file_hasher.hash_link(item_path)
+            dir_hash_info["current_content_hashes"][item] = self.file_hasher.hash_link(item_path)
+            hash_info_list.append({'path': item_path, 'current_hash': dir_hash_info["current_content_hashes"][item]})
 
         # Hash files
         for item in tree_dict[dir_path]['files']:
             item_path = f"{dir_path}/{item}"
-            hash_info[item_path]["current_hash"] = self.file_hasher.hash_file(item_path)
+            dir_hash_info["current_content_hashes"][item] = self.file_hasher.hash_file(item_path)
+            hash_info_list.append({'path': item_path, 'current_hash': dir_hash_info["current_content_hashes"][item]})
 
-        # Hash the directory itself and update changes
-        self._update_directory_hash(hash_info, dir_path)
+        # Get the directory hash (updated in place)
+        self._get_directory_hash(dir_hash_info)
+        # Update the database with hash information learned in this directory
+        self._put_to_hash_database(hash_info_list)
         logger.debug(f"Returning from merkle recursive for {dir_path}")
-        return hash_info[dir_path]["current_hash"]
+        return dir_hash_info["current_hash"]
 
     def _find_deepest_existing_directory(self, root_path: str, dir_path: str) -> Optional[str]:
         """
@@ -164,7 +162,6 @@ class MerkleTreeService:
                 len(dir_contents.get('files', [])) == 0 and
                 len(dir_contents.get('links', [])) == 0)
 
-    #     return dir_hash
     def _check_liveness(self):
         repeats = 5
         while repeats:
@@ -268,18 +265,14 @@ class MerkleTreeService:
 
         return result
 
-    def _update_directory_hash(self, hash_info: Dict[str, Any], dir_path: str):
+    def _get_directory_hash(self, hash_info: Dict[str, Any]):
         """Update directory hash and track changes"""
-        # Compute directory hash
-        logger.debug(f"Updating directory hash for {dir_path}...")
-        hash_info[dir_path]['current_hash'] = self.file_hasher.hash_directory(dir_path, hash_info)
-
-        # Store hash info
-        failed_updates = self.hash_storage.put_hashtable(hash_info, config.session_id)
-        if failed_updates > 0:
-            logger.error(f"Failed to update hash storage for {failed_updates} of {len(hash_info.keys())} records")
+        if not hash_info.get('path', None):
+            logger.error(f"Failed to get_directory_hash for hash_info with not path key")
             return
-        logger.debug(f"Info sent to hash storage for {dir_path}")
+        # Compute directory hash
+        logger.debug(f"Updating directory hash for {hash_info.get('path', None)}...")
+        hash_info['current_hash'] = self.file_hasher.hash_directory(hash_info)
 
     def _recompute_parent_hashes(self, root_path: str, dir_path: str):
         """Recompute parent directory hashes up to root"""
@@ -293,27 +286,36 @@ class MerkleTreeService:
                 logger.error(f"Failed to get parent info from database for path {current_path}")
                 return
 
-            # Collect parent hash information
-            hash_string = ''
+            # Collect and recompute parent hash information
+            dir_hash_info = {'path': current_path, 'current_content_hashes': {}}
             for category in ['dirs', 'files', 'links']:
-                items = parent_info.get(category, [])
-                if items:
-                    for item in sorted(items):
-                        item_path = f"{current_path}/{item}"
-                        hash_string += self.hash_storage.get_single_hash(item_path) or f"{item_path}:NOT_FOUND"
-                else:
-                    hash_string += f"{current_path}/{category}: EMPTY "
-            dir_hash = self.file_hasher.hash_string(hash_string)
-            new_parent_info = {
-                current_path: {
-                    'path': current_path,
-                    'current_hash': dir_hash,
-                    'dirs': parent_info['dirs'],
-                    'files': parent_info['files'],
-                    'links': parent_info['links']
+                items = parent_info.get(category)
+                if not items:
+                    continue
+                dir_hash_info[category] = items
+                for item in items:
+                    item_path = f"{current_path}/{item}"
+                    dir_hash_info['current_content_hashes'][item] = self.hash_storage.get_single_hash(item_path)
+
+            logger.debug(f"Collected existing content hashes for {current_path} recalculation")
+            logger.debug(f"Updating directory hash for {dir_hash_info.get('path', None)}...")
+            self._get_directory_hash(dir_hash_info)
+            self._put_to_hash_database(dir_hash_info)
+
+    def _put_to_hash_database(self, hash_info: List[Dict[str, Any]] | Dict[str, Any]):
+        """Put hash info to database"""
+        if isinstance(hash_info, dict):
+            hash_info = [hash_info]
+
+        for item in hash_info:
+            db_entry = {
+                item['path']: {
+                    'path': item['path'],
+                    'current_hash': item['current_hash'],
+                    'dirs': item.get('dirs', []),
+                    'files': item.get('files', []),
+                    'links': item.get('links', [])
                 }
             }
-            logger.debug(f"Collected parent hashes for {dir_path}")
-            self.hash_storage.put_hashtable(new_parent_info, config.session_id)
-
-        logger.debug(f"Updated hashtable with parent hashes for {dir_path}")
+            logger.debug(f"Sending hashtable entry for {item['path']}")
+            self.hash_storage.put_hashtable(db_entry, config.session_id)

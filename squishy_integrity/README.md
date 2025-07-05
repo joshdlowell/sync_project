@@ -238,6 +238,18 @@ Hashes a directory based on its contents.
 **Returns:**
 - `str`: Hexadecimal hash string
 
+##### `hash_empty_type(full_path: str, category: str='dirs', return_string: bool=False) -> str`
+
+Provides a standardized way to Hash an empty directory by its path
+
+**Parameters**
+- `full_path` (str): Absolute path of the item
+- `category` (str): Default `dirs`, other types accepted for modularity
+- `return_string` (bool): Default `False` sets the return value to hashable string or hashvalue
+ 
+**Returns**
+- `str`: standardized fileHasher directory string, or Hexadecimal hash string of the same.
+
 ##### `hash_string(hashable: str) -> str`
 
 Hashes a string using the configured hash function.

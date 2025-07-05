@@ -103,7 +103,7 @@ class RestProcessor:
         """
         response = self._db_get("api/hash", {"path": path})
         content = self._process_response(response)
-        return content.get('data') if content else None
+        return content if content else None
 
     def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
         """
@@ -130,6 +130,10 @@ class RestProcessor:
         if not dirs:
             logger.info("no child directories in database, requesting full hash")
             return [root_path]
+        # Add files and links in root directory to ensure, if any exist, they are periodically updated
+        dirs.extend(base_response.get('files') if base_response.get('files') else [])
+        dirs.extend(base_response.get('links') if base_response.get('links') else [])
+
         dirs = [f"{root_path}/{relative_dir}" for relative_dir in dirs]
         # Build and sort by timestamp
         dir_timestamps = [(self.get_single_timestamp(directory) or int(time()), directory)
@@ -155,8 +159,8 @@ class RestProcessor:
         """
         response = self._db_get("api/timestamp", {"path": path})
         content = self._process_response(response)
-        logger.debug("Returning single timestamp request")
-        return content.get('data') if content else None
+        logger.debug(f"Returning single timestamp request")
+        return content if content else None
 
     def get_priority_updates(self) -> list | None:
         """

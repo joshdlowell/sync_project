@@ -26,11 +26,22 @@ class FileHasher:
         link_representation = self._get_link_representation(link_path)
         return self.hash_function.hash_string(link_representation)
 
-    def hash_directory(self, dir_path: str, hash_info: Dict[str, Any]) -> str:
+    def hash_directory(self, hash_info: Dict[str, Any]) -> str | None:
         """Hash a directory based on its contents"""
+        if not hash_info.get('path', None):
+            logger.error(f"Failed to hash_directory for hash_info with no path key")
+            return None
         logger.debug("Getting directory hashable string...")
-        dir_representation = self._get_directory_representation(dir_path, hash_info)
+        dir_representation = self._get_directory_representation(hash_info)
         return self.hash_function.hash_string(dir_representation)
+
+    def hash_empty_type(self, full_path: str, category: str = 'dirs', return_string: bool=False) -> str:
+        """Provides a standardized way to Hash an empty directory by its path"""
+        hash_string = f"{full_path}/{category}: EMPTY "
+
+        if return_string:
+            return hash_string
+        return self.hash_function.hash_string(hash_string)
 
     def hash_string(self, hashable: str) -> str:
         """Hash a string using the Filehasher methods"""
@@ -41,17 +52,16 @@ class FileHasher:
         target = self.file_system.readlink(link_path)
         return f"{link_path} -> {target}"
 
-    def _get_directory_representation(self, dir_path: str, hash_info: Dict[str, Any]) -> str:
+    def _get_directory_representation(self, hash_info: Dict[str, Any]) -> str:
         """Get string representation of directory contents for hashing"""
         hash_string = ''
 
         for category in ['dirs', 'files', 'links']:
-            items = hash_info[dir_path].get(category, [])
-            if items:
+            items = hash_info.get(category, [])
+            if items and len(items) > 0:
                 for item in sorted(items):
-                    item_path = f"{dir_path}/{item}"
-                    hash_string += hash_info[item_path]['current_hash']
+                    hash_string += hash_info['current_content_hashes'][item]
             else:
-                hash_string += f"{dir_path}/{category}: EMPTY "
+                hash_string += self.hash_empty_type(hash_info['path'], category, return_string=True)
 
         return hash_string

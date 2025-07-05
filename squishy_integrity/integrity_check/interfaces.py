@@ -34,7 +34,7 @@ class HashStorageInterface(ABC):
     """Abstract interface for hash storage operations"""
 
     @abstractmethod
-    def put_hashtable(self, hash_info: Dict[str, Any], session_id: str=None) -> int:
+    def put_hashtable(self, hash_info: Dict[str, Any]) -> int:
         pass
 
     @abstractmethod

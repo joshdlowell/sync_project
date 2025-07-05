@@ -25,7 +25,6 @@ class LocalMemoryConnection(DBConnection):
         # Logs storage - list of log entries with auto-incrementing IDs
         self.logs = []
         self._next_log_id = 1
-        self.running_sessions = {}
 
         logger.debug("Local memory database initialized")
 
@@ -365,12 +364,7 @@ class LocalMemoryConnection(DBConnection):
             # Merkle Session tracking support
             if args_dict.get('session_id'):
                 if "Completed Merkle compute" in args_dict.get('summary_message'):
-                    self.running_sessions[args_dict.get('session_id')].append(log_id)
-                    self._consolidate_logs(self.running_sessions.pop(args_dict.get('session_id')))
-                elif self.running_sessions.get(args_dict.get('session_id')):
-                    self.running_sessions[args_dict.get('session_id')].append(log_id)
-                else:
-                    self.running_sessions[args_dict.get('session_id')] = [log_id]
+                    self._consolidate_logs(args_dict.get('session_id'))
 
             logger.debug(f"Entry inserted into logs table: {log_id}")
             return log_id
@@ -380,11 +374,11 @@ class LocalMemoryConnection(DBConnection):
             return None
 
 
-    def _consolidate_logs(self, log_entries: List[int]) -> None:
+    def _consolidate_logs(self, session_id: int) -> None:
         changes = {'created': set(), 'modified':set(), 'deleted':set()}
-        logger.debug(f"Consolidating {len(log_entries)} log entries")
-        for log_id in sorted(log_entries):
-            log_entry = self.get_log_entry(log_id)
+
+        log_entries = [log.copy() for log in self.logs if log['session_id'] == session_id]
+        for log_entry in log_entries:
             if log_entry and log_entry.get('detailed_message'):
                 data = log_entry.get('detailed_message')
                 for field in changes.keys():
@@ -400,7 +394,7 @@ class LocalMemoryConnection(DBConnection):
             'summary_message': "Merkle compute complete",
             'detailed_message': detailed_message,
         }
-
+        logger.debug(f"Consolidating {len(log_entries)} log entries")
         self.put_log(summary_entry)
 
         for log_id in log_entries:

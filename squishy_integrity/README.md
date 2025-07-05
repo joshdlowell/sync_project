@@ -42,8 +42,10 @@ squishy_integrity service use the instructions below.
 ### Using Docker (Recommended)
 
 #### Build the Container
+The Dockerfile (and associated `.dockerignore`) is located in the root of the SquishyBadger 
+repo and named `Dockerfile_integrity`
 ```bash
-docker build -t squishy-integrity .
+docker build -t squishy-integrity:v1.2 . -f Dockerfile_integrity
 ```
 
 #### Run with Docker
@@ -52,7 +54,7 @@ docker run -d \
   --name squishy-integrity \
   --network squishy_db_default \
   -v /location/of/baseline:/baseline  \
-  squishy-integrity
+  squishy-integrity:v1.2
 ```
 
 ### Example Usage
@@ -63,7 +65,7 @@ docker run -it --rm \
   --name squishy-integrity \
   --network squishy_db_default \
   -v /location/of/baseline:/baseline  \
-  squishy-integrity
+  squishy-integrity:v1.2
   
 # once at the container prompt
 python -m squishy_integrity

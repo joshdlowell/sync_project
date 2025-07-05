@@ -122,15 +122,16 @@ docker logs squishy-rest-api
 ### Run integrity interactively
 #### First time through you will need to build the container image
 ```bash
-docker build -t squishy-integrity:v1.0 . -f Dockerfile_integrity
+docker build -t squishy-integrity:v1.2 . -f Dockerfile_integrity
 ```
 
 You can run this container for testing, or for production. In production the
 container will reach out to the db (via the rest_api) and perform a hash of the
 files mounted to `/baseline` inside the container
 #### Run interactive for testing
-This command will start the docker container without launching the integrity service and add the tests 
-to the package
+This command will start the docker container in `DEBUG` (verbose) mode without launching 
+the integrity service and add the tests to the package.
+**Note:** There are no files mounted to the `/baseline` directory when launched this way.
 
 ```bash
 docker run -it --rm \
@@ -138,7 +139,7 @@ docker run -it --rm \
   --network squishy_db_default \
   -e LOG_LEVEL=DEBUG \
   -v $(pwd)/squishy_integrity/tests:/app/squishy_integrity/tests \
-  squishy-integrity:v1.0 /bin/sh
+  squishy-integrity:v1.2 /bin/sh
 ```
 ******With all my local files mounted for development
 ```bash
@@ -148,7 +149,7 @@ docker run -it --rm \
     -e LOG_LEVEL=DEBUG \
   -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_integrity:/app/squishy_integrity \
   -v /mnt/c/Users/joshu/Downloads:/baseline \
-  squishy-integrity:v1.0 /bin/sh
+  squishy-integrity:v1.2 /bin/sh
 ```
 
 Run tests with detailed output:
@@ -162,7 +163,7 @@ docker run -d \
   --name squishy-integrity \
   --network squishy_db_default \
     -v <location of baseline>:/baseline \
-  squishy-integrity:v1.0
+  squishy-integrity:v1.2
 ```
 ************** for my testing
 ```bash
@@ -170,7 +171,7 @@ docker run -d \
   --name squishy-integrity \
   --network squishy_db_default \
   -v /mnt/c/Users/joshu/Downloads:/baseline \
-  squishy-integrity:v1.0
+  squishy-integrity:v1.2
 ```
 
 Check the logs to ensure the service is running
@@ -210,11 +211,12 @@ docker-compose logs -f [service-name]
 🟢 **Active Development** - This project is actively maintained and regularly updated.
 
 ### Roadmap
-- [ ] Implement web-gui for viewing db data
-- [ ] Implement session_id for merkle logging grouping in Rest API
-- [ ] Implement putting log entries in DB for merkle status
+- [ ] Implement controller
+- [X] Implement web-gui for viewing db data
+- [X] Implement session_id for merkle logging grouping in Rest API
+- [X] Implement putting log entries in DB for merkle status
 - [ ] Implement putting log entries in DB for REST API
-- [ ] Move string handling (for files dirs links) in responses from rest_processor.py to REST API
+- [X] Move string handling (for files dirs links) in responses from rest_processor.py to REST API
 - [ ] More comprehensive tests to ensure stability of API during code updates
 - [ ] Performance optimization
 

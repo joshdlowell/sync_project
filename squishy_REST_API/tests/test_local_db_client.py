@@ -340,7 +340,7 @@ class DBConnectionTestMixin():
         self.assertIsNotNone(result)
         self.assertTrue(result)
 
-
+# TODO test for putting logs with session id
 # class TestMYSQLConnectionMock(unittest.TestCase, DBConnectionTestMixin):
 #     """Test cases for MySQL implementation"""
 #

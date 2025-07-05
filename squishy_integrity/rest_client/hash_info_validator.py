@@ -2,7 +2,7 @@
 
 class HashInfoValidator:
     # These should align with the Hashtable requirements in the database
-    VALID_KEYS = {'path', 'current_hash', 'current_dtg_latest', 'dirs', 'files', 'links'}
+    VALID_KEYS = {'path', 'current_hash', 'current_dtg_latest', 'dirs', 'files', 'links', 'session_id'}
     REQUIRED_KEYS = {'current_hash'}
 
     def validate(self, hash_info: dict) -> list:

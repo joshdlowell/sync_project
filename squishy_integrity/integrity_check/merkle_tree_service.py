@@ -41,7 +41,7 @@ class MerkleTreeService:
         # Find the deepest existing directory within the root path
         target_dir = self._find_deepest_existing_directory(root_path, dir_path)
         if target_dir is None:
-            logger.error(f"No valid directory found between root ({root_path}) and target ({dir_path})")
+            logger.error(f"No valid directory path found from root ({root_path}) to target ({dir_path})")
             return None
 
         # Get tree structure for the target directory
@@ -51,8 +51,8 @@ class MerkleTreeService:
             return None
 
         # Check if root is empty (only if we ended up at root)
-        if target_dir == root_path and self._is_directory_empty(tree_dict, target_dir):
-            logger.error(f"Root path ({root_path}) is empty")
+        if self._is_directory_empty(tree_dict, root_path):
+            logger.warning(f"Root path ({root_path}) is empty, check that baseline is available and mounted.")
             return None
 
         # Check if database and API are reachable before starting
@@ -76,7 +76,11 @@ class MerkleTreeService:
         """Recursively compute Merkle tree hashes"""
         # create list to hold all hashtable entries generated
         hash_info_list = []
-        dir_hash_info = {'path': dir_path, 'current_content_hashes': {}}
+        dir_hash_info = {
+            'path': dir_path,
+            'current_content_hashes': {},
+            'session_id': config.session_id
+        }
         hash_info_list.append(dir_hash_info)
 
         # Add current directory structure to hash info
@@ -92,13 +96,21 @@ class MerkleTreeService:
         for item in tree_dict[dir_path]['links']:
             item_path = f"{dir_path}/{item}"
             dir_hash_info["current_content_hashes"][item] = self.file_hasher.hash_link(item_path)
-            hash_info_list.append({'path': item_path, 'current_hash': dir_hash_info["current_content_hashes"][item]})
+            hash_info_list.append({
+                'path': item_path,
+                'current_hash': dir_hash_info["current_content_hashes"][item],
+                'session_id': config.session_id
+            })
 
         # Hash files
         for item in tree_dict[dir_path]['files']:
             item_path = f"{dir_path}/{item}"
             dir_hash_info["current_content_hashes"][item] = self.file_hasher.hash_file(item_path)
-            hash_info_list.append({'path': item_path, 'current_hash': dir_hash_info["current_content_hashes"][item]})
+            hash_info_list.append({
+                'path': item_path,
+                'current_hash': dir_hash_info["current_content_hashes"][item],
+                'session_id': config.session_id
+            })
 
         # Get the directory hash (updated in place)
         self._get_directory_hash(dir_hash_info)
@@ -287,7 +299,7 @@ class MerkleTreeService:
                 return
 
             # Collect and recompute parent hash information
-            dir_hash_info = {'path': current_path, 'current_content_hashes': {}}
+            dir_hash_info = {'path': current_path, 'current_content_hashes': {}, 'session_id': config.session_id}
             for category in ['dirs', 'files', 'links']:
                 items = parent_info.get(category)
                 if not items:
@@ -311,6 +323,7 @@ class MerkleTreeService:
             db_entry = {
                 item['path']: {
                     'path': item['path'],
+                    'session_id': item.get('session_id', None),
                     'current_hash': item['current_hash'],
                     'dirs': item.get('dirs', []),
                     'files': item.get('files', []),
@@ -318,4 +331,4 @@ class MerkleTreeService:
                 }
             }
             logger.debug(f"Sending hashtable entry for {item['path']}")
-            self.hash_storage.put_hashtable(db_entry, config.session_id)
+            self.hash_storage.put_hashtable(db_entry)

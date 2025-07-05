@@ -24,7 +24,7 @@ class RestProcessor:
         self.http_client = http_client
         self.validator = validator or HashInfoValidator()
 
-    def put_hashtable(self, hash_info: dict, session_id: str=None) -> int:
+    def put_hashtable(self, hash_info: dict) -> int:
         """
         Store hash information in the database.
 
@@ -53,13 +53,15 @@ class RestProcessor:
                 continue
 
             request_data = {
-                'session_id': session_id,
+                # 'session_id': item_data['session_id'],
                 'path': path,
                 'current_hash': item_data['current_hash'],
                 'dirs': item_data.get('dirs'),
                 'files': item_data.get('files'),
                 'links': item_data.get('links')
             }
+            if item_data.get('session_id'):
+                request_data['session_id'] = item_data['session_id']
 
             code, update = self._db_put("api/hashtable", request_data)
 

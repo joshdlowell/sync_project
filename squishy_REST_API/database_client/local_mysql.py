@@ -40,7 +40,6 @@ class MYSQLConnection(DBConnection):
         }
         self.database = database
         self.connection_factory = connection_factory or mysql.connector.connect
-        self.running_sessions = {}
 
     @contextmanager
     def _get_connection(self):
@@ -465,34 +464,46 @@ class MYSQLConnection(DBConnection):
                     logger.info(f"Successfully inserted log entry with ID: {log_id}")
 
                     # Merkle Session tracking support
-                    if args_dict.get('session_id'):
-                        if "Completed Merkle compute" in args_dict.get('summary_message'):
-                            self.running_sessions[args_dict.get('session_id')].append(log_id)
-                            self._consolidate_logs(self.running_sessions.pop(args_dict.get('session_id')))
-                        elif self.running_sessions.get(args_dict.get('session_id')):
-                            self.running_sessions[args_dict.get('session_id')].append(log_id)
-                        else:
-                            self.running_sessions[args_dict.get('session_id')] = [log_id]
+                    if args_dict.get('session_id') is not None:
+                        if "Completed Merkle compute" in args_dict.get('summary_message', ''):
+                            self._consolidate_logs(args_dict.get('session_id'))
 
                     return log_id
         except Error as e:
             logger.error(f"Error inserting log entry: {e}")
             return None
 
-    def _consolidate_logs(self, log_entries: List[int]) -> None:
-        changes = {'created': set(), 'modified':set(), 'deleted':set()}
-        logger.debug(f"Consolidating {len(log_entries)} log entries")
-        for log_id in sorted(log_entries):
-            log_entry = self.get_log_entry(log_id)
-            if log_entry and log_entry.get('detailed_message'):
-                try:
-                    data = json.loads(log_entry.get('detailed_message'))
-                    for field in changes.keys():
-                        changes[field].update(data.get(field, []))
+    def _consolidate_logs(self, session_id: int) -> None:
+        # Get all entries for this session_id
+        query = "SELECT * FROM logs WHERE session_id = %s ORDER BY log_id"
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor(dictionary=True) as cursor:
+                    cursor.execute(query, (session_id,))
+                    result = cursor.fetchall()
+                    if result:
+                        logger.debug(f"Found {len(result)} entries with session id {session_id}")
+                    else:
+                        logger.debug(f"No log entry found with session id {session_id}")
+        except Error as e:
+            logger.error(f"Error fetching log entry: {e}")
+            return
 
-                except json.JSONDecodeError as e:
-                    logger.debug(f"Error decoding JSON: {e}")
-                    continue
+        changes = {'created': set(), 'modified':set(), 'deleted':set()}
+
+        logger.debug(f"Consolidating log entries")
+        last_detailed_message = None
+        for log_entry in result if result else []:
+            try:
+                data = json.loads(log_entry.get('detailed_message'))
+                logger.debug(f"json encoded log entry")
+                for field in changes.keys():
+                    changes[field].update(data.get(field, []))
+
+            except json.JSONDecodeError as e:
+                logger.debug(f"Not a json encoded log entry: {e}")
+                last_detailed_message = log_entry.get('detailed_message')
+                continue
 
         sorted_changes = {}
         for field in changes.keys():
@@ -500,15 +511,17 @@ class MYSQLConnection(DBConnection):
         detailed_message = json.dumps(sorted_changes)
 
         summary_entry = {
-            'site_id': config.site_id,
-            'summary_message': "Merkle compute complete",
+            'site_id': config.site_name,
+            'summary_message': last_detailed_message,
             'detailed_message': detailed_message,
         }
 
         self.put_log(summary_entry)
 
-        for log_id in log_entries:
-            self.delete_log_entry(log_id)
+        deleted_entries = 0
+        for log_entry in result:
+            deleted_entries += self.delete_log_entry(log_entry['log_id'])
+        logger.info(f"Consolidated {deleted_entries} log entries for session id {session_id}")
 
     def get_log_entry(self, log_id: int) -> Dict[str, Any] | None:
         """
@@ -636,7 +649,7 @@ class MYSQLConnection(DBConnection):
                     # Check if any rows were affected (deleted)
                     rows_affected = cursor.rowcount
 
-            logger.info(f"Removed {rows_affected} log entry from the database")
+            logger.debug(f"Removed {rows_affected} log entry from the database")
             return rows_affected > 0
 
         except Exception as e:

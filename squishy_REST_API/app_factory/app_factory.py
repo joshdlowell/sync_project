@@ -22,7 +22,6 @@ class RESTAPIFactory:
         Create and configure a Flask application instance.
 
         Args:
-            db_instance: The DBConnection instance to use for API requests
             test_config: Optional configuration dictionary for testing
 
         Returns:
@@ -62,11 +61,15 @@ class RESTAPIFactory:
             logger.info("Application configured with default configuration")
 
         # Register routes
+        core_api = False
         register_api_routes(app, db_instance)
         if config.is_core:
             register_gui_routes(app, core_db_instance, db_instance)
-
+            core_api = True
         # Log application startup
-        logger.info(f"Application created with DEBUG={app.config['DEBUG']}")
+        summary_message = f"REST API started at {config.site_name}. "
+        detailed_message = f"DEBUG={app.config['DEBUG']}, Local API=True, Core API={core_api}"
+        logger.info(summary_message + detailed_message)
+        db_instance.put_log({'summary_message': summary_message, 'detailed_message': detailed_message})
 
         return app

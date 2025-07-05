@@ -1,9 +1,10 @@
 from typing import Optional, Dict, Any, List
+import json
 import mysql.connector
 from mysql.connector import Error
 from contextlib import contextmanager
 from .local_DB_interface import DBConnection
-from squishy_REST_API import logger
+from squishy_REST_API import logger, config
 
 
 class MYSQLConnection(DBConnection):
@@ -39,6 +40,7 @@ class MYSQLConnection(DBConnection):
         }
         self.database = database
         self.connection_factory = connection_factory or mysql.connector.connect
+        self.running_sessions = {}
 
     @contextmanager
     def _get_connection(self):
@@ -91,6 +93,9 @@ class MYSQLConnection(DBConnection):
         current_hash = record['current_hash'].strip()
         logger.debug(f"Inserting or updating hash for path: {path}")
 
+        # Format list fields for database
+        dirs, links, files = (json.dumps(record.get(field, '[]')) for field in ['dirs', 'links', 'files'])
+
         # Get existing record
         try:
             with self._get_connection() as conn:
@@ -102,8 +107,8 @@ class MYSQLConnection(DBConnection):
             return False
 
         # Format list fields for database
-        format_list = lambda field_list: ','.join(x.strip() for x in field_list) if field_list else None
-        dirs, links, files = (format_list(record.get(field)) for field in ['dirs', 'links', 'files'])
+        # format_list = lambda field_list: ','.join(x.strip() for x in field_list) if field_list else None
+        # dirs, links, files = (format_list(record.get(field)) for field in ['dirs', 'links', 'files'])
 
         # Initialize change tracking
         modified, created, deleted = set(), set(), set()
@@ -111,7 +116,7 @@ class MYSQLConnection(DBConnection):
         # Calculate changes for existing records
         if result:
             existing_hash, existing_dirs, existing_links, existing_files = result
-            parse_existing = lambda field: [x.strip() for x in field.split(",")] if field else []
+            # parse_existing = lambda field: [x.strip() for x in field.split(",")] if field else []
 
             # Calculate additions and deletions for all field types
             for field_name, existing_str, request_list in [
@@ -119,7 +124,8 @@ class MYSQLConnection(DBConnection):
                 ('files', existing_files, record.get('files', [])),
                 ('links', existing_links, record.get('links', []))
             ]:
-                existing_list = parse_existing(existing_str)
+                # existing_list = parse_existing(existing_str)
+                existing_list = json.loads(existing_str) if existing_str else []
                 if not request_list:
                     request_list = []
                 deleted.update(f"{path}/{x}" for x in set(existing_list) - set(request_list))
@@ -183,10 +189,11 @@ class MYSQLConnection(DBConnection):
 
         # Prune deleted paths from the database
         for del_path in deleted:
-            self._delete_hash_entry(del_path)
+            # self._delete_hash_entry(del_path)
+            deleted.update(self._recursive_delete_hash(del_path))
 
-        changes = {field: sorted(paths) for field, paths in
-                   [('modified', modified), ('created', created), ('deleted', deleted)]}
+        changes = json.dumps({field: sorted(paths) for field, paths in
+                   [('modified', modified), ('created', created), ('deleted', deleted)]})
         log_entry = {
             'session_id': session_id,
             'summary_message': f"Hash for {path} has been updated",
@@ -196,6 +203,33 @@ class MYSQLConnection(DBConnection):
 
         logger.debug(f"Changes: modified={len(modified)}, created={len(created)}, deleted={len(deleted)}")
         return True
+
+    def _recursive_delete_hash(self, path: str) -> set[str]:
+        """delete a hash record and all its children recursively."""
+        deleted_list = []
+        # Get existing record
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor(dictionary=True) as cursor:
+                    cursor.execute("SELECT dirs, links, files FROM hashtable WHERE path = %s", (path,))
+                    result = cursor.fetchone()
+                if not result:
+                    logger.debug(f"No record found for path: {path}")
+                    return set()
+        except Error as e:
+            logger.error(f"Error checking database for existing record: {e}")
+            return set()
+
+        # Combine list fields from database and call recursive delete on each one
+        dirs, links, files = (json.loads(result.get(field, '[]')) for field in ['dirs', 'links', 'files'])
+        combined = [f"{path}/{item}" for item in dirs + files + links]
+        for item in combined:
+            deleted_list.extend(self._recursive_delete_hash(item))
+
+        if self._delete_hash_entry(path):
+            deleted_list.append(path)
+
+        return set(deleted_list)
 
     def _delete_hash_entry(self, path: str) -> bool:
         """
@@ -236,15 +270,16 @@ class MYSQLConnection(DBConnection):
         Returns:
             Dictionary with record data or None if not found or an error occurred
         """
-        query = "SELECT * FROM hashtable WHERE path = %s"
-
         try:
-            with self._get_connection() as conn:
+            with (self._get_connection() as conn):
                 with conn.cursor(dictionary=True) as cursor:
-                    cursor.execute(query, (path,))
+                    cursor.execute("SELECT * FROM hashtable WHERE path = %s", (path,))
                     result = cursor.fetchone()
                     if result:
                         logger.debug(f"Found record for path: {path}")
+                        result['dirs'], result['links'], result['files'] = (
+                            json.loads(result.get(field, '[]')) for field in
+                                              ['dirs', 'links', 'files'])
                     else:
                         logger.debug(f"No record found for path: {path}")
                     return result
@@ -328,16 +363,17 @@ class MYSQLConnection(DBConnection):
             return [path]
 
         # Parse database lists and combine all items
-        parse_list = lambda field: [x.strip() for x in field.split(",")] if field else []
+        # parse_list = lambda field: [x.strip() for x in field.split(",")] if field else []
 
         all_items = []
         for item_type in ['dirs', 'files', 'links']:
-            items = parse_list(path_record.get(item_type, ''))
-            all_items.extend(items)
+            # items = parse_list(path_record.get(item_type, ''))
+            # all_items.extend(items)
+            all_items.extend(path_record.get(item_type, []))
 
         # Create timestamp, path tuples and sort by timestamp (oldest first)
         timestamped_items = [
-            (self.get_single_timestamp(f"{path}/{item}"), f"{path}/{item}")
+            (self.get_single_timestamp(f"{path}/{item}") or 0, f"{path}/{item}")
             for item in all_items
         ]
         ordered_items = [item_path for _, item_path in sorted(timestamped_items)]
@@ -404,7 +440,7 @@ class MYSQLConnection(DBConnection):
 
         # Extract parameters with defaults
         params = {
-            'site_id': args_dict.get('site_id', 'local'),
+            'site_id': args_dict.get('site_id', config.site_name ),
             'log_level': args_dict.get('log_level', 'INFO'),
             'session_id': args_dict.get('session_id', None),
             'summary_message': args_dict.get('summary_message'),
@@ -427,9 +463,77 @@ class MYSQLConnection(DBConnection):
                     # Get the auto-generated log_id
                     log_id = cursor.lastrowid
                     logger.info(f"Successfully inserted log entry with ID: {log_id}")
+
+                    # Merkle Session tracking support
+                    if args_dict.get('session_id'):
+                        if "Completed Merkle compute" in args_dict.get('summary_message'):
+                            self.running_sessions[args_dict.get('session_id')].append(log_id)
+                            self._consolidate_logs(self.running_sessions.pop(args_dict.get('session_id')))
+                        elif self.running_sessions.get(args_dict.get('session_id')):
+                            self.running_sessions[args_dict.get('session_id')].append(log_id)
+                        else:
+                            self.running_sessions[args_dict.get('session_id')] = [log_id]
+
                     return log_id
         except Error as e:
             logger.error(f"Error inserting log entry: {e}")
+            return None
+
+    def _consolidate_logs(self, log_entries: List[int]) -> None:
+        changes = {'created': set(), 'modified':set(), 'deleted':set()}
+        logger.debug(f"Consolidating {len(log_entries)} log entries")
+        for log_id in sorted(log_entries):
+            log_entry = self.get_log_entry(log_id)
+            if log_entry and log_entry.get('detailed_message'):
+                try:
+                    data = json.loads(log_entry.get('detailed_message'))
+                    for field in changes.keys():
+                        changes[field].update(data.get(field, []))
+
+                except json.JSONDecodeError as e:
+                    logger.debug(f"Error decoding JSON: {e}")
+                    continue
+
+        sorted_changes = {}
+        for field in changes.keys():
+            sorted_changes[field] = sorted(list(changes[field]))
+        detailed_message = json.dumps(sorted_changes)
+
+        summary_entry = {
+            'site_id': config.site_id,
+            'summary_message': "Merkle compute complete",
+            'detailed_message': detailed_message,
+        }
+
+        self.put_log(summary_entry)
+
+        for log_id in log_entries:
+            self.delete_log_entry(log_id)
+
+    def get_log_entry(self, log_id: int) -> Dict[str, Any] | None:
+        """
+        Get a single log entry by log_id.
+
+        Args:
+            log_id: log_id to retrieve.
+
+        Returns:
+            log entry as a dict or None if not found or an error occurred
+        """
+        query = "SELECT * FROM logs WHERE log_id = %s"
+
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor(dictionary=True) as cursor:
+                    cursor.execute(query, (log_id,))
+                    result = cursor.fetchone()
+                    if result:
+                        logger.debug(f"Found log entry {log_id}")
+                    else:
+                        logger.debug(f"No log entry found with id {log_id}")
+                    return result if result else None
+        except Error as e:
+            logger.error(f"Error fetching log entry: {e}")
             return None
 
     def get_logs(self, limit: Optional[int] = None, offset: int = 0,

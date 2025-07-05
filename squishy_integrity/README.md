@@ -977,9 +977,12 @@ python -m unittest discover squishy_integrity/tests/ -v
 
 ## Version
 
-Current version: 1.0.5
+Current version: 1.2.0
 
 ## Changelog
+
+**v1.2.0 - 2025-07-03**
+-  **Modified:** Merkle process to correct bug that prevented traversing the full height of the tree.
 
 **v1.0.5 - 2025-07-01**
 

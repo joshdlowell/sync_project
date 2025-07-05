@@ -11,7 +11,7 @@ python:3.12-alpine, mysql:9.3
 ```bash
 docker network create --driver bridge squishy_db_default
 ```
-### To remove
+### To remove when finished
 ```bash
 docker network rm squishy_db_default
 ```
@@ -52,12 +52,6 @@ docker logs mysql-squishy-db
 ```
 
 #### Run the tests
-#### My local version
-```bash
-docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/tests/test_hashtable.sql
-docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/tests/test_logs.sql
-```
-#### Final version (in db readme)
 ```bash
 docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/tests/test_hashtable.sql
 docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/tests/test_logs.sql
@@ -67,13 +61,13 @@ docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/
 ### Run REST API container detached
 #### First time through you will need to build the container image
 ```bash
-docker build -t squishy-rest-api:v1.0 . -f Dockerfile_rest
+docker build -t squishy-rest-api:v2.0 . -f Dockerfile_rest
 ```
 
 You can run this container for testing, or for production
 #### Run interactive for testing
 This command will start the docker container without launching the rest api service and add the tests 
-to the package
+to the package and enable `DEBUG` (verbose) mode
 ```bash
 docker run -it --rm \
   --name squishy-rest-api \
@@ -85,7 +79,7 @@ docker run -it --rm \
   -e LOG_LEVEL=DEBUG \
   -v $(pwd)/squishy_REST_API/tests:/app/squishy_REST_API/tests \
   -p 5000:5000 \
-  squishy-rest-api:v1.0 /bin/sh
+  squishy-rest-api:v2.0 /bin/sh
 ```
 ******With all my local files mounted for development
 ```bash
@@ -99,7 +93,7 @@ docker run -it --rm \
   -e SITE_NAME=SIT0 \
   -p 5000:5000 \
   -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_REST_API:/app/squishy_REST_API \
-  squishy-rest-api:v1.0 /bin/sh
+  squishy-rest-api:v2.0 /bin/sh
 ```
 
 Run tests with detailed output:
@@ -117,7 +111,7 @@ docker run -d \
   -e API_SECRET_KEY=squishy_key_12345 \
   -e SITE_NAME=SIT0 \
   -p 5000:5000 \
-  squishy-rest-api:v1.0
+  squishy-rest-api:v2.0
 ```
 
 Check the logs to ensure the service started correctly

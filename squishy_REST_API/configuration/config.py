@@ -114,13 +114,13 @@ class Config:
 
         # Get sites data
         site_name = self._config.get('site_name')
-        self.site = site_name.upper() if site_name else None
+        self.site_name = site_name.upper() if site_name else None
         core_host = self._config.get('core_host')
 
-        if core_host is None or self.site is None:
+        if core_host is None or self.site_name is None:
             self.is_core = False
         else:
-            self.is_core = self.site in core_host.upper()
+            self.is_core = self.site_name in core_host.upper()
 
         self.is_core = True  # TODO remove this hardcoding
         # Create logger

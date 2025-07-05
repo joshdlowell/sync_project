@@ -1,7 +1,8 @@
 from typing import Optional, Dict, Any, List
 import time
 import hashlib
-from squishy_REST_API import logger
+
+from squishy_REST_API import logger, config
 from .local_DB_interface import DBConnection
 
 
@@ -24,6 +25,7 @@ class LocalMemoryConnection(DBConnection):
         # Logs storage - list of log entries with auto-incrementing IDs
         self.logs = []
         self._next_log_id = 1
+        self.running_sessions = {}
 
         logger.debug("Local memory database initialized")
 
@@ -360,12 +362,67 @@ class LocalMemoryConnection(DBConnection):
             log_id = self._next_log_id
             self._next_log_id += 1
 
+            # Merkle Session tracking support
+            if args_dict.get('session_id'):
+                if "Completed Merkle compute" in args_dict.get('summary_message'):
+                    self.running_sessions[args_dict.get('session_id')].append(log_id)
+                    self._consolidate_logs(self.running_sessions.pop(args_dict.get('session_id')))
+                elif self.running_sessions.get(args_dict.get('session_id')):
+                    self.running_sessions[args_dict.get('session_id')].append(log_id)
+                else:
+                    self.running_sessions[args_dict.get('session_id')] = [log_id]
+
             logger.debug(f"Entry inserted into logs table: {log_id}")
             return log_id
 
         except Exception as e:
             logger.error(f"Error inserting log entry: {e}")
             return None
+
+
+    def _consolidate_logs(self, log_entries: List[int]) -> None:
+        changes = {'created': set(), 'modified':set(), 'deleted':set()}
+        logger.debug(f"Consolidating {len(log_entries)} log entries")
+        for log_id in sorted(log_entries):
+            log_entry = self.get_log_entry(log_id)
+            if log_entry and log_entry.get('detailed_message'):
+                data = log_entry.get('detailed_message')
+                for field in changes.keys():
+                    changes[field].update(data.get(field, []))
+
+        sorted_changes = {}
+        for field in changes.keys():
+            sorted_changes[field] = sorted(list(changes[field]))
+        detailed_message = sorted_changes
+
+        summary_entry = {
+            'site_id': config.site_name,
+            'summary_message': "Merkle compute complete",
+            'detailed_message': detailed_message,
+        }
+
+        self.put_log(summary_entry)
+
+        for log_id in log_entries:
+            self.delete_log_entry(log_id)
+
+    def get_log_entry(self, log_id: int) -> Dict[str, Any] | None:
+        """
+        Get a single log entry by log_id.
+
+        Args:
+            log_id: log_id to retrieve.
+
+        Returns:
+            log entry as a dict or None if not found or an error occurred
+        """
+        for entry in self.logs:
+            if entry['log_id'] == log_id:
+                logger.debug(f"Found log entry {log_id}")
+                return entry.copy()
+
+        logger.debug(f"No log entry found with id {log_id}")
+        return None
 
     def get_logs(self, limit: Optional[int] = None, offset: int = 0,
                  order_by: str = "timestamp", order_direction: str = "DESC") -> List[Dict[str, Any]]:

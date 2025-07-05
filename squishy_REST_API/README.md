@@ -34,8 +34,10 @@ squishy REST API use the instructions below.
 ### Using Docker
 
 #### Build the Container
+The Dockerfile (and associated `.dockerignore`) is located in the root of the SquishyBadger 
+repo and named `Dockerfile_rest`
 ```bash
-docker build -t squishy-rest-api .
+docker build -t squishy-rest-api:v2.0 . -f Dockerfile_rest
 ```
 
 #### Run with Docker
@@ -46,9 +48,9 @@ docker run -d \
   -e LOCAL_MYSQL_USER=your_app_user \
   -e LOCAL_MYSQL_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
-  -e SITE_NAME=SIT0
+  -e SITE_NAME=SIT0 \
   -p 5000:5000 \
-  squishy-rest-api
+  squishy-rest-api:v2.0
 ```
 ### Local Development
 

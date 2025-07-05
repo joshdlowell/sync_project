@@ -200,17 +200,17 @@ class CoreMYSQLConnection(CoreDBConnection):
                     if result:
                         # Update context with actual values from query result
                         context.update({
-                            'crit_error_count': int(result[0]) or 0,
-                            'hash_record_count': int(result[1]) or 0,
-                            'sync_current': int(result[2]) or 0,
-                            'sync_1_behind': int(result[3]) or 0,
-                            'sync_l24_behind': int(result[4]) or 0,
-                            'sync_g24_behind': int(result[5]) or 0,
-                            'sync_unknown': int(result[6]) or 0,
-                            'live_current': int(result[7]) or 0,
-                            'live_1_behind': int(result[8]) or 0,
-                            'live_l24_behind': int(result[9]) or 0,
-                            'live_inactive': int(result[10]) or 0,
+                            'crit_error_count': result[0] or 0,
+                            'hash_record_count': result[1] or 0,
+                            'sync_current': result[2] or 0,
+                            'sync_1_behind': result[3] or 0,
+                            'sync_l24_behind': result[4] or 0,
+                            'sync_g24_behind': result[5] or 0,
+                            'sync_unknown': result[6] or 0,
+                            'live_current': result[7] or 0,
+                            'live_1_behind': result[8] or 0,
+                            'live_l24_behind': result[9] or 0,
+                            'live_inactive': result[10] or 0,
                         })
                     logger.debug(f"Dashboard query result: {result}")
         except Error as e:

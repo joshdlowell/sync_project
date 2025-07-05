@@ -15,12 +15,13 @@ class IntegrityCheckFactory:
         """Create a fully configured MerkleTreeService"""
 
         # Create implementations
+        storage_system = RestClient()
+        hash_storage = RestHashStorage(storage_system)
         file_system = StandardFileSystem()
-        rest_service = (RestClient()).rest_client
-        hash_storage = RestHashStorage(rest_service)
         hash_function = SHA1HashFunction()
 
         # Create components
+
         path_validator = PathValidator()
         tree_walker = DirectoryTreeWalker(file_system)
         file_hasher = FileHasher(file_system, hash_function)

@@ -332,3 +332,14 @@ class MerkleTreeService:
             }
             logger.debug(f"Sending hashtable entry for {item['path']}")
             self.hash_storage.put_hashtable(db_entry)
+
+    def put_log_entry(self, message: str, detailed_message: str=None, log_level: str=None, session_id: str=None) -> int:
+        """Put log entry to database"""
+        return self.hash_storage.put_log(message, detailed_message, log_level, session_id)
+
+    def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
+        return self.hash_storage.get_oldest_updates(root_path, percent)
+
+    def get_priority_updates(self) -> list[str] | None:
+        """Get list of paths that need to be recomputed"""
+        return self.hash_storage.get_priority_updates()

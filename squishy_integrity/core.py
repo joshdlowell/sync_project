@@ -10,7 +10,7 @@ def performance_monitor(merkle_service, operation_name: str):
     """Context manager to monitor operation performance."""
     start_time = time()
     # Log start
-    merkle_service.hash_storage.put_log(
+    merkle_service.put_log_entry(
         message="Starting Merkle compute",
         detailed_message="Starting new session",
         session_id=config.session_id
@@ -22,7 +22,7 @@ def performance_monitor(merkle_service, operation_name: str):
         minutes = int(duration // 60)
         seconds = duration % 60
         # Log completion
-        merkle_service.hash_storage.put_log(
+        merkle_service.put_log_entry(
             message="Completed Merkle compute",
             detailed_message="Session Completed",
             session_id=config.session_id
@@ -35,9 +35,9 @@ def performance_monitor(merkle_service, operation_name: str):
 
 def get_paths_to_process(merkle_service, root_path: str) -> List[str]:
     """Get and deduplicate paths that need processing."""
-    priority = merkle_service.hash_storage.get_priority_updates()
+    priority = merkle_service.get_priority_updates()
     logger.info(f"Priority updates: {priority}")
-    routine = merkle_service.hash_storage.get_oldest_updates(root_path)
+    routine = merkle_service.get_oldest_updates(root_path)
     logger.info(f"Oldest updates: {routine}")
     return merkle_service.remove_redundant_paths_with_priority(priority, routine)
 

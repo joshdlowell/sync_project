@@ -65,8 +65,8 @@ class RestHashStorage(HashStorageInterface):
     def get_lifecheck(self) -> dict | None:
         return self.rest_processor.get_lifecheck()
 
-    def put_log(self, message: str, detailed_message: str=None, log_level: str=None) -> int:
-        return self.rest_processor.put_log(message, detailed_message, log_level)
+    def put_log(self, message: str, detailed_message: str=None, log_level: str=None, session_id: str=None) -> int:
+        return self.rest_processor.put_log(self, message, detailed_message, log_level, session_id)
 
 
 class SHA1HashFunction(HashFunction):

@@ -58,7 +58,7 @@ class HashStorageInterface(ABC):
         pass
 
     @abstractmethod
-    def put_log(self, message: str, detailed_message: str=None, log_level: str=None) -> int:
+    def put_log(self, message: str, detailed_message: str=None, log_level: str=None, session_id: str=None) -> int:
         pass
 
 

@@ -10,7 +10,11 @@ def performance_monitor(merkle_service, operation_name: str):
     """Context manager to monitor operation performance."""
     start_time = time()
     # Log start
-    merkle_service.hash_storage.put_log("Starting Merkle compute", f"Session ID: {config.session_id}")
+    merkle_service.hash_storage.put_log(
+        message="Starting Merkle compute",
+        detailed_message="Starting new session",
+        session_id=config.session_id
+    )
     try:
         yield
     finally:
@@ -18,7 +22,11 @@ def performance_monitor(merkle_service, operation_name: str):
         minutes = int(duration // 60)
         seconds = duration % 60
         # Log completion
-        merkle_service.hash_storage.put_log("Completed Merkle compute", f"Session ID: {config.session_id}")
+        merkle_service.hash_storage.put_log(
+            message="Completed Merkle compute",
+            detailed_message="Session Completed",
+            session_id=config.session_id
+        )
         if minutes > 0:
             logger.info(f"{operation_name} completed in {minutes}m {seconds:.2f}s")
         else:

@@ -181,7 +181,7 @@ class RestProcessor:
         logger.debug("Getting life check")
         return content if content else None
 
-    def put_log(self, message: str, detailed_message: str=None, log_level: str=None) -> int:
+    def put_log(self, message: str, detailed_message: str=None, log_level: str=None, session_id: str=None) -> int:
         """
         Store log information in the database.
 
@@ -193,6 +193,7 @@ class RestProcessor:
             message: string containing the log message
             detailed_message: string containing the detailed log message
             log_level: string containing the log level
+            session_id: string containing the session id for grouping batches of updates
 
         Returns:
             int representing the number of updates sent to the REST API that were unsuccessful
@@ -208,6 +209,7 @@ class RestProcessor:
 
         # Assemble the log entry
         request_data = { 'summary_message': message }
+        if session_id: request_data['session_id'] = session_id
         if detailed_message: request_data['detailed_message'] = detailed_message
         if log_level: request_data['log_level'] = log_level.upper()
 

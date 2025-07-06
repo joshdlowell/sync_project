@@ -17,14 +17,6 @@ class ConfigError(Exception):
 
 class Config:
     """Configuration class for rest_client package."""
-    _instance = None
-    _config = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(Config, cls).__new__(cls)
-        return cls._instance
-
     # Define required keys as class constants
     REQUIRED_KEYS = []
     SENSITIVE_KEYS = []

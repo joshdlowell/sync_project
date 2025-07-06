@@ -151,7 +151,7 @@ class RestProcessor:
         ordered_dirs = [directory for _, directory in sorted(dir_timestamps)]
 
         # Calculate the number of directories to return
-        update_num = max(1, int(len(dirs) * percent / 100))
+        update_num = max(1, int(len(dirs) * percent / 100) + 1) # Make sure to round up with +1
         update_num = min(update_num, len(dirs))
 
         logger.info(f"Returning {update_num} directories for update")

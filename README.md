@@ -122,7 +122,7 @@ docker logs squishy-rest-api
 ### Run integrity interactively
 #### First time through you will need to build the container image
 ```bash
-docker build -t squishy-integrity:v1.2 . -f Dockerfile_integrity
+docker build -t squishy-integrity:v2.0 . -f Dockerfile_integrity
 ```
 
 You can run this container for testing, or for production. In production the
@@ -139,7 +139,7 @@ docker run -it --rm \
   --network squishy_db_default \
   -e LOG_LEVEL=DEBUG \
   -v $(pwd)/squishy_integrity/tests:/app/squishy_integrity/tests \
-  squishy-integrity:v1.2 /bin/sh
+  squishy-integrity:v2.0 /bin/sh
 ```
 ******With all my local files mounted for development
 ```bash
@@ -147,14 +147,18 @@ docker run -it --rm \
   --name squishy-integrity \
   --network squishy_db_default \
     -e LOG_LEVEL=DEBUG \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_integrity:/app/squishy_integrity \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy:/app \
   -v /mnt/c/Users/joshu/Downloads:/baseline \
-  squishy-integrity:v1.2 /bin/sh
+  squishy-integrity:v2.0 /bin/sh
 ```
 
 Run tests with detailed output:
 ```bash
+# For integrity package
 python -m unittest discover squishy_integrity/tests/ -v
+
+# For rest_api package
+python -m unittest discover rest_client/tests/ -v
 ```
 
 #### Run the container detached for production

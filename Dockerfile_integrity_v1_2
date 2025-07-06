@@ -20,8 +20,6 @@ WORKDIR /app
 
 # Copy application code
 COPY squishy_integrity /app/squishy_integrity/
-COPY rest_client /app/rest_client/
-COPY integrity_check /app/integrity_check/
 
 # Set environment variables
 ENV REST_API_HOST=squishy-rest-api

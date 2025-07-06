@@ -1,5 +1,5 @@
 """
-Configuration module for integrity package.
+Configuration module for coordinator package.
 
 This module centralizes configuration management and provides a way to
 load configuration from environment variables or configuration files.
@@ -35,6 +35,7 @@ class Config:
         'rest_api_port': 5000,
         'core_api_host': False,
         'core_api_port': 443,
+        'root_path': '/baseline',
         'debug': False,
         'log_level': 'INFO',
         'max_retries': 3,
@@ -47,6 +48,7 @@ class Config:
         'rest_api_port': 'REST_API_PORT',
         'core_api_host': 'CORE_API_HOST',
         'core_api_port': 'CORE_API_PORT',
+        'root_path': 'BASELINE',
         'debug': 'DEBUG',
         'log_level': 'LOG_LEVEL'
     }

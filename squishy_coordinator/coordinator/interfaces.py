@@ -101,5 +101,40 @@ class PersistentStorageInterface(ABC):
         pass
 
     @abstractmethod
-    def put_log(self, message: str, detailed_message: str=None, log_level: str=None, session_id: str=None) -> int:
+    def put_log(self,
+                message: str,
+                site_id: str=None,
+                timestamp: int=None,
+                detailed_message: str=None,
+                log_level: str=None,
+                session_id: str=None
+                ) -> int:
+        pass
+
+    @abstractmethod
+    def find_orphaned_entries(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def find_untracked_children(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def get_pipeline_updates(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def consolidate_logs(self) -> bool:
+        pass
+
+    @abstractmethod
+    def collect_logs_to_ship(self) -> list[dict[str, Any]] | None:
+        pass
+
+    @abstractmethod
+    def delete_log_entries(self, log_ids: list[int]) -> Tuple[bool, list]:
+        pass
+
+    @abstractmethod
+    def collect_logs_older_than(self, days: int) -> list[dict[str, Any]] | None:
         pass

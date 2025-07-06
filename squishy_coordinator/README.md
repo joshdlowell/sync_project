@@ -1,4 +1,4 @@
-# SquishyBadger Integrity Service
+# SquishyBadger Coordinator Service
 
 A containerized microservice that generates cryptographic Merkle tree 
 structures from local file systems to enable efficient integrity verification.
@@ -981,24 +981,15 @@ python -m unittest discover squishy_integrity/tests/ -v
 
 ## Version
 
-Current version: 1.2.0
+Current version: 1.0.0
 
 ## Changelog
 
-**v1.2.0 - 2025-07-03**
--  **Modified:** Merkle process to correct bug that prevented traversing the full height of the tree.
-
-**v1.0.5 - 2025-07-01**
-
--   **Changed:** Core.py entrypoint to exit on 'suspicious' conditions (like empty baseline)
--   **Removed:** Added 'session_id' fingerprint for tracking and grouping log entries.
-
-**v1.0.0 - 2025-06-26**
-
+**v1.0.0 - 2025-07-07**
 -   Baseline of current project state.
 
 ### Roadmap
-- [ ] Comprehensive logging and monitoring
+- [ ] Implement Check to update last heard from? or is that already taken care of
 - [ ] Performance optimization
 
 ## Support

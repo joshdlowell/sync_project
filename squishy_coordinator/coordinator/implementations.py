@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 
 from squishy_integrity import logger
-from .interfaces import FileSystemInterface, HashStorageInterface, HashFunction, PersistentStorageInterface
+from .interfaces import FileSystemInterface, HashFunction, PersistentStorageInterface
 
 
 class StandardFileSystem(FileSystemInterface):
@@ -42,7 +42,7 @@ class StandardFileSystem(FileSystemInterface):
         return str(Path(path).readlink())
 
 
-class RestHashStorage(HashStorageInterface):
+class RestStorage(PersistentStorageInterface):
     """Hash storage implementation using REST connector"""
     def __init__(self, rest_processor):
         self.rest_processor = rest_processor
@@ -65,8 +65,36 @@ class RestHashStorage(HashStorageInterface):
     def get_lifecheck(self) -> dict | None:
         return self.rest_processor.get_lifecheck()
 
-    def put_log(self, message: str, detailed_message: str=None, log_level: str=None, session_id: str=None) -> int:
-        return self.rest_processor.put_log(message, detailed_message, log_level, session_id)
+    def put_log(self,
+                message: str,
+                site_id: str=None,
+                timestamp: int=None,
+                detailed_message: str=None,
+                log_level: str=None,
+                session_id: str=None
+                ) -> int:
+        return self.rest_processor.put_log(message, site_id, timestamp, detailed_message, log_level, session_id)
+
+    def find_orphaned_entries(self) -> list[str]:
+        return self.rest_processor.find_orphaned_entries()
+
+    def find_untracked_children(self) -> list[str]:
+        return self.rest_processor.find_untracked_children()
+
+    def get_pipeline_updates(self) -> list[str]:
+        return self.rest_processor.get_pipeline_updates()
+
+    def consolidate_logs(self) -> bool:
+        return self.rest_processor.consolidate_logs()
+
+    def collect_logs_to_ship(self) -> list[dict[str, Any]] | None:
+        return self.rest_processor.collect_logs_to_ship()
+
+    def delete_log_entries(self, log_ids: list[int]) -> Tuple[bool, list]:
+        return self.rest_processor.delete_log_entries(log_ids)
+
+    def collect_logs_older_than(self, days: int) -> list[dict[str, Any]] | None:
+        return self.rest_processor.collect_logs_older_than(days)
 
 
 class SHA1HashFunction(HashFunction):
@@ -77,28 +105,3 @@ class SHA1HashFunction(HashFunction):
 
     def hash_string(self, data: str) -> str:
         return hashlib.sha1(data.encode()).hexdigest()
-
-
-class RestStorage(PersistentStorageInterface):
-    """REST API persistent storage implementation"""
-
-    def put_hashtable(self, hash_info: Dict[str, Any]) -> int:
-        pass
-
-    def get_hashtable(self, path: str) -> Optional[Dict[str, Any]]:
-        pass
-
-    def get_single_hash(self, path: str) -> Optional[str]:
-        pass
-
-    def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
-        pass
-
-    def get_priority_updates(self) -> list[str] | None:
-        pass
-
-    def get_lifecheck(self) -> dict | None:
-        pass
-
-    def put_log(self, message: str, detailed_message: str=None, log_level: str=None, session_id: str=None) -> int:
-        pass

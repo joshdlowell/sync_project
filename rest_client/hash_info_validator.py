@@ -1,9 +1,9 @@
-
+from .configuration import config
 
 class HashInfoValidator:
     # These should align with the Hashtable requirements in the database
-    VALID_KEYS = {'path', 'current_hash', 'current_dtg_latest', 'dirs', 'files', 'links', 'session_id'}
-    REQUIRED_KEYS = {'current_hash'}
+    VALID_KEYS = config.get('hash_validator_keys')
+    REQUIRED_KEYS = config.get('hash_validator_required_keys')
 
     def validate(self, hash_info: dict) -> list:
         """Validate hash_info and return list of validation errors."""

@@ -10,7 +10,6 @@ from flask_moment import Moment
 from squishy_REST_API import config, logger
 from squishy_REST_API.database_client import DBClient, CoreDBClient
 from .api_routes import register_api_routes
-from .gui_routes import register_gui_routes
 
 
 class RESTAPIFactory:
@@ -61,14 +60,18 @@ class RESTAPIFactory:
             logger.info("Application configured with default configuration")
 
         # Register routes
-        core_api = False
         register_api_routes(app, db_instance)
+        # Register additional routes if we are a core
         if config.is_core:
+            # Import the additional modules
+            from .gui_routes import register_gui_routes
+            from .core_routes import register_core_routes
             register_gui_routes(app, core_db_instance, db_instance)
-            core_api = True
+            register_core_routes(app, core_db_instance, db_instance)
+
         # Log application startup
         summary_message = f"REST API started at {config.site_name}. "
-        detailed_message = f"DEBUG={app.config['DEBUG']}, Local API=True, Core API={core_api}"
+        detailed_message = f"DEBUG={app.config['DEBUG']}, Local API=True, Core API={config.is_core}"
         logger.info(summary_message + detailed_message)
         db_instance.put_log({'summary_message': summary_message, 'detailed_message': detailed_message})
 

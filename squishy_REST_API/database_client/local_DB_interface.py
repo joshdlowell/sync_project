@@ -110,18 +110,24 @@ class DBConnection(ABC):
 
     @abstractmethod
     def get_logs(self, limit: Optional[int] = None, offset: int = 0,
-                 order_by: str = "timestamp", order_direction: str = "DESC") -> List[Dict[str, Any]]:
+                 order_by: str = "timestamp", order_direction: str = "DESC",
+                 session_id_filter: Optional[str] = None,
+                 older_than_days: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Get log entries from database.
 
-        This method retrieves log entries from the local database with optional pagination
-        and ordering capabilities.
+        This method retrieves log entries from the local database with optional pagination,
+        ordering, and filtering capabilities.
 
         Args:
             limit: Maximum number of records to return (None for all records)
             offset: Number of records to skip for pagination
             order_by: Column name to order by (default: 'timestamp')
             order_direction: Sort direction - 'ASC' or 'DESC' (default: 'DESC')
+            session_id_filter: Filter by session_id - None for all records,
+                              'null' for records with NULL session_id (logs to ship),
+                              or specific session_id value
+            older_than_days: Filter records older than specified number of days
 
         Returns:
             A list of dicts where each dict is a complete log entry from the database.
@@ -158,4 +164,26 @@ class DBConnection(ABC):
          Returns:
              True if the database is active and responsive, False if not.
          """
+        pass
+
+    @abstractmethod
+    def find_orphaned_entries(self) -> list[str]:
+        """
+        Find children that exist as entries but aren't listed by their parent.
+
+        Returns:
+             List of entries that exist but aren't listed in their parent's children arrays.
+        """
+        pass
+
+    @abstractmethod
+    def find_untracked_children(self) -> list[Any]:
+        """
+        Find children listed by parents but don't exist as entries.
+
+        Alternate return (not used):
+            List of dictionaries with keys: untracked_path, parent_path, child_name, child_type
+        Returns:
+            List of paths that are listed in their parent's children arrays but don't exist as entries in the database.
+        """
         pass

@@ -16,7 +16,7 @@ def register_api_routes(app: Flask, db_instance):
         app: Flask application instance
         db_instance: The DBConnection instance to use for API requests
     """
-    db_instance = db_instance
+    # db_instance = db_instance
 
     @app.route('/api/hashtable', methods=['GET', 'POST'])
     def get_put_hashes():
@@ -109,9 +109,9 @@ def register_api_routes(app: Flask, db_instance):
                         "data": {'api': True,
                                  'db': db_instance.life_check()}}), 200
 
-    @app.route('/api/logs', methods=['POST'])
-    def put_logs():
-        """Put a log entry in the database."""
+    @app.route('/api/logs', methods=['GET', 'POST', 'DELETE'])
+    def handle_logs():
+        """Handle log operations - POST to add logs, GET to consolidate logs, DELETE to remove logs."""
         if request.method == 'POST':
             if 'summary_message' not in request.json.keys():
                 logger.warning("POST /api/logs missing required 'summary_message' field")
@@ -128,7 +128,121 @@ def register_api_routes(app: Flask, db_instance):
                 logger.error(f"Database error adding log entry")
                 return jsonify({"message": "Database error, see DB logs"}), 500
 
-            return jsonify({"message": "Success", 'data': 0})
+            return jsonify({"message": "Success", 'data': True})
+
+        elif request.method == 'GET':
+            # Handle GET request for log consolidation
+            action = request.args.get('action')
+            if action in ['consolidate', 'shippable', 'older_than']:
+                try:
+                    success = False
+                    if action == 'shippable':
+                        logger.info("GET /api/logs?action=shippable - Starting log collection")
+                        # Trigger log collection
+                        success = db_instance.get_logs(session_id_filter='null')  # Returns data or false
+
+                    if action == 'older_than':
+                        logger.info("GET /api/logs?action=older_than - Starting log collection")
+                        if request.args.get('days') and isinstance(request.args.get('days'), int):
+                            # Trigger log collection
+                            success = db_instance.get_logs(older_than_days=request.args.get('days'))  # Returns data or false
+
+                    if action == 'consolidate':
+                        logger.info("GET /api/logs?action=consolidate - Starting log consolidation")
+                        # Trigger log consolidation
+                        success = db_instance.consolidate_logs()  # Returns bool for success/failure
+
+                    if success:
+                        logger.info("Log operation completed successfully")
+                        return jsonify({
+                            "message": "Log operation completed successfully",
+                            "data": success
+                        }), 200
+                    else:
+                        logger.error("Log operation failed")
+                        return jsonify({
+                            "message": "Log operation failed",
+                            "data": False
+                        }), 500
+                except Exception as e:
+                    logger.error(f"Error during log operation: {e}", exc_info=True)
+                    return jsonify({
+                        "message": "Internal server error during log operation",
+                        "data": False
+                    }), 500
+            else:
+                # Handle other GET requests or missing action parameter
+                logger.warning(f"GET /api/logs called without valid action parameter. Action: {action}")
+                return jsonify({
+                    "message": "Invalid or missing 'action' parameter. Use 'action=consolidate' to consolidate logs.",
+                    "data": False
+                }), 400
+
+        elif request.method == 'DELETE':
+            # Handle DELETE request for log deletion
+            if not request.json:
+                logger.warning("DELETE /api/logs missing request body")
+                return jsonify({"message": "Request body required for DELETE operation"}), 400
+
+            log_ids = request.json.get('log_ids')
+
+            # Validate input
+            if not log_ids:
+                logger.warning("DELETE /api/logs missing 'log_ids' field")
+                return jsonify({"message": "'log_ids' field required"}), 400
+
+            if not isinstance(log_ids, list):
+                logger.warning("DELETE /api/logs 'log_ids' must be a list")
+                return jsonify({"message": "'log_ids' must be a list of integers"}), 400
+
+            if not log_ids:
+                logger.warning("DELETE /api/logs empty 'log_ids' list")
+                return jsonify({"message": "'log_ids' cannot be empty"}), 400
+
+            # Validate all IDs are integers
+            try:
+                log_ids = [int(log_id) for log_id in log_ids]
+            except (ValueError, TypeError):
+                logger.warning("DELETE /api/logs invalid log_ids format")
+                return jsonify({"message": "All log IDs must be integers"}), 400
+
+            logger.info(f"DELETE /api/logs attempting to delete {len(log_ids)} log entries")
+
+            try:
+                deleted_count = 0
+                failed_deletes = []
+
+                for log_id in log_ids:
+                    result = db_instance.delete_log_entry(log_id)
+                    if result:
+                        deleted_count += 1
+                    else:
+                        failed_deletes.append(log_id)
+
+                if failed_deletes:
+                    logger.warning(f"Failed to delete log entries: {failed_deletes}")
+                    return jsonify({
+                        "message": f"Deleted {deleted_count} entries, failed to delete {len(failed_deletes)} entries",
+                        "data": {
+                            "deleted_count": deleted_count,
+                            "failed_deletes": failed_deletes
+                        }
+                    }), 207  # 207 Multi-Status for partial success
+                else:
+                    logger.info(f"Successfully deleted {deleted_count} log entries")
+                    return jsonify({
+                        "message": f"Successfully deleted {deleted_count} log entries",
+                        "data": {
+                            "deleted_count": deleted_count
+                        }
+                    }), 200
+
+            except Exception as e:
+                logger.error(f"Error during log deletion: {e}", exc_info=True)
+                return jsonify({
+                    "message": "Internal server error during log deletion",
+                    "data": False
+                }), 500
 
         else:
             logger.warning(f"Method not allowed: {request.method}")

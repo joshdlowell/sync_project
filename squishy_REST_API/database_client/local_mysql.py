@@ -463,17 +463,153 @@ class MYSQLConnection(DBConnection):
                     log_id = cursor.lastrowid
                     logger.info(f"Successfully inserted log entry with ID: {log_id}")
 
-                    # Merkle Session tracking support
-                    if args_dict.get('session_id') is not None:
-                        if "Completed Merkle compute" in args_dict.get('summary_message', ''):
-                            self._consolidate_logs(args_dict.get('session_id'))
+                    # # Merkle Session tracking support
+                    # if args_dict.get('session_id') is not None:
+                    #     if "Completed Merkle compute" in args_dict.get('summary_message', ''):
+                    #         self._consolidate_logs(args_dict.get('session_id'))
 
                     return log_id
         except Error as e:
             logger.error(f"Error inserting log entry: {e}")
             return None
 
-    def _consolidate_logs(self, session_id: int) -> None:
+    def find_orphaned_entries(self) -> list[str]:
+        """
+        Returns a list of entries that exist but aren't listed in their parent's children arrays.
+        """
+        # Get the root path - you'll need to pass this or access it here
+        root_path = self.config.get('root_path')
+
+        # Find entries that exist but aren't listed in their parent's children arrays
+        query = """
+                SELECT e.path as orphaned_path
+                FROM hashtable e
+                WHERE e.path != %s -- Exclude root path
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM hashtable parent
+                        WHERE parent.path = SUBSTRING(
+                                e.path, 1,
+                                CHAR_LENGTH(e.path) -
+                                CHAR_LENGTH(SUBSTRING_INDEX(e.path, '/', -1)) - 1)
+                        AND (
+                            JSON_CONTAINS(parent.dirs, JSON_QUOTE(SUBSTRING_INDEX(e.path, '/', -1))) OR
+                            JSON_CONTAINS(parent.files, JSON_QUOTE(SUBSTRING_INDEX(e.path, '/', -1))) OR
+                            JSON_CONTAINS(parent.links, JSON_QUOTE(SUBSTRING_INDEX(e.path, '/', -1)))
+                    ))
+                ORDER BY e.path;
+                """
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(query, (root_path,))  # Pass the root_path parameter
+                    result = cursor.fetchall()
+        except Error as e:
+            logger.error(f"Error fetching orphaned entries: {e}")
+            return []
+
+        # Extract just the path strings from the tuples
+        return [row[0] for row in result]
+
+    def find_untracked_children(self) -> list[Any]:
+        """
+        Find children listed by parents but don't exist as entries.
+
+        Returns:
+            List of dictionaries with keys: untracked_path, parent_path, child_name, child_type
+        """
+        query = """
+                SELECT DISTINCT CONCAT(
+                                parent.path, '/', child_name.name)  as untracked_path,
+                                parent.path                         as parent_path,
+                                child_name.name                     as child_name,
+                                child_types.child_type              as child_type
+                FROM hashtable parent
+                         CROSS JOIN JSON_TABLE(
+                        JSON_ARRAY(
+                                JSON_OBJECT('names', parent.dirs, 'type', 'dirs'),
+                                JSON_OBJECT('names', parent.files, 'type', 'files'),
+                                JSON_OBJECT('names', parent.links, 'type', 'links')
+                        ),
+                        '$[*]' COLUMNS (
+                            child_list JSON PATH '$.names',
+                            child_type VARCHAR(10) PATH '$.type'
+                            )
+                                    ) as child_types
+                         CROSS JOIN JSON_TABLE(
+                        child_types.child_list,
+                        '$[*]' COLUMNS (
+                            name VARCHAR(255) PATH '$'
+                            )
+                                    ) as child_name
+                         LEFT JOIN hashtable existing
+                                   ON CONCAT(parent.path, '/', child_name.name) = existing.path
+                WHERE existing.path IS NULL
+                  AND child_types.child_list IS NOT NULL
+                ORDER BY parent.path, child_name.name
+                """
+
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(query)
+                    result = cursor.fetchall()
+        except Error as e:
+            logger.error(f"Error fetching untracked children: {e}")
+            return []
+
+        # return all query results?
+        # return [
+        #     {
+        #         'untracked_path': row[0],
+        #         'parent_path': row[1],
+        #         'child_name': row[2],
+        #         'child_type': row[3]
+        #     }
+        #     for row in result
+        # ]
+
+        return [row[0] for row in result]  # Just the untracked paths
+
+    def consolidate_logs(self) -> bool:
+        """
+        Consolidate log entries by session ID, grouping and deduplicating JSON-encoded detailed messages.
+
+        Returns:
+            bool: True if consolidation was successful, False otherwise
+        """
+        try:
+            # Find all unique session IDs that have log entries
+            query = "SELECT DISTINCT session_id FROM logs WHERE session_id IS NOT NULL"
+            with self._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(query)
+                    session_ids = [row[0] for row in cursor.fetchall()]
+
+            if not session_ids:
+                logger.info("No sessions found to consolidate")
+                return True
+
+            logger.info(f"Found {len(session_ids)} sessions to consolidate")
+
+            # Consolidate each session
+            for session_id in session_ids:
+                self._consolidate_logs(session_id)
+
+            logger.info("Log consolidation completed successfully")
+            return True
+
+        except Error as e:
+            logger.error(f"Error during log consolidation: {e}")
+            return False
+
+    def _consolidate_logs(self, session_id: str) -> None:
+        """
+        Consolidate log entries for a specific session ID.
+
+        Args:
+            session_id: The session ID to consolidate logs for
+        """
         # Get all entries for this session_id
         query = "SELECT * FROM logs WHERE session_id = %s ORDER BY log_id"
         try:
@@ -485,83 +621,116 @@ class MYSQLConnection(DBConnection):
                         logger.debug(f"Found {len(result)} entries with session id {session_id}")
                     else:
                         logger.debug(f"No log entry found with session id {session_id}")
+                        return
         except Error as e:
             logger.error(f"Error fetching log entry: {e}")
             return
 
-        changes = {'created': set(), 'modified':set(), 'deleted':set()}
+        # Group entries by log level
+        log_level_groups = {}
+        session_type = None
+        has_finish_session = False
 
-        logger.debug(f"Consolidating log entries")
-        last_detailed_message = None
-        for log_entry in result if result else []:
-            try:
-                data = json.loads(log_entry.get('detailed_message'))
-                logger.debug(f"json encoded log entry")
-                for field in changes.keys():
-                    changes[field].update(data.get(field, []))
+        for log_entry in result:
+            log_level = log_entry.get('log_level', 'INFO')
+            summary_message = log_entry.get('summary_message', '')
 
-            except json.JSONDecodeError as e:
-                logger.debug(f"Not a json encoded log entry: {e}")
-                last_detailed_message = log_entry.get('detailed_message')
+            # Check for session start/finish messages
+            if 'START SESSION' in summary_message:
+                session_type = log_entry.get('detailed_message', 'Unknown Session')
+                continue
+            elif 'FINISH SESSION' in summary_message:
+                has_finish_session = True
                 continue
 
-        sorted_changes = {}
-        for field in changes.keys():
-            sorted_changes[field] = sorted(list(changes[field]))
-        detailed_message = json.dumps(sorted_changes)
+            # Initialize log level group if not exists
+            if log_level not in log_level_groups:
+                log_level_groups[log_level] = {
+                    'entries': [],
+                    'consolidated_data': {},
+                    'site_id': log_entry.get('site_id', 'local')
+                }
 
-        summary_entry = {
-            'site_id': config.site_name,
-            'summary_message': last_detailed_message,
-            'detailed_message': detailed_message,
-        }
+            log_level_groups[log_level]['entries'].append(log_entry)
 
-        self.put_log(summary_entry)
+        # Process each log level group
+        for log_level, group_data in log_level_groups.items():
+            logger.debug(f"Consolidating {len(group_data['entries'])} entries for log level {log_level}")
 
-        deleted_entries = 0
-        for log_entry in result:
-            deleted_entries += self.delete_log_entry(log_entry['log_id'])
-        logger.info(f"Consolidated {deleted_entries} log entries for session id {session_id}")
+            # Consolidate JSON data for this log level
+            consolidated_changes = {}
 
-    def get_log_entry(self, log_id: int) -> Dict[str, Any] | None:
-        """
-        Get a single log entry by log_id.
+            for log_entry in group_data['entries']:
+                try:
+                    data = json.loads(log_entry.get('detailed_message', '{}'))
+                    logger.debug(f"Processing JSON encoded log entry")
 
-        Args:
-            log_id: log_id to retrieve.
+                    # Merge data by keys, deduplicating lists
+                    for key, value in data.items():
+                        if key not in consolidated_changes:
+                            consolidated_changes[key] = set()
 
-        Returns:
-            log entry as a dict or None if not found or an error occurred
-        """
-        query = "SELECT * FROM logs WHERE log_id = %s"
+                        if isinstance(value, list):
+                            consolidated_changes[key].update(value)
+                        else:
+                            consolidated_changes[key].add(str(value))
 
-        try:
-            with self._get_connection() as conn:
-                with conn.cursor(dictionary=True) as cursor:
-                    cursor.execute(query, (log_id,))
-                    result = cursor.fetchone()
-                    if result:
-                        logger.debug(f"Found log entry {log_id}")
-                    else:
-                        logger.debug(f"No log entry found with id {log_id}")
-                    return result if result else None
-        except Error as e:
-            logger.error(f"Error fetching log entry: {e}")
-            return None
+                except json.JSONDecodeError as e:
+                    logger.debug(f"Not a JSON encoded log entry: {e}")
+                    # Handle non-JSON entries by treating them as text
+                    text_key = 'messages'
+                    if text_key not in consolidated_changes:
+                        consolidated_changes[text_key] = set()
+                    consolidated_changes[text_key].add(log_entry.get('detailed_message', ''))
+
+            # Sort and convert sets back to lists
+            sorted_changes = {}
+            for key, value_set in consolidated_changes.items():
+                sorted_changes[key] = sorted(list(value_set))
+
+            # Create consolidated entry
+            detailed_message = json.dumps(sorted_changes, indent=2)
+
+            summary_entry = {
+                'site_id': group_data['site_id'],
+                'session_id': None if has_finish_session else session_id,
+                'log_level': log_level,
+                'summary_message': f"Consolidated {log_level} entries for session {session_id}" +
+                                   (f" ({session_type})" if session_type else ""),
+                'detailed_message': detailed_message,
+            }
+
+            # Insert consolidated entry
+            self.put_log(summary_entry)
+
+            # Delete original entries for this log level
+            deleted_entries = 0
+            for log_entry in group_data['entries']:
+                deleted_entries += 1 if self.delete_log_entry(log_entry['log_id']) else 0
+
+            logger.info(f"Consolidated {deleted_entries} {log_level} entries for session {session_id}")
+
+        logger.info(f"Finished consolidating session {session_id}")
 
     def get_logs(self, limit: Optional[int] = None, offset: int = 0,
-                 order_by: str = "timestamp", order_direction: str = "DESC") -> List[Dict[str, Any]]:
+                 order_by: str = "timestamp", order_direction: str = "DESC",
+                 session_id_filter: Optional[str] = None,
+                 older_than_days: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Get log entries from database.
 
-        This method retrieves log entries from the local database with optional pagination
-        and ordering capabilities.
+        This method retrieves log entries from the local database with optional pagination,
+        ordering, and filtering capabilities.
 
         Args:
             limit: Maximum number of records to return (None for all records)
             offset: Number of records to skip for pagination
             order_by: Column name to order by (default: 'timestamp')
             order_direction: Sort direction - 'ASC' or 'DESC' (default: 'DESC')
+            session_id_filter: Filter by session_id - None for all records,
+                              'null' for records with NULL session_id (logs to ship),
+                              or specific session_id value
+            older_than_days: Filter records older than specified number of days
 
         Returns:
             A list of dicts where each dict is a complete log entry from the database.
@@ -580,8 +749,11 @@ class MYSQLConnection(DBConnection):
         if order_direction.upper() not in ('ASC', 'DESC'):
             raise ValueError("Order direction must be 'ASC' or 'DESC'")
 
+        if older_than_days is not None and (not isinstance(older_than_days, int) or older_than_days <= 0):
+            raise ValueError("older_than_days must be a positive integer")
+
         # Validate order_by column (whitelist approach for security)
-        allowed_columns = {'log_id', 'site_id', 'log_level', 'timestamp'}  # Adjust based on schema changes
+        allowed_columns = {'log_id', 'site_id', 'log_level', 'timestamp', 'session_id'}
         if order_by not in allowed_columns:
             raise ValueError(f"Invalid order_by column. Allowed: {allowed_columns}")
 
@@ -589,6 +761,24 @@ class MYSQLConnection(DBConnection):
         base_query = "SELECT * FROM logs"
         query_parts = [base_query]
         query_params = []
+        where_conditions = []
+
+        # Add WHERE clause for session_id filtering
+        if session_id_filter is not None:
+            if session_id_filter == 'null':
+                where_conditions.append("session_id IS NULL")
+            else:
+                where_conditions.append("session_id = %s")
+                query_params.append(session_id_filter)
+
+        # Add WHERE clause for date filtering
+        if older_than_days is not None:
+            where_conditions.append("timestamp < DATE_SUB(NOW(), INTERVAL %s DAY)")
+            query_params.append(older_than_days)
+
+        # Combine WHERE conditions
+        if where_conditions:
+            query_parts.append("WHERE " + " AND ".join(where_conditions))
 
         # Add ORDER BY clause (safe since we validated the column name)
         query_parts.append(f"ORDER BY {order_by} {order_direction.upper()}")
@@ -612,7 +802,14 @@ class MYSQLConnection(DBConnection):
 
                     # More informative logging
                     record_count = len(result) if result else 0
-                    logger.debug(f"Retrieved {record_count} log records from database")
+                    filter_info = []
+                    if session_id_filter is not None:
+                        filter_info.append(f"session_id: {session_id_filter}")
+                    if older_than_days is not None:
+                        filter_info.append(f"older than {older_than_days} days")
+
+                    filter_str = f" (filters: {', '.join(filter_info)})" if filter_info else ""
+                    logger.debug(f"Retrieved {record_count} log records from database{filter_str}")
 
                     return result or []  # Ensure we always return a list
 

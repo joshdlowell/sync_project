@@ -43,9 +43,9 @@ class StandardFileSystem(FileSystemInterface):
 
 
 class RestHashStorage(HashStorageInterface):
-    """Hash storage implementation using REST connector"""
-    def __init__(self, rest_processor):
-        self.rest_processor = rest_processor
+    """Hash storage implementation using rest_client package"""
+    def __init__(self, storage_service):
+        self.rest_processor = storage_service.rest_client
 
     def put_hashtable(self, hash_info: Dict[str, Any]) -> int:
         return self.rest_processor.put_hashtable(hash_info)

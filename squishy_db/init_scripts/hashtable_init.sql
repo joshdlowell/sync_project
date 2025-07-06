@@ -7,7 +7,13 @@ CREATE TABLE IF NOT EXISTS hashtable (
     target_hash VARCHAR(40), -- Not case sensitive
     prev_hash VARCHAR(40), -- Not case sensitive
     prev_dtg_latest INT UNSIGNED,
-    dirs TEXT,
-    files TEXT,
-    links TEXT
+    dirs JSON,
+    files JSON,
+    links JSON,
+
+    -- Index for performance
+    INDEX idx_path (path(255)),  -- Index with prefix length for path
+    INDEX idx_dirs ((CAST(dirs->'$[0]' AS CHAR(100)))),
+    INDEX idx_files ((CAST(files->'$[0]' AS CHAR(100)))),
+    INDEX idx_links ((CAST(links->'$[0]' AS CHAR(100))))
 );

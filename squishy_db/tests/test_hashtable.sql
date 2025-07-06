@@ -106,8 +106,8 @@ SELECT
 FROM hashtable
 WHERE path = '/tmp/test';
 
--- Test 5: Insert with all fields
-SELECT 'Test 5: Test all values are populated:' as '';
+-- Test 5: Insert with all fields (JSON format)
+SELECT 'Test 5: Test all values are populated (JSON format):' as '';
 INSERT INTO hashtable (
     path,
     current_hash,
@@ -123,13 +123,19 @@ INSERT INTO hashtable (
     'c3d4e5f6789012345678901234567890abcdef12',
     'd4e5f6789012345678901234567890abcdef123',
     UNIX_TIMESTAMP('2024-01-15 12:30:00'),
-    'dir1,dir2,dir3',
-    'file1.txt,file2.log,file3.conf',
-    'link1->target1,link2->target2'
+    JSON_ARRAY('dir1', 'dir2', 'dir3'),
+    JSON_ARRAY(
+        JSON_OBJECT('name', 'file1.txt', 'size', 1024),
+        JSON_OBJECT('name', 'file2.log', 'size', 2048),
+        JSON_OBJECT('name', 'file3.conf', 'size', 512)
+    ),
+    JSON_ARRAY(
+        JSON_OBJECT('name', 'link1', 'target', 'target1'),
+        JSON_OBJECT('name', 'link2', 'target', 'target2')
+    )
 );
 
--- Verbose output
-
+-- Verbose output for Test 5
 SELECT
     CASE
         WHEN path = '/var/log/system'
@@ -137,9 +143,9 @@ SELECT
         AND target_hash ='c3d4e5f6789012345678901234567890abcdef12'
         AND prev_hash ='d4e5f6789012345678901234567890abcdef123'
         AND prev_dtg_latest =UNIX_TIMESTAMP('2024-01-15 12:30:00')
-        AND dirs ='dir1,dir2,dir3'
-        AND files ='file1.txt,file2.log,file3.conf'
-        AND links ='link1->target1,link2->target2'
+        AND JSON_CONTAINS(dirs, '"dir1"')
+        AND JSON_CONTAINS(files, JSON_OBJECT('name', 'file1.txt', 'size', 1024))
+        AND JSON_CONTAINS(links, JSON_OBJECT('name', 'link1', 'target', 'target1'))
         THEN 'PASSED'
         ELSE 'FAILED'
     END as test_result,
@@ -151,24 +157,6 @@ SELECT
     dirs,
     files,
     links
-FROM hashtable
-WHERE path = '/var/log/system';
-
--- Summary output
-SELECT
-    CASE
-        WHEN path = '/var/log/system'
-        AND current_hash ='b2c3d4e5f6789012345678901234567890abcdef'
-        AND target_hash ='c3d4e5f6789012345678901234567890abcdef12'
-        AND prev_hash ='d4e5f6789012345678901234567890abcdef123'
-        AND prev_dtg_latest =UNIX_TIMESTAMP('2024-01-15 12:30:00')
-        AND dirs ='dir1,dir2,dir3'
-        AND files ='file1.txt,file2.log,file3.conf'
-        AND links ='link1->target1,link2->target2'
-        THEN 'PASSED'
-        ELSE 'FAILED'
-    END as test_result,
-    'NOTE: For Test 5 verbose output, un-comment the verbose version' as COMMENT
 FROM hashtable
 WHERE path = '/var/log/system';
 
@@ -219,7 +207,6 @@ SELECT
 FROM hashtable
 WHERE path = '/tmp/test';
 
-
 -- Test 8: Complex query test
 SELECT 'Test 8: Complex query:' as ''; -- Add blank line to output
 SELECT
@@ -250,8 +237,8 @@ SELECT
     LENGTH(current_hash) as current_hash_length
 FROM hashtable;
 
--- Test 10: Test text field handling with special characters
-SELECT 'Test 10: Special characters handling:' as ''; -- Add blank line to output
+-- Test 10: Test JSON field handling with special characters
+SELECT 'Test 10: JSON fields handling:' as ''; -- Add blank line to output
 INSERT INTO hashtable (
     path,
     current_hash,
@@ -261,18 +248,23 @@ INSERT INTO hashtable (
 ) VALUES (
     '/special/path with spaces & symbols!@#$%',
     'f6789012345678901234567890abcdef12345',
-    'dir with spaces,dir@symbols,dir#hash',
-    'file with spaces.txt,file@symbol.log',
-    'link with spaces->target with spaces'
+    JSON_ARRAY('dir with spaces', 'dir@symbols', 'dir#hash'),
+    JSON_ARRAY(
+        JSON_OBJECT('name', 'file with spaces.txt', 'size', 1234),
+        JSON_OBJECT('name', 'file@symbol.log', 'size', 5678)
+    ),
+    JSON_ARRAY(
+        JSON_OBJECT('name', 'link with spaces', 'target', 'target with spaces')
+    )
 );
 
 SELECT
     CASE
         WHEN path = '/special/path with spaces & symbols!@#$%'
         AND current_hash = 'f6789012345678901234567890abcdef12345'
-        AND dirs = 'dir with spaces,dir@symbols,dir#hash'
-        AND files = 'file with spaces.txt,file@symbol.log'
-        AND links = 'link with spaces->target with spaces'
+        AND JSON_CONTAINS(dirs, '"dir with spaces"')
+        AND JSON_CONTAINS(files, JSON_OBJECT('name', 'file with spaces.txt', 'size', 1234))
+        AND JSON_CONTAINS(links, JSON_OBJECT('name', 'link with spaces', 'target', 'target with spaces'))
         THEN 'PASSED'
         ELSE 'FAILED'
     END as test_result
@@ -306,6 +298,19 @@ WHERE prev_hash = 'D4E5F6789012345678901234567890abcdef123';
 
 -- Test 12: Required field enforcement
 CALL test_hashtable_insert();
+
+-- Test 13: JSON query functionality
+SELECT 'Test 13: JSON query functionality:' as '';
+SELECT
+    CASE
+        WHEN COUNT(*) > 0 THEN 'PASSED'
+        ELSE 'FAILED'
+    END as test_result,
+    'Testing JSON queries' as description
+FROM hashtable
+WHERE JSON_CONTAINS(dirs, '"dir1"')
+   OR JSON_EXTRACT(files, '$[0].name') = 'file1.txt'
+   OR JSON_EXTRACT(links, '$[0].name') = 'link1';
 
 -- Test Summary
 SELECT '';

@@ -1,11 +1,12 @@
 from typing import Tuple, Any
 from time import time
 
+from .rest_interface import RestProcessorInterface
 from .http_client import HttpClient
 from .hash_info_validator import HashInfoValidator
 from .configuration import config, logger
 
-class RestProcessor:
+class RestProcessor(RestProcessorInterface):
     """
     Connector for interacting with the REST API for hash storage operations.
 

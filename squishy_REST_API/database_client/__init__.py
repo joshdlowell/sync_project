@@ -1,3 +1,3 @@
-from .db_bootstrap import DBClient, CoreDBClient
+from .db_factory import DBClientFactory
 
-__all__ = ['DBClient', 'CoreDBClient']
+__all__ = ['DBClientFactory']

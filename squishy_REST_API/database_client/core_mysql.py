@@ -5,8 +5,9 @@ import mysql.connector
 from mysql.connector import Error
 from contextlib import contextmanager
 
-from .core_site_DB_interface import CoreDBConnection
-from squishy_REST_API import logger, config
+from .db_interfaces import CoreDBConnection
+import logging_config
+from logging_config import VALID_LOG_LEVELS
 
 class CoreMYSQLConnection(CoreDBConnection):
     """
@@ -41,6 +42,7 @@ class CoreMYSQLConnection(CoreDBConnection):
         }
         self.database = database
         self.connection_factory = connection_factory or mysql.connector.connect
+        self.logger = logging_config.configure_logging()
 
     @contextmanager
     def _get_connection(self):
@@ -56,17 +58,17 @@ class CoreMYSQLConnection(CoreDBConnection):
         connection = None
         try:
             connection = self.connection_factory(**self.config)
-            logger.debug(f"Database connection established to {self.config['host']}")
+            self.logger.debug(f"Database connection established to {self.config['host']}")
             yield connection
         except Error as e:
-            logger.error(f"Database error: {e}")
+            self.logger.error(f"Database error: {e}")
             if connection:
                 connection.rollback()
             raise
         finally:
             if connection and connection.is_connected():
                 connection.close()
-                logger.debug("Database connection closed")
+                self.logger.debug("Database connection closed")
 
     def get_dashboard_content(self) -> dict[str, Any]:
         """
@@ -212,9 +214,9 @@ class CoreMYSQLConnection(CoreDBConnection):
                             'live_l24_behind': result[9] or 0,
                             'live_inactive': result[10] or 0,
                         })
-                    logger.debug(f"Dashboard query result: {result}")
+                    self.logger.debug(f"Dashboard query result: {result}")
         except Error as e:
-            logger.error(f"Error collecting dashboard information: {e}")
+            self.logger.error(f"Error collecting dashboard information: {e}")
             # Context remains with default values (0s) on error
 
         return context
@@ -268,14 +270,14 @@ class CoreMYSQLConnection(CoreDBConnection):
                         })
 
                     if results:
-                        logger.debug(f"Retrieved status for {len(results)} sites")
+                        self.logger.debug(f"Retrieved status for {len(results)} sites")
                         return cleaned_results
                     else:
-                        logger.debug("No sites found in site_list")
+                        self.logger.debug("No sites found in site_list")
                         return []
 
         except Error as e:
-            logger.error(f"Error fetching site status summary: {e}")
+            self.logger.error(f"Error fetching site status summary: {e}")
             return []
 
     def get_site_sync_status(self) -> list:
@@ -347,14 +349,14 @@ class CoreMYSQLConnection(CoreDBConnection):
                         })
 
                     if results:
-                        logger.debug(f"Retrieved sync status for {len(results)} active sites")
+                        self.logger.debug(f"Retrieved sync status for {len(results)} active sites")
                         return cleaned_results
                     else:
-                        logger.debug("No active sites found for sync status check")
+                        self.logger.debug("No active sites found for sync status check")
                         return []
 
         except Error as e:
-            logger.error(f"Error fetching site sync status: {e}")
+            self.logger.error(f"Error fetching site sync status: {e}")
             return []
 
     def get_recent_logs(self, log_level: str = None, site_id: str = None) -> list:
@@ -409,14 +411,14 @@ class CoreMYSQLConnection(CoreDBConnection):
                         filter_desc.append(f"site_id={site_id}")
                     filter_str = f" with filters: {', '.join(filter_desc)}" if filter_desc else ""
                     if results:
-                        logger.debug(f"Retrieved {len(results)} log records from last 30 days{filter_str}")
+                        self.logger.debug(f"Retrieved {len(results)} log records from last 30 days{filter_str}")
                         return results
                     else:
-                        logger.debug(f"No log records found in the last 30 days{filter_str}")
+                        self.logger.debug(f"No log records found in the last 30 days{filter_str}")
                         return []
 
         except Error as e:
-            logger.error(f"Error fetching recent logs: {e}")
+            self.logger.error(f"Error fetching recent logs: {e}")
             return []
 
     def get_valid_site_ids(self) -> list:
@@ -436,14 +438,14 @@ class CoreMYSQLConnection(CoreDBConnection):
 
                     if results:
                         site_ids = [row['site_name'] for row in results]
-                        logger.debug(f"Retrieved {len(site_ids)} valid site IDs")
+                        self.logger.debug(f"Retrieved {len(site_ids)} valid site IDs")
                         return site_ids
                     else:
-                        logger.debug("No site IDs found")
+                        self.logger.debug("No site IDs found")
                         return []
 
         except Error as e:
-            logger.error(f"Error fetching valid site IDs: {e}")
+            self.logger.error(f"Error fetching valid site IDs: {e}")
             return []
 
     def get_hash_record_count(self) -> int:
@@ -462,13 +464,13 @@ class CoreMYSQLConnection(CoreDBConnection):
                     result = cursor.fetchone()
                     if result:
                         count = result['total_count']
-                        logger.debug(f"Total records in hashtable: {count}")
+                        self.logger.debug(f"Total records in hashtable: {count}")
                         return count
                     else:
-                        logger.debug("No count result returned")
+                        self.logger.debug("No count result returned")
                         return 0
         except Error as e:
-            logger.error(f"Error fetching record count: {e}")
+            self.logger.error(f"Error fetching record count: {e}")
             return 0
 
     def get_log_count_last_24h(self, log_level: str) -> int:
@@ -490,7 +492,7 @@ class CoreMYSQLConnection(CoreDBConnection):
             ValueError: If invalid log_level is provided
         """
         # Input validation
-        allowed_log_levels = config.VALID_LOG_LEVELS
+        allowed_log_levels = VALID_LOG_LEVELS
         if not isinstance(log_level, str):
             raise ValueError("log_level must be a string")
 
@@ -517,15 +519,15 @@ class CoreMYSQLConnection(CoreDBConnection):
                     result = cursor.fetchone()
 
                     count = result['record_count'] if result else 0
-                    logger.debug(f"Found {count} {log_level} log records in last 24 hours")
+                    self.logger.debug(f"Found {count} {log_level} log records in last 24 hours")
 
                     return count
 
         except mysql.connector.Error as e:
             # More specific error handling
-            logger.error(f"MySQL error counting log records: {e.errno} - {e.msg}")
+            self.logger.error(f"MySQL error counting log records: {e.errno} - {e.msg}")
             return 0
         except Exception as e:
             # Catch any other unexpected errors
-            logger.error(f"Unexpected error counting log records: {e}")
+            self.logger.error(f"Unexpected error counting log records: {e}")
             return 0

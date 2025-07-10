@@ -66,18 +66,19 @@ docker build -t squishy-rest-api:v2.0 . -f Dockerfile_rest
 
 You can run this container for testing, or for production
 #### Run interactive for testing
-This command will start the docker container without launching the rest api service and add the tests 
-to the package and enable `DEBUG` (verbose) mode
+This command will start the docker container without launching the rest api service, add the tests 
+to the packages and enable `DEBUG` (verbose) mode
 ```bash
 docker run -it --rm \
   --name squishy-rest-api \
   --network squishy_db_default \
-  -e LOCAL_MYSQL_USER=your_app_user \
-  -e LOCAL_MYSQL_PASSWORD=your_user_password \
+  -e LOCAL_DB_USER=your_app_user \
+  -e LOCAL_DB_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
   -e SITE_NAME=SIT0 \
   -e LOG_LEVEL=DEBUG \
   -v $(pwd)/squishy_REST_API/tests:/app/squishy_REST_API/tests \
+  -v $(pwd)/database_client/tests:/app/database_client/tests \
   -p 5000:5000 \
   squishy-rest-api:v2.0 /bin/sh
 ```
@@ -86,13 +87,14 @@ docker run -it --rm \
 docker run -it --rm \
   --name squishy-rest-api \
   --network squishy_db_default \
-  -e LOCAL_MYSQL_USER=your_app_user \
-  -e LOCAL_MYSQL_PASSWORD=your_user_password \
+  -e LOCAL_DB_USER=your_app_user \
+  -e LOCAL_DB_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
   -e LOG_LEVEL=DEBUG \
   -e SITE_NAME=SIT0 \
   -p 5000:5000 \
   -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_REST_API:/app/squishy_REST_API \
+  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/database_client:/app/database_client \
   squishy-rest-api:v2.0 /bin/sh
 ```
 

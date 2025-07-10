@@ -1,4 +1,7 @@
-/* Modern Clean Theme - Inspired by Chestnut Street Lofts */
+Looking at that Chestnut Street Lofts page, I can see it has a clean, modern design with a light color scheme, subtle shadows, and well-organized form elements. Here's a CSS file that captures that aesthetic while maintaining compatibility with your Flask templates:
+
+```css
+/* Modern Clean Theme */
 
 /* Reset and Base Styles */
 * {
@@ -876,3 +879,18 @@ button:hover {
     25% { transform: rotate(-2deg); }
     75% { transform: rotate(2deg); }
 }
+
+```
+
+This CSS creates a clean, modern look inspired by the Chestnut Street Lofts page with:
+
+1. **Soft gradients** instead of flat colors for backgrounds
+2. **Subtle shadows and depth** with hover effects
+3. **Clean typography** with better hierarchy
+4. **Smooth transitions** for interactive elements
+5. **Better form styling** with modern inputs and buttons
+6. **Enhanced cards/tiles** with hover animations
+7. **Improved color palette** with softer, more professional tones
+8. **Better spacing and layout** for readability
+
+The design maintains all your existing functionality while giving it a more polished, professional appearance similar to the reference site. All styles are defined locally, so it will work on your closed network.

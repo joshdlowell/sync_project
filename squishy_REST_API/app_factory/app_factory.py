@@ -27,7 +27,7 @@ class RESTAPIFactory:
         """
 
         # Get db instance for use in routes - database interactions
-        db_config = {'database': config.db_config}
+        db_config = {'database': config.database_config}
         db_client = DBClientFactory(db_config).create_client()
         db_instance = DBInstance(db_client)
 

@@ -3,7 +3,7 @@ import pyodbc
 from contextlib import contextmanager
 
 from .db_interfaces import PipelineDBConnection
-import logging_config
+from database_client import logging_config
 
 
 class PipelineMSSQLConnection(PipelineDBConnection):

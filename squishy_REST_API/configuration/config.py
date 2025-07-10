@@ -157,7 +157,7 @@ class Config:
                 'database': self._config['pipeline_db_name'] ,
                 'user': self._config['pipeline_db_user'],
                 'password': self._config['pipeline_db_password'],
-                'port': self._config['pipeline_port']
+                'port': self._config['pipeline_db_port']
             }
         }
 

@@ -4,7 +4,7 @@ import pyodbc
 from contextlib import contextmanager
 
 from .db_interfaces import RemoteDBConnection
-import logging_config
+from database_client import logging_config
 
 
 class RemoteMSSQLConnection(RemoteDBConnection):

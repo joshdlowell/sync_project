@@ -1,2 +1,6 @@
 squishy_REST_API/tests
 squishy_integrity/tests
+squishy_coordinator/tests
+database_client/tests
+integrity_check/tests
+rest_client/tests

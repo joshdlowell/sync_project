@@ -6,7 +6,7 @@ using configuration from the config module.
 """
 from typing import Optional, Dict, Type
 
-import logging_config
+from database_client import logging_config
 from .db_implementation import DBInstance
 from .remote_memory import RemoteInMemoryConnection
 from .remote_mssql_untested import RemoteMSSQLConnection

@@ -6,8 +6,8 @@ from mysql.connector import Error
 from contextlib import contextmanager
 
 from .db_interfaces import CoreDBConnection
-import logging_config
-from logging_config import VALID_LOG_LEVELS
+from database_client import logging_config
+from database_client.logging_config import VALID_LOG_LEVELS
 
 class CoreMYSQLConnection(CoreDBConnection):
     """

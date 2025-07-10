@@ -5,7 +5,7 @@ from mysql.connector import Error
 from contextlib import contextmanager
 
 from .db_interfaces import RemoteDBConnection
-import logging_config
+from database_client import logging_config
 
 
 class RemoteMYSQLConnection(RemoteDBConnection):

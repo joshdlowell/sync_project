@@ -1,7 +1,21 @@
 FROM python:3.12-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev
+# Install build dependencies including those needed for pyodbc and ODBC driver
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    unixodbc-dev \
+    g++ \
+    make
+
+# Install Microsoft ODBC Driver 18 for SQL Server
+RUN apk add --no-cache curl gnupg && \
+    curl -O https://download.microsoft.com/download/fae28b9a-d880-42fd-9b98-d779f0fdd77f/msodbcsql18_18.5.1.1-1_amd64.apk && \
+    curl -O https://download.microsoft.com/download/7/6/d/76de322a-d860-4894-9945-f0cc5d6a45f8/mssql-tools18_18.4.1.1-1_amd64.apk && \
+    apk add --allow-untrusted msodbcsql18_18.5.1.1-1_amd64.apk && \
+    apk add --allow-untrusted mssql-tools18_18.4.1.1-1_amd64.apk
 
 # Install Python dependencies
 RUN pip install --no-cache-dir \
@@ -9,10 +23,24 @@ RUN pip install --no-cache-dir \
     flask \
     Flask-Moment \
     gunicorn \
-    requests
+    requests \
+    pyodbc
 
 FROM python:3.12-alpine
 LABEL authors="jdlowel"
+
+# Install runtime dependencies for ODBC
+RUN apk add --no-cache \
+    unixodbc \
+    curl \
+    gnupg
+
+# Install Microsoft ODBC Driver 17 for SQL Server in final image
+RUN curl -O https://download.microsoft.com/download/fae28b9a-d880-42fd-9b98-d779f0fdd77f/msodbcsql18_18.5.1.1-1_amd64.apk && \
+    curl -O https://download.microsoft.com/download/7/6/d/76de322a-d860-4894-9945-f0cc5d6a45f8/mssql-tools18_18.4.1.1-1_amd64.apk && \
+    apk add --allow-untrusted msodbcsql18_18.5.1.1-1_amd64.apk && \
+    apk add --allow-untrusted mssql-tools18_18.4.1.1-1_amd64.apk && \
+    rm -f msodbcsql18_18.5.1.1-1_amd64.apk mssql-tools18_18.4.1.1-1_amd64.apk
 
 # Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
@@ -23,6 +51,7 @@ WORKDIR /app
 
 # Copy application code
 COPY squishy_REST_API /app/squishy_REST_API/
+COPY database_client /app/database_client/
 
 # Set environment variables
 # All non-required env vars are running v2 defaults

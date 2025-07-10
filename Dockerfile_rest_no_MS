@@ -1,0 +1,35 @@
+FROM python:3.12-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    mysql-connector-python \
+    flask \
+    Flask-Moment \
+    gunicorn \
+    requests
+
+FROM python:3.12-alpine
+LABEL authors="jdlowel"
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code
+COPY squishy_REST_API /app/squishy_REST_API/
+COPY database_client /app/database_client/
+
+# Set environment variables
+# All non-required env vars are running v2 defaults
+
+# Expose port
+EXPOSE 5000
+
+## Start the application using the runnable package
+CMD ["python", "-m", "squishy_REST_API"]

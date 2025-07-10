@@ -16,7 +16,9 @@ class CoordinatorFactory:
         rest_client = RestClient()
         local_storage = RestStorage(rest_client.create_rest_connector(config.get('rest_api_url')))
         core_storage = RestStorage(rest_client.create_rest_connector(config.get('core_api_url')))
-        integrity_service = IntegrityCheckFactory.create_service()  # TODO env var ? sets to return updates here or new implementation?
+
+        merkle_config = None  # Inject custom config dict into Integrity check factory
+        integrity_service = IntegrityCheckFactory.create_service(merkle_config)
 
         logger.info("Application configured services with default configuration")
 

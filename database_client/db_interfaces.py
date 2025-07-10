@@ -230,6 +230,31 @@ class CoreDBConnection(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_site_liveness(self) -> list:
+        """
+        Get all sites from site_list with their last_updated timestamps and status categories.
+
+        Returns:
+            List of dictionaries containing site records with their status categories,
+            or empty list if no records found or an error occurred.
+            Each dictionary contains: site_name, last_updated, status_category
+        """
+        pass
+
+    @abstractmethod
+    def get_site_sync_status(self) -> list:
+        """
+        Get synchronization status for all active sites based on their current hash
+        compared to the hash history timeline.
+
+        Returns:
+            List of dictionaries containing site records with their sync status categories,
+            or empty list if no records found or an error occurred.
+            Each dictionary contains: site_name, current_hash, last_updated, sync_category
+        """
+        pass
+
 
 class PipelineDBConnection(ABC):
     """

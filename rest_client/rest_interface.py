@@ -4,7 +4,7 @@ from typing import Any, Tuple
 
 class RestProcessorInterface(ABC):
     """
-    Connector for interacting with the REST API for hash storage operations.
+    Interface for interacting with the REST API for hash storage operations.
 
     This class implements the HashStorageInterface required by the MerkleTreeService.
     """
@@ -195,4 +195,16 @@ class RestProcessorInterface(ABC):
         Returns:
             A tuple containing (success, response_data)
         """
+        pass
+
+    @abstractmethod
+    def get_site_liveness(self) -> list:
+        pass
+
+    @abstractmethod
+    def get_site_sync_status(self) -> list:
+        pass
+
+    @abstractmethod
+    def get_official_sites(self) -> list[str]:
         pass

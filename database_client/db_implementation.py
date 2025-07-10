@@ -93,6 +93,16 @@ class DBInstance(RemoteDBConnection, CoreDBConnection, PipelineDBConnection):
             raise NotImplementedError("CoreDBConnection implementation not provided")
         return self.core_db.get_log_count_last_24h(log_level)
 
+    def get_site_liveness(self) -> list:
+        if not self.core_db:
+            raise NotImplementedError("CoreDBConnection implementation not provided")
+        return self.core_db.get_site_liveness()
+
+    def get_site_sync_status(self) -> list:
+        if not self.core_db:
+            raise NotImplementedError("CoreDBConnection implementation not provided")
+        return self.core_db.get_site_sync_status()
+
     # PipelineDBConnection interface methods
     def get_pipeline_updates(self) -> List[Dict[str, Any]]:
         if not self.pipeline_db:

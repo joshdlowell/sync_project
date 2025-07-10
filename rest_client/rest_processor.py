@@ -109,7 +109,7 @@ class RestProcessor(RestProcessorInterface):
         Returns:
             The hash value as a string, or None if not found or error
         """
-        response = self._db_get("api/hash", {"path": path})
+        response = self._db_get("api/hash", {"path": path, 'field': 'hash'})
         logger.debug("Processing get single hash request")
         return self._process_response(response)
 
@@ -168,7 +168,7 @@ class RestProcessor(RestProcessorInterface):
         Returns:
             The timestamp as a float, or None if not found or error
         """
-        response = self._db_get("api/timestamp", {"path": path})
+        response = self._db_get("api/hashtable", {"path": path, 'field': 'timestamp'})
         logger.debug("Processing get single timestamp request")
         return self._process_response(response)
 
@@ -179,13 +179,13 @@ class RestProcessor(RestProcessorInterface):
         Returns:
             A list containing paths as strings that need priority updates, or None if not found or error
         """
-        response = self._db_get('api/priority')
+        response = self._db_get('api/hashtable', {"path": None, 'field': 'priority'})
         logger.debug("Processing priority updates request")
         return self._process_response(response)
 
     def get_lifecheck(self) -> dict | None:
         """Get the liveness of the rest api and database."""
-        response = self._db_get('api/lifecheck')
+        response = self._db_get('api/health')
         content = self._process_response(response)
         logger.debug("Processing life check request")
         return self._process_response(response)
@@ -254,7 +254,7 @@ class RestProcessor(RestProcessorInterface):
         Returns:
             A list containing paths in the database that aren't listed by a parent, or None if not found or error
         """
-        response = self._db_get('api/orphans')
+        response = self._db_get('api/hashtable', {"path": None, 'field': 'orphaned'})
         logger.debug("Processing database orphaned entries list request")
         return self._process_response(response)
 
@@ -264,7 +264,7 @@ class RestProcessor(RestProcessorInterface):
         Returns:
             A list containing paths in the database that aren't listed by a parent, or None if not found or error
         """
-        response = self._db_get('api/untracked')
+        response = self._db_get('api/hashtable', {"path": None, 'field': 'untracked'})
         logger.debug("Processing database untracked children list request")
         return self._process_response(response)
 
@@ -276,6 +276,34 @@ class RestProcessor(RestProcessorInterface):
         """
         response = self._db_get('api/pipeline')
         logger.debug("Processing database pipeline updates list request")
+        return self._process_response(response)
+
+    def get_site_liveness(self) -> list:
+        """
+        Get all sites from site_list with their last_updated timestamps and status categories.
+
+        Returns:
+            List of dictionaries containing site records with their status categories,
+            or empty list if no records found or an error occurred.
+            Each dictionary contains: site_name, last_updated, status_category
+        """
+        response = self._db_get('web/liveness')
+        logger.debug("Processing database liveness request")
+        return self._process_response(response)
+
+
+    def get_site_sync_status(self) -> list:
+        """
+        Get synchronization status for all active sites based on their current hash
+        compared to the hash history timeline.
+
+        Returns:
+            List of dictionaries containing site records with their sync status categories,
+            or empty list if no records found or an error occurred.
+            Each dictionary contains: site_name, current_hash, last_updated, sync_category
+        """
+        response = self._db_get('web/status')
+        logger.debug("Processing database site hash status request")
         return self._process_response(response)
 
     def consolidate_logs(self) -> bool | None:
@@ -347,6 +375,20 @@ class RestProcessor(RestProcessorInterface):
             return False, data.get('failed_deletes')
         else:
             return False, []
+
+    def get_official_sites(self) -> list[str]:
+        """
+        Get the current authoritative sites list from the MSSQL table.
+
+        Returns:
+            List of site names (strings)
+        """
+        endpoint = "api/pipeline"
+        params = {"action": "sites"}
+
+        response = self._db_get(endpoint, params)
+        logger.debug("Processing official sites request")
+        return self._process_response(response)
 
     def _has_validation_errors(self, path: str, item_data: dict) -> bool:
         """

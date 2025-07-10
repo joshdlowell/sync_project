@@ -9,10 +9,10 @@ from typing import Dict, Any, Optional, Union
 
 from .logging_config import configure_logging
 
+
 class ConfigError(Exception):
     """Custom exception for configuration errors."""
     pass
-
 
 
 class Config:
@@ -27,26 +27,30 @@ class Config:
 
     # Define required keys as class constants
     REQUIRED_KEYS = ['db_user', 'db_password', 'secret_key', 'site_name']
-    MAX_LENGTHS = {'site_name': 5}
     SENSITIVE_KEYS = ['db_password', 'secret_key']
+    NUMERIC_KEYS = ['db_port', 'api_port', 'workers', 'timeout', 'keepalive', 'max_requests', 'max_requests_jitter']
+    BOOLEAN_KEYS = ['debug', 'use_gunicorn']
+    MAX_LENGTHS = {'site_name': 5}
 
-    # Default values for configuration
+
+    # Default generic configuration values
     DEFAULTS = {
-        'db_type': 'mysql',
-        'db_host': 'mysql-squishy-db',
-        'db_name': 'squishy_db',
-        'db_user': None,
-        'db_password': None,
-        'db_port': 3306,
+        'valid_log_levels': {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
+        'log_level': 'INFO',
         'site_name': None,
-        'core_host': 'core',  # TODO update this and in README
-        'core_top_level_domain': 'home',  # TODO update this and in README
+        'core_host': 'squishy_badger',
+        'core_top_level_domain': 'home'
+    }
+    # REST API (flask) default configs
+    DEFAULTS.update({
         'api_host': '0.0.0.0',
         'api_port': 5000,
         'debug': False,
-        'secret_key': None,
-        'log_level': 'INFO',
-        'workers': 4,  # Gunicorn specific configs start here
+        'secret_key': None
+    })
+    # Gunicorn (WSGI) default configs
+    DEFAULTS.update({
+        'workers': 4,
         'worker_class': 'sync',
         'timeout': 30,
         'keepalive': 2,
@@ -56,19 +60,39 @@ class Config:
         'errorlog': '-',
         'proc_name': 'squishy_rest_api',
         'use_gunicorn': True
-    }
+    })
+    # Database default configs
+    DEFAULTS.update({
+        'db_type': 'mysql',
+        'db_host': 'mysql-squishy-db',
+        'db_name': 'squishy_db',
+        'db_user': None,
+        'db_password': None,
+        'db_port': 3306,
 
-    # Environment variable mapping (add more gunicorn adjustments?)
+        'pipeline_db_type': 'mssql',
+        'pipeline_db_server': 'mysql-squishy-db',
+        'pipeline_db_name': 'squishybadger',
+        'pipeline_db_user': None,
+        'pipeline_db_password': None,
+        'pipeline_db_port': 1433,
+    })
+
+    # Environment variable mapping
     ENV_MAPPING = {
         'db_type': 'LOCAL_DB_TYPE',
-        'db_host': 'LOCAL_MYSQL_HOST',
-        'db_name': 'LOCAL_MYSQL_DATABASE',
-        'db_user': 'LOCAL_MYSQL_USER',
-        'db_password': 'LOCAL_MYSQL_PASSWORD',
-        'db_port': 'LOCAL_MYSQL_PORT',
+        'db_host': 'LOCAL_DB_HOST',
+        'db_name': 'LOCAL_DB_DATABASE',
+        'db_user': 'LOCAL_DB_USER',
+        'db_password': 'LOCAL_DB_PASSWORD',
+        'db_port': 'LOCAL_DB_PORT',
+        'pipeline_db_type': 'PIPELINE_DB_TYPE',
+        'pipeline_db_server': 'PIPELINE_DB_SERVER',
+        'pipeline_db_name': 'PIPELINE_DB_NAME',
+        'pipeline_db_user': 'PIPELINE_DB_USER',
+        'pipeline_db_password': 'PIPELINE_DB_PASSWORD',
+        'pipeline_db_port': 'PIPELINE_DB_PORT',
         'site_name': 'SITE_NAME',
-        'core_host': 'CORE_HOST',
-        'core_top_level_domain': 'CORE_TOP_LEVEL_DOMAIN',
         'api_host': 'API_HOST',
         'api_port': 'API_PORT',
         'debug': 'DEBUG',
@@ -76,8 +100,6 @@ class Config:
         'log_level': 'LOG_LEVEL'
     }
 
-    # Valid log levels
-    VALID_LOG_LEVELS = {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}
 
     def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
         """
@@ -112,17 +134,51 @@ class Config:
             'proc_name': self._config["proc_name"],
         }
 
-        # Get sites data
-        site_name = self._config.get('site_name')
-        self.site_name = site_name.upper() if site_name else None
-        core_host = self._config.get('core_host')
+        self.database_config = {
+            'remote_type': self._config['db_type'],
+            'remote_config': {
+                'host': self._config['db_host'],
+                'database': self._config['db_name'],
+                'user': self._config['db_user'],
+                'password': self._config['db_password'],
+                'port': self._config['db_port'],
+            },
+            'core_type': self._config['db_type'],
+            'core_config': {
+                'host': self._config['db_host'],
+                'database': self._config['db_name'],
+                'user': self._config['db_user'],
+                'password': self._config['db_password'],
+                'port': self._config['db_port'],
+            },
+            'pipeline_type': self._config['pipeline_db_type'],
+            'pipeline_config': {
+                'server': self._config['pipeline_db_server'],
+                'database': self._config['pipeline_db_name'] ,
+                'user': self._config['pipeline_db_user'],
+                'password': self._config['pipeline_db_password'],
+                'port': self._config['pipeline_port']
+            }
+        }
 
-        if core_host is None or self.site_name is None:
-            self.is_core = False
-        else:
-            self.is_core = self.site_name in core_host.upper()
+        # Get sites' data
+        self.site_name = self._config.get('site_name')
+        self.site_name = self.site_name.upper() if self.site_name else None
+
+        core_host = self._config.get('core_host')
+        self.is_core = (
+                core_host is not None and
+                self.site_name is not None and
+                self.site_name in core_host.upper()
+        )
 
         self.is_core = True  # TODO remove this hardcoding
+
+        # Update database dict based on is_core status
+        if not self.is_core:
+            for key in {'core_type', 'core_config', 'pipeline_type', 'pipeline_config'}:
+                self.database_config[key] = None
+
         # Create logger
         self.logger = configure_logging(self._config.get('log_level'))
 
@@ -151,12 +207,12 @@ class Config:
         Raises:
             ConfigError: If conversion fails
         """
-        if key in ('db_port', 'api_port', 'workers', 'timeout', 'keepalive', 'max_requests', 'max_requests_jitter'):
+        if key in self.NUMERIC_KEYS:
             try:
                 return int(value)
             except ValueError:
                 raise ConfigError(f"Invalid integer value for {key}: {value}")
-        elif key in ('debug', 'use_gunicorn'):
+        elif key == self.BOOLEAN_KEYS:
             return value.lower() in ('true', '1', 'yes', 'on')
         return value
 
@@ -182,7 +238,7 @@ class Config:
         self._config['site_name'] = self._config['site_name'].upper()
 
         self._config['log_level'] = self._config['log_level'].upper()
-        if self._config['log_level'].upper() not in self.VALID_LOG_LEVELS:
+        if self._config['log_level'] not in self._config.get('valid_log_levels'):
             self._config['log_level'] = 'INFO'
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -197,6 +253,16 @@ class Config:
             Configuration value or default
         """
         return self._config.get(key, default)
+
+    def _set(self, key: str, value: Any = None) -> None:
+        """
+        Set configuration value by key (used for running tests).
+
+        Args:
+            key: Configuration key
+            value: The value to set
+        """
+        self._config[key] = value
 
     def get_database_url(self) -> str:
         """
@@ -236,5 +302,4 @@ class Config:
 
 # Default configuration instances
 config = Config()
-# Default logger instance
 logger = config.logger

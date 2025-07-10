@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from squishy_REST_API import logger, config
 
 
-def register_gui_routes(app: Flask, core_db_instance, db_instance):
+def register_gui_routes(app: Flask, db_instance):
     """
     Register web gui routes with the Flask application.
 
@@ -20,13 +20,14 @@ def register_gui_routes(app: Flask, core_db_instance, db_instance):
     """
 
     @app.route('/')
+    @app.route('/dashboard')
     def dashboard():
         """Display the main dashboard with hashtable overview."""
         logger.debug("GET / - Dashboard request")
 
         try:
             # Get all dashboard metrics from the database
-            dashboard_data = core_db_instance.get_dashboard_content()
+            dashboard_data = db_instance.get_dashboard_content()
             logger.debug(dashboard_data)
             return render_template('dashboard.html', dashboard_data=dashboard_data)
 
@@ -71,7 +72,7 @@ def register_gui_routes(app: Flask, core_db_instance, db_instance):
 
         try:
             # Get all liveness metrics from the database
-            liveness_data = core_db_instance.get_site_liveness()
+            liveness_data = db_instance.get_site_liveness()
             for row in liveness_data:
                 if row['last_updated']:
                     row['last_updated'] = datetime.fromtimestamp(row['last_updated'], tz=timezone.utc)
@@ -100,7 +101,7 @@ def register_gui_routes(app: Flask, core_db_instance, db_instance):
 
         # Get valid options for dropdowns
         valid_log_levels = config.VALID_LOG_LEVELS
-        valid_site_ids = core_db_instance.get_valid_site_ids()
+        valid_site_ids = db_instance.get_official_sites()
 
         # Validate and sanitize filters
         log_level_filter = None
@@ -113,7 +114,7 @@ def register_gui_routes(app: Flask, core_db_instance, db_instance):
             site_id_filter = requested_site_id
 
         # Get filtered logs
-        logs_data = core_db_instance.get_recent_logs(log_level=log_level_filter, site_id=site_id_filter)
+        logs_data = db_instance.get_logs(log_level=log_level_filter, site_id=site_id_filter)
 
         # Convert UNIX timestamps to datetime objects for template
         for log in logs_data:
@@ -136,7 +137,7 @@ def register_gui_routes(app: Flask, core_db_instance, db_instance):
 
         try:
             # Get all liveness metrics from the database
-            hash_sync_data = core_db_instance.get_site_sync_status()
+            hash_sync_data = db_instance.get_site_sync_status()
             for row in hash_sync_data:
                 if row.get('last_updated'):
                     row['last_updated'] = datetime.fromtimestamp(row['last_updated'], tz=timezone.utc)
@@ -148,62 +149,4 @@ def register_gui_routes(app: Flask, core_db_instance, db_instance):
             logger.error(f"Error rendering hash_status: {e}")
             return render_template('error.html', error="Failed to load hash status"), 500
 
-    register_error_handlers(app)
-
     logger.info("web-gui routes registered")
-
-
-def register_error_handlers(app: Flask):
-    """
-    Register error handlers with the Flask application.
-
-    Args:
-        app: Flask application instance
-    """
-    @app.errorhandler(404)
-    def handle_404_error(error):
-        logger.info(f"404 error: {error}")
-        # Check if the request is for the API
-        if request.path.startswith('/api/'):  # The API base path
-
-            response = {
-                "error": "Not Found",
-                "message": "The requested API resource was not found.",
-                "status": 404
-            }
-            return jsonify(response), 404
-        else:
-            # Handle GUI requests with a template
-            return render_template('error.html', error=f"Path not found: {error}"), 404
-
-    @app.errorhandler(500)
-    def server_error(error):
-        logger.error(f"500 error: {error}")
-        # Check if the request is for the API
-        if request.path.startswith('/api/'):  # The API base path
-
-            response = {
-                "error": "Server Error",
-                "message": "Internal server error",
-                "status": 500
-            }
-            return jsonify(response), 500
-        else:
-            # Handle GUI requests with a template
-            return render_template('error.html', error=f"Internal server error: {error}"), 500
-
-    @app.errorhandler(Exception)
-    def handle_exception(error):
-        logger.error(f"Unhandled exception: {error}", exc_info=True)
-        # Check if the request is for the API
-        if request.path.startswith('/api/'):  # The API base path
-
-            response = {
-                "error": "Server Error",
-                "message": "Internal server error",
-                "status": 500
-            }
-            return jsonify(response), 500
-        else:
-            # Handle GUI requests with a template
-            return render_template('error.html', error=f"Internal server error: {error}"), 500

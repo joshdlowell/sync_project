@@ -6,10 +6,11 @@ with proper configuration and dependency injection.
 """
 from flask import Flask
 from flask_moment import Moment
+from database_client import DBClientFactory
 
 from squishy_REST_API import config, logger
-from squishy_REST_API.database_client import DBClient, CoreDBClient
-from .api_routes import register_api_routes
+from ..routes import register_all_routes
+from .db_client_implementation import DBInstance
 
 
 class RESTAPIFactory:
@@ -19,36 +20,28 @@ class RESTAPIFactory:
     def create_app(test_config=None):
         """
         Create and configure a Flask application instance.
-
         Args:
             test_config: Optional configuration dictionary for testing
-
         Returns:
             Configured Flask application
         """
-        # Get db functions for remote site
-        db_instance = (DBClient()).database_client
-        # Get additional db functions for core site
-        core_db_instance = (CoreDBClient()).database_client if config.is_core else None
 
-        if config.is_core:
-            # Create Flask app (with locations of web-gui templates)
+        # Get db instance for use in routes - database interactions
+        db_config = {'database': config.db_config}
+        db_client = DBClientFactory(db_config).create_client()
+        db_instance = DBInstance(db_client)
+
+        if config.is_core:  # Create Flask app (with locations of web-gui templates)
             app = Flask(__name__, template_folder='../web/templates', static_folder='../web/static')
             moment = Moment(app)  # Used in web-gui templates
-        else:
-            # Create Flask app
+        else:  # Create Flask app for remote site
             app = Flask(__name__)
 
         # Load configuration
         if test_config:
             if test_config.get('db_instance'):
-                db_instance = test_config.get('db_instance')
-                test_config.pop('db_instance')
-            if test_config.get('core_db_instance'):
-                core_db_instance = test_config.get('core_db_instance')
-                test_config.pop('core_db_instance')
-            # Load test configuration if provided
-            app.config.update(test_config)
+                db_instance = test_config.pop('db_instance')
+            app.config.update(test_config)  # Load test configuration if provided
             logger.info("Application configured with test configuration")
         else:
             # Load configuration from config module
@@ -60,14 +53,7 @@ class RESTAPIFactory:
             logger.info("Application configured with default configuration")
 
         # Register routes
-        register_api_routes(app, db_instance)
-        # Register additional routes if we are a core
-        if config.is_core:
-            # Import the additional modules
-            from .gui_routes import register_gui_routes
-            from .core_routes import register_core_routes
-            register_gui_routes(app, core_db_instance, db_instance)
-            register_core_routes(app, core_db_instance, db_instance)
+        register_all_routes(app, db_instance, config.is_core)
 
         # Log application startup
         summary_message = f"REST API started at {config.site_name}. "

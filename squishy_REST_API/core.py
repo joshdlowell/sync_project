@@ -1,44 +1,15 @@
-# """
-# Main entry point for REST API package.
-#
-# This module creates and runs the Flask application.
-# """
-# from squishy_REST_API.configuration import config
-# from squishy_REST_API.app_factory import create_app
-# from squishy_REST_API.configuration.logging_config import logger
-#
-#
-# def main():
-#     """Create and run the Flask application."""
-#     # Create application
-#     app = create_app()
-#
-#     # Get configuration
-#     host = config.get('api_host')
-#     port = config.get('api_port')
-#     debug = config.get('debug')
-#
-#     # Run application
-#     logger.info(f"Starting application on {host}:{port} (debug={debug})")
-#     app.run(host=host, port=port, debug=debug)
-#
-#
-# if __name__ == '__main__':
-#     main()
 """
 Main entry point for the squishy_REST_API package.
+
+This module creates and runs a default Flask application with gunicorn WSGI server.
 """
-import sys
-import os
-# from squishy_REST_API.app_factory import create_app
-# from squishy_REST_API.configuration.logging_config import logger
 from squishy_REST_API import config, logger, RESTAPIFactory
 
 # Create application instance for WSGI (at module level for Gunicorn)
-app = RESTAPIFactory.create_app()
+# app = RESTAPIFactory.create_app()  # TODO test if putting into args changes if it works
 
 
-def run_with_gunicorn():
+def run_with_gunicorn(app):
     """Run the application with Gunicorn."""
     try:
         from gunicorn.app.wsgiapp import WSGIApplication
@@ -53,9 +24,9 @@ def run_with_gunicorn():
 
     # Create Gunicorn app
     class StandaloneApplication(WSGIApplication):
-        def __init__(self, app, options=None):
+        def __init__(self, class_app, options=None):
             self.options = options or {}
-            self.application = app
+            self.application = class_app
             super().__init__()
 
         def load_config(self):
@@ -71,7 +42,7 @@ def run_with_gunicorn():
     return True
 
 
-def run_development():
+def run_development(app):
     """Run with Flask development server."""
     host = config.get('api_host', '0.0.0.0')
     port = config.get('api_port', 5000)
@@ -83,13 +54,16 @@ def run_development():
 
 def main():
     """Main entry point with server selection."""
+
+    # Create the app
+    app = RESTAPIFactory.create_app()
     try:
-        if config.get('use_gunicorn', True):
-            if not run_with_gunicorn():
+        if config.get('use_gunicorn', True):  # Default to using gunicorn WSGI
+            if not run_with_gunicorn(app):
                 logger.warning("Failed to start Gunicorn, falling back to development server")
-                run_development()
+                run_development(app)
         else:
-            run_development()
+            run_development(app)
 
     except Exception as e:
         logger.error(f"Fatal error in main routine: {e}")

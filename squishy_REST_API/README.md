@@ -146,7 +146,7 @@ from app_factory import RESTAPIFactory
 
 ```python
 # Create a Flask application
-app = RESTAPIFactory.create_app()
+app = RESTAPIFactory.create_client()
 
 # Run the application
 if __name__ == '__main__':
@@ -177,11 +177,12 @@ Creates and configures a Flask application instance with database connectivity a
 - `SECRET_KEY`: Application secret key (default: 'dev-key-change-in-production')
 
 **Example:**
+
 ```python
 from app_factory import RESTAPIFactory
 
 # Create with default config
-app = RESTAPIFactory.create_app()
+app = RESTAPIFactory.create_client()
 
 # Create with test config
 test_config = {
@@ -189,7 +190,7 @@ test_config = {
     'TESTING': True,
     'SECRET_KEY': 'test-secret-key'
 }
-test_app = RESTAPIFactory.create_app(test_config)
+test_app = RESTAPIFactory.create_client(test_config)
 ```
 
 ---
@@ -439,7 +440,7 @@ All operations are logged using the `squishy_REST_API.logger` module:
 from app_factory import RESTAPIFactory
 
 # Create application
-app = RESTAPIFactory.create_app()
+app = RESTAPIFactory.create_client()
 
 # Run in development
 if __name__ == '__main__':
@@ -457,7 +458,7 @@ production_config = {
     'SECRET_KEY': 'your-production-secret-key'
 }
 
-app = RESTAPIFactory.create_app(production_config)
+app = RESTAPIFactory.create_client(production_config)
 
 # Deploy with WSGI server (e.g., Gunicorn)
 # gunicorn -w 4 -b 0.0.0.0:5000 app:app
@@ -469,16 +470,18 @@ app = RESTAPIFactory.create_app(production_config)
 import pytest
 from app_factory import RESTAPIFactory
 
+
 @pytest.fixture
 def client():
     test_config = {
         'TESTING': True,
         'DEBUG': True
     }
-    app = RESTAPIFactory.create_app(test_config)
-    
+    app = RESTAPIFactory.create_client(test_config)
+
     with app.test_client() as client:
         yield client
+
 
 def test_lifecheck(client):
     response = client.get('/api/lifecheck')
@@ -1314,6 +1317,9 @@ Current version: 2.0.0
 -   Baseline of current project state.
 
 ### Roadmap
+- [ ] cleanup
+- [ ] docs endpoint
+- [ ] general docs cleanup
 - [ ] Comprehensive logging and monitoring
 - [ ] Web GUI to easily access status
 - [ ] Enhanced authentication and authorization

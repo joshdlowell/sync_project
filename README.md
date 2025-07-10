@@ -18,18 +18,10 @@ docker network rm squishy_db_default
 ## Start the containers
 
 ### Run sql container detached
-#### My local version
+#### My local path version
+# TODO REMOVE THIS NEXT LINE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ```bash
-docker run -d \
-  --name mysql-squishy-db \
-  --network squishy_db_default \
-  -e MYSQL_ROOT_PASSWORD=your_root_password \
-  -e MYSQL_DATABASE=squishy_db \
-  -e MYSQL_USER=your_app_user \
-  -e MYSQL_PASSWORD=your_user_password \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_db/init_scripts:/docker-entrypoint-initdb.d \
-  -p 3306:3306 \
-  mysql:9.3
+cd /mnt/c/Users/joshu/Documents/Current_work/squishy
 ```
 
 #### Final version (in db readme)
@@ -63,8 +55,8 @@ docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/
 ```bash
 docker build -t squishy-rest-api:v2.0 . -f Dockerfile_rest
 ```
-
 You can run this container for testing, or for production
+
 #### Run interactive for testing
 This command will start the docker container without launching the rest api service, add the tests 
 to the packages and enable `DEBUG` (verbose) mode
@@ -82,6 +74,8 @@ docker run -it --rm \
   -p 5000:5000 \
   squishy-rest-api:v2.0 /bin/sh
 ```
+
+# TODO REMOVE THIS NEXT LINE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ******With all my local files mounted for development
 ```bash
 docker run -it --rm \
@@ -101,6 +95,7 @@ docker run -it --rm \
 Run tests with detailed output:
 ```bash
 python -m unittest discover squishy_REST_API/tests/ -v
+python -m unittest discover database_client/tests/ -v
 ```
 
 #### Run the container detached for production

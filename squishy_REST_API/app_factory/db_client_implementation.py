@@ -2,6 +2,7 @@ from typing import Dict, Tuple, Optional, Any, List
 
 # from .db_client_interface import DBClientInterface, CoreDBClientInterface, DBInstanceInterface
 from .db_client_interface import DBInstanceInterface
+from squishy_REST_API import config
 
 
 # class RemoteDBStorage(DBClientInterface):
@@ -165,6 +166,9 @@ class DBInstance(DBInstanceInterface):
         return self.local_db_instance.get_priority_updates()
 
     def put_log(self, args_dict: dict) -> int:
+        site_id = args_dict.get('site_id')
+        if not site_id or 'local' == site_id:
+            args_dict['site_id'] = config.site_name
         return self.local_db_instance.put_log(args_dict)
 
     def get_logs(self, limit: Optional[int] = None, offset: int = 0,

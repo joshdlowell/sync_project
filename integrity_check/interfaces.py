@@ -46,7 +46,7 @@ class HashStorageInterface(ABC):
         pass
 
     @abstractmethod
-    def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
+    def get_oldest_updates(self, percent: int = 10) -> list[str]:
         pass
 
     @abstractmethod
@@ -54,7 +54,7 @@ class HashStorageInterface(ABC):
         pass
 
     @abstractmethod
-    def get_lifecheck(self) -> dict | None:
+    def get_health(self) -> dict | None:
         pass
 
     @abstractmethod

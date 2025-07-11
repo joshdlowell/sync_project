@@ -2,7 +2,7 @@ import hashlib
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 
-from squishy_integrity import logger
+from .configuration import config, logger
 from .interfaces import FileSystemInterface, HashStorageInterface, HashFunction
 
 
@@ -56,17 +56,17 @@ class RestHashStorage(HashStorageInterface):
     def get_single_hash(self, path: str) -> Optional[str]:
         return self.rest_processor.get_single_hash(path)
 
-    def get_oldest_updates(self, root_path: str, percent: int = 10) -> list[str]:
-        return self.rest_processor.get_oldest_updates(root_path, percent)
+    def get_oldest_updates(self, percent: int = 10) -> list[str]:
+        return self.rest_processor.get_oldest_updates(config.get('root_path'), percent)
 
     def get_priority_updates(self) -> list[str] | None:
         return self.rest_processor.get_priority_updates()
 
-    def get_lifecheck(self) -> dict | None:
-        return self.rest_processor.get_lifecheck()
+    def get_health(self) -> dict | None:
+        return self.rest_processor.get_health()
 
     def put_log(self, message: str, detailed_message: str=None, log_level: str=None, session_id: str=None) -> int:
-        return self.rest_processor.put_log(message, detailed_message, log_level, session_id)
+        return self.rest_processor.put_log(message=message, detailed_message=detailed_message, log_level=log_level, session_id=session_id)
 
 
 class SHA1HashFunction(HashFunction):

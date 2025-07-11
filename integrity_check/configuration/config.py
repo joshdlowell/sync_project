@@ -36,7 +36,7 @@ class Config:
     DEFAULTS = {
         'rest_api_host': 'squishy-rest-api',
         'rest_api_port': 5000,
-        'root_path': '/baseline',
+        'root_path': '/baseline',  # REQUIRED
         'debug': False,
         'log_level': 'INFO',
         'max_retries': 3,

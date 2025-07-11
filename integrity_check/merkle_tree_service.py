@@ -5,7 +5,7 @@ from .interfaces import HashStorageInterface
 from .validators import PathValidator
 from .tree_walker import DirectoryTreeWalker
 from .file_hasher import FileHasher
-from squishy_integrity import config, logger
+from .configuration import config, logger
 
 
 class MerkleTreeService:
@@ -21,18 +21,18 @@ class MerkleTreeService:
         self.file_hasher = file_hasher
         self.path_validator = path_validator
 
-    def compute_merkle_tree(self, root_path: str, dir_path: str) -> Optional[str]:
+    def compute_merkle_tree(self, dir_path: str) -> Optional[str]:
         """
         Create a Merkle tree hash for a directory and detect changes
 
         Args:
-            root_path: Root directory of the monitored tree
             dir_path: Directory to hash (must be within root_path)
 
         Returns:
             Directory hash string, or None if computation fails
         """
         # Validate paths
+        root_path = config.get('root_path')
         logger.debug(f"Validating dir_path ({dir_path}) and root_path ({root_path})")
         if not self.path_validator.validate_root_and_dir_paths(root_path, dir_path):
             logger.error(f"dir_path ({dir_path}) is not a child of root_path ({root_path})")
@@ -119,6 +119,9 @@ class MerkleTreeService:
         logger.debug(f"Returning from merkle recursive for {dir_path}")
         return dir_hash_info["current_hash"]
 
+    def put_log_w_session(self, message: str, detailed_message: str=None) -> int:
+        return self.hash_storage.put_log(message=message, detailed_message=detailed_message, session_id=config.session_id)
+
     def _find_deepest_existing_directory(self, root_path: str, dir_path: str) -> Optional[str]:
         """
         Find the deepest existing directory by walking up from dir_path to root_path
@@ -178,11 +181,9 @@ class MerkleTreeService:
         repeats = 5
         while repeats:
             repeats -= 1
-            status = self.hash_storage.get_lifecheck()
-            if not status or not status.get('api'):
+            status = self.hash_storage.get_health()
+            if not status or not status.get('status') == 'healthy':
                 logger.critical(f"REST API is not reachable will attempt {repeats} more times")
-            elif not status.get('db'):
-                logger.critical(f"Database is not reachable will attempt {repeats} more times")
             else:
                 logger.info("REST API and Database are reachable")
                 return True

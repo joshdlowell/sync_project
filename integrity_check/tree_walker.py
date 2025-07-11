@@ -1,7 +1,7 @@
 from typing import Dict, List
 
 from .interfaces import FileSystemInterface
-from squishy_integrity import logger
+from .configuration import logger
 
 class DirectoryTreeWalker:
     """Handles directory tree traversal and categorization"""
@@ -36,7 +36,7 @@ class DirectoryTreeWalker:
                 "files": sorted(clean_files),
                 "links": sorted(clean_links)
             }
-
+        logger.debug("Cleaned and sorted files lists from get_tree_structure")
         logger.debug("Collected local baseline file tree")
         return tree_dict
 
@@ -50,5 +50,4 @@ class DirectoryTreeWalker:
                 clean_files.append(item)
             else:
                 clean_links.append(item)
-        logger.debug("Cleaned and sorted files lists")
         return clean_files, clean_links

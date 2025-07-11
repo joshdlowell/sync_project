@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from squishy_integrity import logger
+from .configuration import logger
 
 
 class PathValidator:

@@ -36,7 +36,7 @@ class Config:
         'retry_delay': 5,
         'long_delay': 30,
         'valid_log_levels': {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
-        'hash_validator_required_keys': {'path', 'target_hash'},
+        'hash_validator_required_keys': {'path', 'current_hash'},
         'hash_validator_keys': {'path',
                                 'target_hash',
                                 'current_hash',

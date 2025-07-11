@@ -93,7 +93,7 @@ class RestProcessorInterface(ABC):
         pass
 
     @abstractmethod
-    def get_lifecheck(self) -> dict | None:
+    def get_health(self) -> dict | None:
         """Get the liveness of the rest api and database."""
         pass
 

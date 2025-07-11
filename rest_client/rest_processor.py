@@ -43,14 +43,7 @@ class RestProcessor(RestProcessorInterface):
 
         Returns:
             int representing the number of updates sent to the REST API that were successful
-            TODO update integrity implementation to this return
         """
-        # Validate input
-        # validation_errors = self.validator.validate(hash_info)
-        # if validation_errors:
-        #     for error in validation_errors:
-        #         logger.error(f"Validation error: {error}")
-
         send_errors = 0
         for path, item_data in hash_info.items():
             # Skip invalid items
@@ -90,14 +83,8 @@ class RestProcessor(RestProcessorInterface):
             A dictionary containing the hash table, or None if not found or error
         """
         response = self._db_get("api/hashtable", {"path": path})
-        # content = self._process_response(response)
-        # if content:
-        #     for key in ['dirs', 'files', 'links']:
-        #         if key in content and isinstance(content[key], str):
-        #             # Split by common delimiters (adjust as needed based on data format)
-        #             content[key] = [item.strip() for item in content[key].split(',') if item.strip()]
         logger.debug("Processing get hashtable request")
-        return self._process_response(response)  # TODO check that content should be json loaded already
+        return self._process_response(response)
 
     def get_single_hash(self, path: str) -> str | None:
         """
@@ -183,7 +170,7 @@ class RestProcessor(RestProcessorInterface):
         logger.debug("Processing priority updates request")
         return self._process_response(response)
 
-    def get_lifecheck(self) -> dict | None:
+    def get_health(self) -> dict | None:
         """Get the liveness of the rest api and database."""
         response = self._db_get('api/health')
         content = self._process_response(response)
@@ -213,7 +200,6 @@ class RestProcessor(RestProcessorInterface):
 
         Returns:
             int representing the number of updates sent to the REST API that were successfully
-            TODO change to return log id of log entry instead of 0 or 1 in integrity
         """
         # Validate input, allow api to set to default if arg is not valid
         log_level = log_level.upper() if log_level and log_level.upper() in config.get('valid_log_levels') else None
@@ -421,9 +407,9 @@ class RestProcessor(RestProcessorInterface):
         code, content = response
 
         if code == 200:
-            return content.get('data', None)
+            return content
         elif code == 207:
-            return content.get('data', None)
+            return content
 
         # Handle specific error cases
         if code == 0:

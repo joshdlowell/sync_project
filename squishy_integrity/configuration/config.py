@@ -1,5 +1,5 @@
 """
-Configuration module for integrity package.
+Configuration module for squishy_integrity package.
 
 This module centralizes configuration management and provides a way to
 load configuration from environment variables or configuration files.
@@ -36,16 +36,16 @@ class Config:
     DEFAULTS = {
         'rest_api_host': 'squishy-rest-api',
         'rest_api_port': 5000,
-        'root_path': '/baseline',
+        'root_path': '/baseline',  # ALSO NEED THIS ONE
         'debug': False,
         'log_level': 'INFO',
         'max_retries': 3,
         'retry_delay': 5,
         'long_delay': 30,
-        'max_runtime_min': 10
+        'max_runtime_min': 10  # THE ONLY CONFIG ITEM I NEED SO FAR
     }
 
-    # Environment variable mapping (add more gunicorn adjustments?)
+    # Environment variable mapping
     ENV_MAPPING = {
         'rest_api_host': 'REST_API_HOST',
         'rest_api_port': 'REST_API_PORT',

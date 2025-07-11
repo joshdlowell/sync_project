@@ -2,7 +2,8 @@ from time import time
 from contextlib import contextmanager
 from typing import List, Tuple
 
-from squishy_integrity import IntegrityCheckFactory, config, logger
+from squishy_integrity import config, logger
+from integrity_check import IntegrityCheckFactory
 
 
 @contextmanager
@@ -10,10 +11,9 @@ def performance_monitor(merkle_service, operation_name: str):
     """Context manager to monitor operation performance."""
     start_time = time()
     # Log start
-    merkle_service.put_log_entry(
-        message="Starting Merkle compute",
-        detailed_message="Starting new session",
-        session_id=config.session_id
+    merkle_service.put_log_w_session(
+        message="START SESSION",
+        detailed_message="Starting Merkle compute"
     )
     try:
         yield
@@ -22,10 +22,9 @@ def performance_monitor(merkle_service, operation_name: str):
         minutes = int(duration // 60)
         seconds = duration % 60
         # Log completion
-        merkle_service.put_log_entry(
-            message="Completed Merkle compute",
-            detailed_message="Session Completed",
-            session_id=config.session_id
+        merkle_service.put_log_w_session(
+            message="FINISH SESSION",
+            detailed_message="Completed Merkle compute"
         )
         if minutes > 0:
             logger.info(f"{operation_name} completed in {minutes}m {seconds:.2f}s")
@@ -33,16 +32,16 @@ def performance_monitor(merkle_service, operation_name: str):
             logger.info(f"{operation_name} completed in {seconds:.2f}s")
 
 
-def get_paths_to_process(merkle_service, root_path: str) -> List[str]:
+def get_paths_to_process(merkle_service) -> List[str]:
     """Get and deduplicate paths that need processing."""
-    priority = merkle_service.get_priority_updates()
+    priority = merkle_service.hash_storage.get_priority_updates()
     logger.info(f"Priority updates: {priority}")
-    routine = merkle_service.get_oldest_updates(root_path)
+    routine = merkle_service.hash_storage.get_oldest_updates()
     logger.info(f"Oldest updates: {routine}")
     return merkle_service.remove_redundant_paths_with_priority(priority, routine)
 
 
-def process_paths(merkle_service, paths_list: List[str], root_path: str,
+def process_paths(merkle_service, paths_list: List[str],
                   max_runtime_min: int) -> Tuple[int, int]:
     """
     Process paths within time limit.
@@ -59,7 +58,7 @@ def process_paths(merkle_service, paths_list: List[str], root_path: str,
             break
         logger.info(f"Processing path: {dir_path}")
         try:
-            merkle_service.compute_merkle_tree(root_path, dir_path)
+            merkle_service.compute_merkle_tree(dir_path)
             processed_count += 1
             logger.info(f"Processed path: {dir_path}")
         except Exception as e:
@@ -78,21 +77,20 @@ def main() -> int:
 
     logger.info("Starting integrity check routine")
 
-    merkle_service = IntegrityCheckFactory.create_service()
-    root_path = config.get('root_path')
-    logger.info(f"Discovered root path {root_path}")
+
+    merkle_config = None  # Inject custom config dict into Integrity check factory
+    merkle_service = IntegrityCheckFactory.create_service(merkle_config)
     max_runtime_min = config.get('max_runtime_min', 10)
 
     with performance_monitor(merkle_service, "Integrity check routine"):
 
         try:
             logger.info(f"Collecting paths to process")
-            paths_list = get_paths_to_process(merkle_service, root_path)
+            paths_list = get_paths_to_process(merkle_service)
             logger.info(f"Processing {len(paths_list)} paths")
 
             processed_count, total_count = process_paths(
-                merkle_service, paths_list, root_path, max_runtime_min
-            )
+                merkle_service, paths_list, max_runtime_min)
 
             logger.info(f"Completed: processed {processed_count} of {total_count} paths")
             return 0  # Success

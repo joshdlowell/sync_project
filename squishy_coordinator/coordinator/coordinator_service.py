@@ -3,43 +3,28 @@ from typing import Dict, Optional, Any, List
 from time import sleep
 from collections import deque
 
-from .interfaces import PersistentStorageInterface
-
-from integrity_check.merkle_tree_service import MerkleTreeService
-# from .validators import PathValidator
-# from .tree_walker import DirectoryTreeWalker
-# from .file_hasher import FileHasher
+# from .interfaces import PersistentStorageInterface, HashStorageInterface
+# from rest_client.rest_interface import RestProcessorInterface
+# from integrity_check.merkle_tree_service import MerkleTreeService
+from .implementations import RestClientStorage, MerkleTreeImplementation
 from squishy_coordinator import config, logger
 
 
 class CoordinatorService:
     """Main service for Coordinator functionality"""
-
-    def __init__(self,
-                 local_storage: PersistentStorageInterface,
-                 core_storage: PersistentStorageInterface,
-                 integrity_service: MerkleTreeService,
-                 # tree_walker: DirectoryTreeWalker,
-                 # file_hasher: FileHasher,
-                 # path_validator: PathValidator):
-                 ):
-        # self.hash_storage = hash_storage
-        # self.tree_walker = tree_walker
-        # self.file_hasher = file_hasher
-        # self.path_validator = path_validator
-        self.local_storage = local_storage
-        self.core_storage = core_storage
+    def __init__(self, rest_storage: RestClientStorage, integrity_service: MerkleTreeImplementation):
+        self.rest_storage = rest_storage
         self.integrity_service = integrity_service
 
     def consolidate_logs(self) -> bool:
-        return self.local_storage.consolidate_logs()
+        return self.rest_storage.consolidate_logs()
 
     def ship_logs_to_core(self) -> bool:
-        log_entries = self.local_storage.collect_logs_to_ship()
+        log_entries = self.rest_storage.collect_logs_for_shipping()
         # ship them
         log_ids = []
         for entry in log_entries if log_entries else []:
-            result = self.core_storage.put_log(
+            result = self.rest_storage.put_log(
                 site_id=entry.get('site_id'),
                 log_level=entry.get('log_level'),
                 timestamp=entry.get('timestamp'),
@@ -54,15 +39,15 @@ class CoordinatorService:
 
         # Delete log entries that shipped
         logger.info(f"Deleting {len(log_ids)} log entries that shipped from local storage.")
-        success, fail_list = self.local_storage.delete_log_entries(log_ids)
+        success, fail_list = self.rest_storage.delete_log_entries(log_ids)
 
         if not success:
             logger.error(f"Failed to delete {len(fail_list)} shipped log entries from local storage.")
 
         # Delete log entries older than 90 days
         logger.info(f"Deleting log entries older than 90 days from local storage.")
-        log_entries = self.local_storage.collect_logs_older_than(90)
-        success, fail_list = self.local_storage.delete_log_entries(fail_list + [entry.get('id') for entry in log_entries])
+        log_entries = self.rest_storage.collect_logs_older_than(90)
+        success, fail_list = self.rest_storage.delete_log_entries(fail_list + [entry.get('id') for entry in log_entries])
         if not success:
             logger.error(f"Failed to delete {len(fail_list)} old log entries from local storage.")
 
@@ -72,44 +57,44 @@ class CoordinatorService:
         Returns a tuple of orphaned entries, untracked children.
         """
 
-        orphans = self.local_storage.find_orphaned_entries()
+        orphans = self.rest_storage.find_orphaned_entries()
         if len(orphans) > 0:
             logger.warning(f"Found orphaned entries: {orphans}")
             self.put_log_entry("Found orphaned entries", json.dumps({'orphans':orphans}), "WARNING")
         else:
             logger.info("No orphaned entries found")
 
-        untracked = self.local_storage.find_untracked_children()
+        untracked = self.rest_storage.find_untracked_children()
         if len(untracked) > 0:
             logger.warning(f"Found untracked children: {untracked}")
             self.put_log_entry("Found untracked children", json.dumps({'untracked':untracked}), "WARNING")
         else:
             logger.info("No untracked children found")
 
-    def get_database_counts(self):
-        """
-        Returns counts of directories, files, links, and total records.
-        Uses the already-fetched data if available, otherwise fetches it.
-        """
-        # You could cache the all_entries data if called frequently
-        all_entries = self.local_storage.get_all_paths_and_children()
-
-        dir_count = 0
-        file_count = 0
-        link_count = 0
-
-        for parent_path, children in all_entries.items():
-            dir_count += len(children['dirs'])
-            file_count += len(children['files'])
-            link_count += len(children['links'])
-
-        return {
-            'directories': dir_count,
-            'files': file_count,
-            'links': link_count,
-            'total_records': len(all_entries),
-            'total_children': dir_count + file_count + link_count
-        }
+    # def get_database_counts(self):
+    #     """
+    #     Returns counts of directories, files, links, and total records.
+    #     Uses the already-fetched data if available, otherwise fetches it.
+    #     """
+    #     # You could cache the all_entries data if called frequently
+    #     all_entries = self.rest_storage.get_ get_all_paths_and_children()
+    #
+    #     dir_count = 0
+    #     file_count = 0
+    #     link_count = 0
+    #
+    #     for parent_path, children in all_entries.items():
+    #         dir_count += len(children['dirs'])
+    #         file_count += len(children['files'])
+    #         link_count += len(children['links'])
+    #
+    #     return {
+    #         'directories': dir_count,
+    #         'files': file_count,
+    #         'links': link_count,
+    #         'total_records': len(all_entries),
+    #         'total_children': dir_count + file_count + link_count
+    #     }
 
     def verify_hash_status(self) -> list[tuple[str, str, str]]:
         """
@@ -133,8 +118,8 @@ class CoordinatorService:
             processed_paths.add(current_path)
 
             # Get hashes from both sources
-            local_hash = self.local_storage.get_single_hash(current_path)
-            core_hash = self.core_storage.get_single_hash(current_path)
+            local_hash = self.rest_storage.get_single_hash(current_path)
+            core_hash = self.rest_storage.get_single_hash(current_path)
 
             # Handle different scenarios
             if local_hash is None and core_hash is None:
@@ -176,13 +161,13 @@ class CoordinatorService:
         children = set()
 
         if source in ['local', 'both']:
-            local_entry = self.local_storage.get_hashtable(path)
+            local_entry = self.rest_storage.get_hashtable(path)
             if local_entry:
                 for category in ['dirs', 'files', 'links']:
                     children.update(local_entry.get(category, []))
 
         if source in ['core', 'both']:
-            core_entry = self.core_storage.get_hashtable(path)
+            core_entry = self.rest_storage.get_core_hashtable(path)
             if core_entry:
                 for category in ['dirs', 'files', 'links']:
                     children.update(core_entry.get(category, []))
@@ -206,7 +191,7 @@ class CoordinatorService:
 
         Returns:
             int representing the number of updates sent to the REST API that were successful"""
-        return self.local_storage.put_hashtable({
+        return self.rest_storage.put_hashtable({
             'path': path,
             'current_hash': current_hash,
             'target_hash': target_hash
@@ -214,17 +199,17 @@ class CoordinatorService:
 
     def get_priority_updates(self) -> list[str]:
         """Get the list of database entries where the current hash does not match the target hash."""
-        return self.local_storage.get_priority_updates() or []
+        return self.rest_storage.get_priority_updates() or []
 
     def get_pipeline_updates(self) -> list[str]:
         """Get the list of updates that have been approved by the continuous delivery (CD) pipeline."""
-        return self.local_storage.get_pipeline_updates() or []
+        return self.rest_storage.get_pipeline_updates() or []
 
     def recompute_hashes(self, path_list: list[str]) -> list[tuple[str, str]]:
 
         recomputed = []
         for path in path_list:
-            recomputed.append((path, self.integrity_service.compute_merkle_tree(config.root_path, path)))
+            recomputed.append((path, self.integrity_service.compute_merkle_tree(path)))
 
         return recomputed
 
@@ -234,4 +219,4 @@ class CoordinatorService:
             session_id = config.session_id
         else:
             session_id = None
-        return self.local_storage.put_log(message, detailed_message, log_level, session_id)
+        return self.rest_storage.put_log(message, detailed_message, log_level, session_id)

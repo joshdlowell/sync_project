@@ -1,9 +1,11 @@
 from squishy_coordinator import logger, config
 from rest_client import RestClient
+from integrity_check import IntegrityCheckFactory
 
 from .coordinator_service import CoordinatorService
-from .implementations import RestStorage
-from integrity_check import IntegrityCheckFactory
+from .implementations import RestClientStorage, MerkleTreeImplementation
+
+
 
 
 class CoordinatorFactory:
@@ -13,14 +15,15 @@ class CoordinatorFactory:
     def create_service() -> CoordinatorService:
 
         # Create implementations
-        rest_client = RestClient()
-        local_storage = RestStorage(rest_client.create_rest_connector(config.get('rest_api_url')))
-        core_storage = RestStorage(rest_client.create_rest_connector(config.get('core_api_url')))
+        rest_client = RestClient().create_rest_connector(config.rest_api_url)
+        rest_storage = RestClientStorage(rest_client)
 
         merkle_config = None  # Inject custom config dict into Integrity check factory
-        integrity_service = IntegrityCheckFactory.create_service(merkle_config)
+        integrity_service = IntegrityCheckFactory().create_service(merkle_config, rest_storage)
+        merkle_service = MerkleTreeImplementation(integrity_service)
+
 
         logger.info("Application configured services with default configuration")
 
         # Create main service
-        return CoordinatorService(local_storage, core_storage, integrity_service)
+        return CoordinatorService(rest_storage, merkle_service)

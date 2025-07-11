@@ -72,3 +72,37 @@ class HashFunction(ABC):
     @abstractmethod
     def hash_string(self, data: str) -> str:
         pass
+
+class MerkleTreeInterface(ABC):
+    """Abstract interface for Merkle tree integrity checking"""
+
+    @abstractmethod
+    def compute_merkle_tree(self, dir_path: str) -> Optional[str]:
+        """
+        Create a Merkle tree hash for a directory and detect changes
+
+        Args:
+            dir_path: Directory to hash (must be within root_path)
+
+        Returns:
+            Directory hash string, or None if computation fails
+        """
+        pass
+
+    @abstractmethod
+    def put_log_w_session(self, message: str, detailed_message: str=None) -> int:
+        pass
+
+    @abstractmethod
+    def remove_redundant_paths_with_priority(self, priority: list, routine: list):
+        """
+        Remove redundant paths from the provided lists while preserving priority order.
+
+        Args:
+            priority: list of paths that should be processed first
+            routine: list of paths for hash recomputing
+
+        Returns:
+            Combined, deduplicated list of paths with priority items first
+        """
+        pass

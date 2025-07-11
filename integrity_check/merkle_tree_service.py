@@ -1,14 +1,14 @@
 from typing import Dict, Optional, Any, List
 from time import sleep
 
-from .interfaces import HashStorageInterface
+from .interfaces import HashStorageInterface, MerkleTreeInterface
 from .validators import PathValidator
 from .tree_walker import DirectoryTreeWalker
 from .file_hasher import FileHasher
 from .configuration import config, logger
 
 
-class MerkleTreeService:
+class MerkleTreeService(MerkleTreeInterface):
     """Main service for Merkle tree integrity checking"""
 
     def __init__(self,

@@ -11,7 +11,7 @@ from .file_hasher import FileHasher
 class IntegrityCheckFactory:
     """Factory for creating integrity check components"""
     @staticmethod
-    def create_service(new_config=None) -> MerkleTreeService:
+    def create_service(new_config=None, rest_storage=None) -> MerkleTreeService:
         """Create a fully configured MerkleTreeService"""
 
         # Set configuration passed from importing package
@@ -19,8 +19,9 @@ class IntegrityCheckFactory:
             config.update(new_config)
 
         # Create implementations
-        rest_client = RestClient()
-        hash_storage = RestHashStorage(rest_client.create_rest_connector(config.rest_api_url))
+        if not rest_storage:  # Attempt to create a connection using local config if none provided
+            rest_client = RestClient().create_rest_connector(config.rest_api_url)
+            rest_storage = RestHashStorage(rest_client)
         file_system = StandardFileSystem()
         hash_function = SHA1HashFunction()
 
@@ -31,4 +32,4 @@ class IntegrityCheckFactory:
         logger.info("Application configured services with default configuration")
 
         # Create main service
-        return MerkleTreeService(hash_storage, tree_walker, file_hasher, path_validator)
+        return MerkleTreeService(rest_storage, tree_walker, file_hasher, path_validator)

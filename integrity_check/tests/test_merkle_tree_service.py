@@ -1,7 +1,7 @@
 import unittest
-from unittest.mock import Mock, patch, mock_open
-from squishy_integrity.integrity_check.merkle_tree_service import MerkleTreeService
-from squishy_integrity.integrity_check.implementations import SHA1HashFunction
+from unittest.mock import Mock, patch, MagicMock
+from integrity_check.merkle_tree_service import MerkleTreeService
+from integrity_check.implementations import SHA1HashFunction
 
 
 class TestMerkleTreeService(unittest.TestCase):
@@ -18,32 +18,89 @@ class TestMerkleTreeService(unittest.TestCase):
             self.mock_path_validator
         )
 
-    def test_compute_merkle_tree_invalid_path(self):
+    @patch('integrity_check.merkle_tree_service.config')
+    def test_compute_merkle_tree_invalid_path(self, mock_config):
         # Arrange
+        mock_config.get.return_value = "/root"
+        mock_config.session_id = "test_session"
         self.mock_path_validator.validate_root_and_dir_paths.return_value = False
 
         # Act
-        result = self.service.compute_merkle_tree("/root", "/invalid")
+        result = self.service.compute_merkle_tree("/invalid")
 
         # Assert
         self.assertEqual(result, None)
         self.mock_path_validator.validate_root_and_dir_paths.assert_called_once_with("/root", "/invalid")
 
-    def test_compute_merkle_tree_valid_path(self):
+    @patch('integrity_check.merkle_tree_service.config')
+    def test_compute_merkle_tree_valid_path(self, mock_config):
         # Arrange
+        mock_config.get.return_value = "/root"
+        mock_config.session_id = "test_session"
         self.mock_path_validator.validate_root_and_dir_paths.return_value = True
         self.mock_tree_walker.get_tree_structure.return_value = {
-            "/test": {"dirs": [], "files": ["file1.txt"], "links": []}
+            "/root": {"dirs": [], "files": ["file1.txt"], "links": []}
         }
         self.mock_file_hasher.hash_file.return_value = "file_hash_123"
         self.mock_file_hasher.hash_directory.return_value = "dir_hash_456"
         self.mock_hash_storage.put_hashtable.return_value = 0
+        self.mock_hash_storage.get_health.return_value = {"status": "healthy"}
+
+        # Mock the private methods
+        self.service._find_deepest_existing_directory = Mock(return_value="/root")
+        self.service._is_directory_empty = Mock(return_value=False)
+        self.service._check_liveness = Mock(return_value=True)
 
         # Act
-        dir_hash = self.service.compute_merkle_tree("/test", "/test")
+        result = self.service.compute_merkle_tree("/root")
 
         # Assert
-        self.assertEqual(dir_hash, "dir_hash_456")
+        self.assertEqual(result, "dir_hash_456")
+
+    @patch('integrity_check.merkle_tree_service.config')
+    def test_compute_merkle_tree_empty_directory(self, mock_config):
+        # Arrange
+        mock_config.get.return_value = "/root"
+        mock_config.session_id = "test_session"
+        self.mock_path_validator.validate_root_and_dir_paths.return_value = True
+        self.mock_tree_walker.get_tree_structure.return_value = {
+            "/root": {"dirs": [], "files": [], "links": []}
+        }
+        self.mock_hash_storage.get_health.return_value = {"status": "healthy"}
+
+        # Mock the private methods
+        self.service._find_deepest_existing_directory = Mock(return_value="/root")
+        self.service._is_directory_empty = Mock(return_value=True)
+        self.service._check_liveness = Mock(return_value=True)
+
+        # Act
+        result = self.service.compute_merkle_tree("/root")
+
+        # Assert
+        self.assertEqual(result, None)
+
+    @patch('integrity_check.merkle_tree_service.config')
+    def test_compute_merkle_tree_liveness_check_fails(self, mock_config):
+        # Arrange
+        mock_config.get.return_value = "/root"
+        mock_config.session_id = "test_session"
+        self.mock_path_validator.validate_root_and_dir_paths.return_value = True
+        self.mock_tree_walker.get_tree_structure.return_value = {
+            "/root": {"dirs": [], "files": ["file1.txt"], "links": []}
+        }
+        self.mock_hash_storage.get_health.return_value = None
+
+        # Mock the private methods
+        self.service._find_deepest_existing_directory = Mock(return_value="/root")
+        self.service._is_directory_empty = Mock(return_value=False)
+        self.service._check_liveness = Mock(return_value=False)
+
+        # Act
+        result = self.service.compute_merkle_tree("/root")
+
+        # Assert
+        # The method should still continue and return a hash even if liveness check fails
+        self.assertIsNotNone(result)
 
     def test_remove_redundant_paths_no_change(self):
         # Arrange
@@ -144,13 +201,108 @@ class TestMerkleTreeService(unittest.TestCase):
         self.assertEqual(self.service.remove_redundant_paths_with_priority(priority_list, routine_list), return_value,
                          "Failed to handle 'NoneType' inputs")
 
+    @patch('integrity_check.merkle_tree_service.config')
+    def test_put_log_w_session(self, mock_config):
+        # Arrange
+        mock_config.session_id = "test_session"
+        self.mock_hash_storage.put_log.return_value = 1
+
+        # Act
+        result = self.service.put_log_w_session("test message", "detailed message")
+
+        # Assert
+        self.assertEqual(result, 1)
+        self.mock_hash_storage.put_log.assert_called_once_with(
+            message="test message",
+            detailed_message="detailed message",
+            session_id="test_session"
+        )
+
+    def test_find_deepest_existing_directory(self):
+        # Arrange
+        self.mock_tree_walker.get_tree_structure.side_effect = [
+            False,  # /root/deep/path doesn't exist
+            False,  # /root/deep doesn't exist
+            {"/root": {"dirs": [], "files": [], "links": []}}  # /root exists
+        ]
+
+        # Act
+        result = self.service._find_deepest_existing_directory("/root", "/root/deep/path")
+
+        # Assert
+        self.assertEqual(result, "/root")
+
+    def test_find_deepest_existing_directory_root_missing(self):
+        # Arrange
+        self.mock_tree_walker.get_tree_structure.return_value = False
+
+        # Act
+        result = self.service._find_deepest_existing_directory("/root", "/root")
+
+        # Assert
+        self.assertEqual(result, None)
+
+    def test_is_directory_empty_true(self):
+        # Arrange
+        tree_dict = {"/root": {"dirs": [], "files": [], "links": []}}
+
+        # Act
+        result = self.service._is_directory_empty(tree_dict, "/root")
+
+        # Assert
+        self.assertTrue(result)
+
+    def test_is_directory_empty_false(self):
+        # Arrange
+        tree_dict = {"/root": {"dirs": ["subdir"], "files": [], "links": []}}
+
+        # Act
+        result = self.service._is_directory_empty(tree_dict, "/root")
+
+        # Assert
+        self.assertFalse(result)
+
+    def test_is_directory_empty_missing_path(self):
+        # Arrange
+        tree_dict = {}
+
+        # Act
+        result = self.service._is_directory_empty(tree_dict, "/missing")
+
+        # Assert
+        self.assertTrue(result)
+
+    @patch('integrity_check.merkle_tree_service.sleep')
+    def test_check_liveness_success(self, mock_sleep):
+        # Arrange
+        self.mock_hash_storage.get_health.return_value = {"status": "healthy"}
+
+        # Act
+        result = self.service._check_liveness()
+
+        # Assert
+        self.assertTrue(result)
+        mock_sleep.assert_not_called()
+
+    @patch('integrity_check.merkle_tree_service.sleep')
+    def test_check_liveness_failure(self, mock_sleep):
+        # Arrange
+        self.mock_hash_storage.get_health.return_value = None
+
+        # Act
+        result = self.service._check_liveness()
+
+        # Assert
+        self.assertFalse(result)
+        self.assertEqual(mock_sleep.call_count, 5)  # Should sleep 5 times
+
 
 class TestFileHasher(unittest.TestCase):
     def setUp(self):
         self.mock_file_system = Mock()
         self.hash_function = SHA1HashFunction()
 
-        from squishy_integrity.integrity_check.file_hasher import FileHasher
+        from integrity_check.file_hasher import FileHasher
         self.file_hasher = FileHasher(
             self.mock_file_system,
             self.hash_function
@@ -216,12 +368,47 @@ class TestFileHasher(unittest.TestCase):
         self.assertEqual(hash_info_result, self.file_hasher.hash_directory(test_hash_info), "Return values didn't match")
         self.assertEqual(hash_info_result_2, self.file_hasher.hash_directory(test_hash_info_2), "Return values didn't match")
 
+    def test_hash_directory_no_path(self):
+        # Arrange
+        hash_info = {'dirs': [], 'files': [], 'links': []}
+
+        # Act
+        result = self.file_hasher.hash_directory(hash_info)
+
+        # Assert
+        self.assertIsNone(result)
+
+    def test_hash_empty_type(self):
+        # Arrange
+        full_path = "/test/path"
+        category = "files"
+
+        # Act
+        result = self.file_hasher.hash_empty_type(full_path, category)
+
+        # Assert
+        expected_string = f"{full_path}/{category}: EMPTY "
+        expected_hash = self.hash_function.hash_string(expected_string)
+        self.assertEqual(result, expected_hash)
+
+    def test_hash_empty_type_return_string(self):
+        # Arrange
+        full_path = "/test/path"
+        category = "files"
+
+        # Act
+        result = self.file_hasher.hash_empty_type(full_path, category, return_string=True)
+
+        # Assert
+        expected_string = f"{full_path}/{category}: EMPTY "
+        self.assertEqual(result, expected_string)
+
 
 class TestDirectoryTreeWalker(unittest.TestCase):
     def setUp(self):
         self.mock_file_system = Mock()
 
-        from squishy_integrity.integrity_check.tree_walker import DirectoryTreeWalker
+        from integrity_check.tree_walker import DirectoryTreeWalker
         self.walker = DirectoryTreeWalker(self.mock_file_system)
 
     def test_get_tree_structure(self):
@@ -245,10 +432,30 @@ class TestDirectoryTreeWalker(unittest.TestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_get_tree_structure_failed_walk(self):
+        # Arrange
+        self.mock_file_system.walk.return_value = [(None, None, None)]
+
+        # Act
+        result = self.walker.get_tree_structure("/nonexistent")
+
+        # Assert
+        self.assertFalse(result)
+
+    def test_get_tree_structure_empty_walk(self):
+        # Arrange
+        self.mock_file_system.walk.return_value = []
+
+        # Act
+        result = self.walker.get_tree_structure("/nonexistent")
+
+        # Assert
+        self.assertFalse(result)
+
 
 class TestPathValidator(unittest.TestCase):
     def setUp(self):
-        from squishy_integrity.integrity_check.validators import PathValidator
+        from integrity_check.validators import PathValidator
         self.validator = PathValidator()
 
     def test_validate_root_and_dir_paths_valid(self):
@@ -259,6 +466,30 @@ class TestPathValidator(unittest.TestCase):
     def test_validate_root_and_dir_paths_invalid(self):
         # Act & Assert
         self.assertFalse(self.validator.validate_root_and_dir_paths("/root", "/other"))
+
+    @patch('integrity_check.validators.Path')
+    def test_validate_root_and_dir_paths_exception(self, mock_path):
+        # Arrange
+        mock_path.side_effect = OSError("Path error")
+
+        # Act & Assert
+        self.assertFalse(self.validator.validate_root_and_dir_paths("/root", "/root/subdir"))
+
+    @patch('integrity_check.validators.Path')
+    def test_validate_path_exists_true(self, mock_path):
+        # Arrange
+        mock_path.return_value.exists.return_value = True
+
+        # Act & Assert
+        self.assertTrue(self.validator.validate_path_exists("/test/path"))
+
+    @patch('integrity_check.validators.Path')
+    def test_validate_path_exists_false(self, mock_path):
+        # Arrange
+        mock_path.return_value.exists.return_value = False
+
+        # Act & Assert
+        self.assertFalse(self.validator.validate_path_exists("/test/path"))
 
 
 # Mock implementations for testing
@@ -286,6 +517,11 @@ class MockFileSystem:
     def is_dir(self, path: str) -> bool:
         return path in self.dirs
 
+    def walk(self, path: str):
+        # Simple mock implementation
+        if path in self.dirs:
+            yield (path, [], [])
+
     def read_file_chunks(self, path: str, chunk_size: int = 65536):
         if path in self.files:
             content = self.files[path]
@@ -310,3 +546,19 @@ class MockHashStorage:
     def get_single_hash(self, path):
         item = self.storage.get(path, {})
         return item.get('current_hash')
+
+    def get_oldest_updates(self, percent: int = 10):
+        return []
+
+    def get_priority_updates(self):
+        return []
+
+    def get_health(self):
+        return {"status": "healthy"}
+
+    def put_log(self, message: str, detailed_message: str = None, log_level: str = None, session_id: str = None):
+        return 1
+
+
+if __name__ == '__main__':
+    unittest.main()

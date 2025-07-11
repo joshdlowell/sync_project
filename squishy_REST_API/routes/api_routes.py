@@ -88,14 +88,6 @@ def register_api_routes(app: Flask, db_instance):
             except ValueError as e:
                 return create_error_response(e, 400)
 
-    # @app.route('/api/priority', methods=['GET'])
-    # def get_priority():
-    #     """Get a list of directories that need to be updated based on their hash values."""
-    #     logger.debug(f"GET /api/priority")
-    #     # Get a list of paths that will ensure all out of sync hashes get updated
-    #     priority = db_instance.get_priority_updates()
-    #     return create_success_response(data=priority)
-
     @app.route('/api/logs', methods=['GET', 'POST', 'DELETE'])
     def handle_logs():
         """Handle log operations - POST to add logs, GET to consolidate logs, DELETE to remove logs."""
@@ -172,35 +164,6 @@ def register_api_routes(app: Flask, db_instance):
                 return create_error_response(e)
         return create_error_response("Invalid request method")
 
-    # @app.route('/api/orphans', methods=['GET'])
-    # def find_orphans():
-    #     """Get all entries that aren't listed by a parent"""
-    #     logger.debug(f"GET /api/orphans")
-    #
-    #     try:
-    #         # Get oldest updates from database
-    #         orphaned_paths = db_instance.find_orphaned_entries()
-    #     except Exception as e:
-    #         logger.error(f"Error during orphaned entry search: {e}", exc_info=True)
-    #         return create_error_response(e)
-    #
-    #     logger.info(f"Found {len(orphaned_paths)} orphaned entries")
-    #     return create_success_response(data=orphaned_paths)
-    #
-    # @app.route('/api/untracked', methods=['GET'])
-    # def find_untracked():
-    #     """Get a list of children claimed by a parent but not tracked in the database"""
-    #     logger.debug(f"GET /api/untracked")
-    #     try:
-    #         # Get oldest updates from database
-    #         untracked_paths = db_instance.find_untracked_children()
-    #     except Exception as e:
-    #         logger.error(f"Error during untracked child search: {e}", exc_info=True)
-    #         return create_error_response(e)
-    #
-    #     logger.info(f"Found {len(untracked_paths)} untracked children")
-    #     return create_success_response(data=untracked_paths)
-
     @app.route('/api/lifecheck', methods=['GET'])
     @app.route('/health', methods=['GET'])
     @app.route('/api/health', methods=['GET'])
@@ -227,21 +190,254 @@ def register_api_routes(app: Flask, db_instance):
 
     @app.route('/api/docs')
     def api_documentation():
-        """Return API documentation."""
+        """Return comprehensive API documentation."""
+
+        # Base documentation structure
         docs = {
-            "version": "2.0",
-            "endpoints": {
-                "/api/hashtable": {
-                    "methods": ["GET", "POST"],
-                    "description": "Manage hash records",
-                    "parameters": {
-                        "GET": {"path": "string (required)"},
-                        "POST": {"path": "string (required)", "...": "hash data"}
+            "api_version": "2.0",
+            "site_name": config.get('site_name'),
+            "site_type": "core" if config.is_core else "remote",
+            "description": "Squishy REST API - File hash tracking and synchronization system",
+            "base_url": request.host_url.rstrip('/'),
+            "endpoints": {}
+        }
+
+        # Core API endpoints (available on all sites)
+        docs["endpoints"].update({
+            "/api/hashtable": {
+                "methods": ["GET", "POST"],
+                "description": "Manage hash records for files and directories",
+                "parameters": {
+                    "GET": {
+                        "path": {
+                            "type": "string",
+                            "required": True,
+                            "description": "File or directory path to query"
+                        },
+                        "field": {
+                            "type": "string",
+                            "required": False,
+                            "default": "record",
+                            "options": ["record", "hash", "timestamp", "priority", "untracked", "orphaned"],
+                            "description": "Specific field to retrieve"
+                        }
+                    },
+                    "POST": {
+                        "body": {
+                            "type": "object",
+                            "required": True,
+                            "description": "Hash record data",
+                            "example": {
+                                "path": "/example/path",
+                                "current_hash": "abc123...",
+                                "current_dtg_latest": 1234567890,
+                                "files": ["file1.txt", "file2.txt"],
+                                "dirs": ["subdir1", "subdir2"],
+                                "links": []
+                            }
+                        }
                     }
                 },
-                # ... other endpoints
+                "responses": {
+                    "200": "Success with requested data",
+                    "400": "Invalid request parameters",
+                    "404": "Path not found (GET only)",
+                    "500": "Server error"
+                }
+            },
+            "/api/logs": {
+                "methods": ["GET", "POST", "DELETE"],
+                "description": "Manage application logs",
+                "parameters": {
+                    "GET": {
+                        "action": {
+                            "type": "string",
+                            "required": True,
+                            "options": ["consolidate", "shippable", "older_than"],
+                            "description": "Log operation to perform"
+                        },
+                        "days": {
+                            "type": "integer",
+                            "required": False,
+                            "description": "Number of days (used with action=older_than)"
+                        }
+                    },
+                    "POST": {
+                        "body": {
+                            "type": "object",
+                            "required": True,
+                            "description": "Log entry data",
+                            "example": {
+                                "site_id": "SITE1",
+                                "log_level": "INFO",
+                                "summary_message": "Operation completed",
+                                "detailed_message": "Detailed log information"
+                            }
+                        }
+                    },
+                    "DELETE": {
+                        "body": {
+                            "type": "object",
+                            "required": True,
+                            "description": "Log IDs to delete",
+                            "example": {
+                                "log_ids": [1, 2, 3, 4, 5]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": "Success",
+                    "207": "Partial success (DELETE only)",
+                    "400": "Invalid request parameters",
+                    "500": "Server error"
+                }
+            },
+            "/api/health": {
+                "methods": ["GET"],
+                "description": "Health check endpoint for API and database services",
+                "aliases": ["/health", "/api/lifecheck"],
+                "responses": {
+                    "200": "Health status information",
+                    "example": {
+                        "status": "healthy",
+                        "timestamp": "2024-01-01T12:00:00Z",
+                        "site_name": "SITE1",
+                        "services": {
+                            "api": True,
+                            "database": True
+                        }
+                    }
+                }
+            },
+            "/api/docs": {
+                "methods": ["GET"],
+                "description": "This endpoint - returns API documentation",
+                "responses": {
+                    "200": "API documentation in JSON format"
+                }
+            }
+        })
+
+        # Add core-specific endpoints if this is a core site
+        if config.is_core:
+            docs["endpoints"].update({
+                "/api/pipeline": {
+                    "methods": ["GET", "POST"],
+                    "description": "Manage pipeline operations (core site only)",
+                    "parameters": {
+                        "GET": {
+                            "action": {
+                                "type": "string",
+                                "required": False,
+                                "default": "updates",
+                                "options": ["updates", "sites"],
+                                "description": "Type of pipeline data to retrieve"
+                            }
+                        },
+                        "POST": {
+                            "body": {
+                                "type": "object",
+                                "required": True,
+                                "description": "Pipeline operation data",
+                                "examples": {
+                                    "hash_update": {
+                                        "action": "hash",
+                                        "update_path": "/example/path",
+                                        "hash_value": "abc123..."
+                                    },
+                                    "site_status": {
+                                        "action": "site_status",
+                                        "site_name": "SITE1",
+                                        "status_data": {"last_sync": 1234567890}
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": "Success",
+                        "400": "Invalid request parameters",
+                        "501": "Operation not supported",
+                        "503": "Pipeline database unavailable"
+                    }
+                }
+            })
+
+            # Add web GUI endpoints for core sites
+            docs["web_endpoints"] = {
+                "/": {
+                    "methods": ["GET"],
+                    "description": "Main dashboard (core site only)",
+                    "aliases": ["/dashboard"]
+                },
+                "/web/hashtable/<path:file_path>": {
+                    "methods": ["GET"],
+                    "description": "Detailed view of hashtable record (core site only)"
+                },
+                "/web/liveness": {
+                    "methods": ["GET"],
+                    "description": "Site liveness status page (core site only)"
+                },
+                "/web/logs": {
+                    "methods": ["GET"],
+                    "description": "Logs viewing page with filtering (core site only)",
+                    "parameters": {
+                        "log_level": {
+                            "type": "string",
+                            "required": False,
+                            "description": "Filter by log level"
+                        },
+                        "site_id": {
+                            "type": "string",
+                            "required": False,
+                            "description": "Filter by site ID"
+                        }
+                    }
+                },
+                "/web/status": {
+                    "methods": ["GET"],
+                    "description": "Hash synchronization status page (core site only)"
+                }
+            }
+
+        # Add authentication info if applicable
+        if config.get('secret_key'):
+            docs["authentication"] = {
+                "type": "session-based",
+                "description": "API uses Flask sessions for authentication"
+            }
+
+        # Add general information
+        docs["general_info"] = {
+            "error_format": {
+                "structure": {
+                    "error": "Error type",
+                    "message": "Human readable error message",
+                    "status": "HTTP status code"
+                },
+                "example": {
+                    "error": "Not Found",
+                    "message": "The requested API resource was not found.",
+                    "status": 404
+                }
+            },
+            "success_format": {
+                "structure": {
+                    "message": "Success message",
+                    "data": "Response data (optional)"
+                },
+                "example": {
+                    "message": "Success",
+                    "data": {"result": "value"}
+                }
+            },
+            "content_types": {
+                "request": "application/json",
+                "response": "application/json"
             }
         }
+
         return jsonify(docs)
 
     logger.info("API routes registered")

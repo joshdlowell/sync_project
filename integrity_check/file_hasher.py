@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
 from .interfaces import FileSystemInterface, HashFunction
-from squishy_integrity import logger
+from .configuration import logger
 
 
 class FileHasher:

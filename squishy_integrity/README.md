@@ -1,13 +1,6 @@
-# SquishyBadger Integrity Service
+# Squishy Integrity
 
-A containerized microservice that generates cryptographic Merkle tree 
-structures from local file systems to enable efficient integrity verification.
-The service scans designated file system paths, computes hash-based tree 
-representations of directory structures and file contents, then transmits 
-the results to a remote storage backend. This approach provides rapid, 
-low-overhead detection of inconsistencies, corruption, or unauthorized 
-changes between distributed file system copies through mathematical proof 
-verification rather than expensive byte-by-byte comparisons.
+A containerized Python package that orchestrates periodic integrity verification of file systems using Merkle tree cryptographic structures. The service coordinates with external integrity checking components and REST APIs to systematically scan designated file system paths, prioritize processing workloads, and manage execution within configurable time limits.
 
 ## Table of Contents
 
@@ -15,8 +8,8 @@ verification rather than expensive byte-by-byte comparisons.
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
 - [API Reference](#api-reference)
-  - [IntegrityCheck](#integrity-check-package-api-documentation)
-  - [RestClient](#restclient)
+  - [Core Module](#core-module)
+  - [Configuration Module](#configuration-module)
 - [Development](#development)
 - [Project Structure](#project-structure)
 - [Testing](#testing)
@@ -28,27 +21,33 @@ verification rather than expensive byte-by-byte comparisons.
 - [Acknowledgments](#acknowledgments)
 
 ## Service Operation
-The squishy-integrity service requires no local input. Each time the service or container is started
-it will: 
-1. Use the default config values (or modified env. vars)
-2. Collect necessary information from the database (via the REST API) to determine its workload
-3. Process portions of the local file tree mounted to the containers `/baseline`
-4. Send the computed results to the configured REST API
-5. Exit gracefully
+
+The squishy-integrity service requires no local input and operates as an orchestration layer. Each time the service or container is started it will:
+
+1. Initialize with default configuration values (or modified environment variables)
+2. Create an integrity check service instance via the `IntegrityCheckFactory`
+3. Query the database (via REST API) to determine workload priorities and routine updates
+4. Process portions of the local file tree mounted to the container's `/baseline` within configured time limits
+5. Coordinate the transmission of computed results to the configured REST API
+6. Exit gracefully upon completion or timeout
+
+The service acts as a coordinator between the `integrity_check` package (which handles the actual Merkle tree computation) and the storage backend, managing execution flow and resource constraints.
 
 ## Quick Start
-There is a quick start for all the services in the root README.md, if you want to start just the
-squishy_integrity service use the instructions below.
+
+There is a quick start for all the services in the root README.md. If you want to start just the squishy-integrity service, use the instructions below.
+
 ### Using Docker (Recommended)
 
 #### Build the Container
-The Dockerfile (and associated `.dockerignore`) is located in the root of the SquishyBadger 
-repo and named `Dockerfile_integrity`
+The Dockerfile (and associated `.dockerignore`) is located in the root of the SquishyBadger repo and named `Dockerfile_integrity`
+
 ```bash
 docker build -t squishy-integrity:v1.2 . -f Dockerfile_integrity
 ```
 
 #### Run with Docker
+
 ```bash
 docker run -d \
   --name squishy-integrity \
@@ -60,19 +59,21 @@ docker run -d \
 ### Example Usage
 
 ```bash
-# run an interactive session with the `squishy-integrity` container
+# Run an interactive session with the `squishy-integrity` container
 docker run -it --rm \
   --name squishy-integrity \
   --network squishy_db_default \
   -v /location/of/baseline:/baseline  \
   squishy-integrity:v1.2
   
-# once at the container prompt
+# Once at the container prompt
 python -m squishy_integrity
 
-# squishy_integrity will make requests to the database (through the REST API)
-# complile a list of directories and files to run hash checks on, return the 
-# results to the database, and exit.
+# squishy_integrity will coordinate with the integrity_check package to:
+# - Make requests to the database (through the REST API)
+# - Compile a list of directories and files to run hash checks on
+# - Execute integrity checks within time limits
+# - Return results to the database, and exit
 ```
 
 ## Configuration
@@ -80,827 +81,203 @@ python -m squishy_integrity
 ### Required Environment Variables
 None (defaults configured for typical operation)
 
-### Other configurable Environment Variables
+### Configurable Environment Variables
+
 | Variable         | Description                         | Default            |
 |------------------|-------------------------------------|--------------------|
 | `REST_API_HOST`  | REST API hostname                   | `squishy-rest-api` |
 | `REST_API_PORT`  | REST API port                       | `5000`             |
 | `BASELINE`       | Internal mount location of baseline | `/baseline`        |
-| `DEBUG`          | REST API debugging                  | `False`            |
-| `LOG_LEVEL`      | REST API logging level              | `INFO`             | 
+| `DEBUG`          | Enable debug mode                   | `False`            |
+| `LOG_LEVEL`      | Application logging level           | `INFO`             |
 
+### Non-configurable Variables
 
-### Non-configurable variables
-| Variable          | Description                                            | Default |
-|-------------------|--------------------------------------------------------|---------|
-| `max_retries`     | number of attempts to contact REST API before failure  | `3`     |
-| `retry_delay`     | number of seconds between retries                      | `5`     |
-| `long_delay`      | Long hold-down during retry attempts                   | `30`    |
-| `max_runtime_min` | Minutes to allow integrity check to run                | `10`    |
-
-# API Reference
-# Integrity Check Package API Documentation
-
-## Overview
-
-The `integrity_check` package provides a comprehensive solution for file system integrity verification using Merkle trees. It offers modular components for hashing files, walking directory trees, and storing hash information.
-
-## Installation
-
-```python
-from integrity_check import IntegrityCheckFactory
-```
-
-## Quick Start
-
-```python
-# Create a service instance
-service = IntegrityCheckFactory.create_service()
-
-# Compute integrity hash for a directory
-hash_result = service.compute_merkle_tree("/path/to/root", "/path/to/target")
-```
+| Variable          | Description                                     | Default |
+|-------------------|-------------------------------------------------|---------|
+| `max_retries`     | Number of attempts to contact REST API         | `3`     |
+| `retry_delay`     | Seconds between retries                         | `5`     |
+| `long_delay`      | Extended delay during retry attempts            | `30`    |
+| `max_runtime_min` | Maximum minutes to allow integrity check to run | `10`    |
 
 ## API Reference
 
-### IntegrityCheckFactory
+### Core Module
 
-Main factory class for creating integrity check components.
+The core module provides the main entry point and orchestration logic for the integrity checking process.
 
-#### Methods
+#### Functions
 
-##### `create_service() -> MerkleTreeService`
+##### `main() -> int`
 
-Creates a fully configured `MerkleTreeService` with default implementations.
+Main entry point to run a routine integrity check.
 
 **Returns:**
-- `MerkleTreeService`: Configured service instance
+- `int`: Exit code (0 for success, non-zero for failure)
 
 **Example:**
 ```python
+from squishy_integrity.core import main
+
+exit_code = main()
+if exit_code == 0:
+    print("Integrity check completed successfully")
+else:
+    print("Integrity check failed")
+```
+
+##### `get_paths_to_process(merkle_service) -> List[str]`
+
+Retrieves and deduplicates paths that need processing by combining priority and routine updates.
+
+**Parameters:**
+- `merkle_service`: Configured MerkleTreeService instance
+
+**Returns:**
+- `List[str]`: Deduplicated list of paths to process
+
+**Example:**
+```python
+from squishy_integrity.core import get_paths_to_process
 from integrity_check import IntegrityCheckFactory
 
 service = IntegrityCheckFactory.create_service()
+paths = get_paths_to_process(service)
+print(f"Processing {len(paths)} paths")
 ```
 
----
+##### `process_paths(merkle_service, paths_list: List[str], max_runtime_min: int) -> Tuple[int, int]`
 
-### MerkleTreeService
-
-Primary service class for Merkle tree integrity operations.
-
-#### Constructor
-
-```python
-MerkleTreeService(
-    hash_storage: HashStorageInterface,
-    tree_walker: DirectoryTreeWalker,
-    file_hasher: FileHasher,
-    path_validator: PathValidator
-)
-```
-
-#### Methods
-
-##### `compute_merkle_tree(root_path: str, dir_path: str) -> Optional[str]`
-
-Computes a Merkle tree hash for a directory and its contents.
+Processes a list of paths within the specified time limit.
 
 **Parameters:**
-- `root_path` (str): Root directory of the monitored tree
-- `dir_path` (str): Directory to hash (must be within root_path)
+- `merkle_service`: Configured MerkleTreeService instance
+- `paths_list` (List[str]): List of paths to process
+- `max_runtime_min` (int): Maximum runtime in minutes
 
 **Returns:**
-- `Optional[str]`: Directory hash string, or None if computation fails
+- `Tuple[int, int]`: (processed_count, total_count)
 
 **Example:**
 ```python
-hash_result = service.compute_merkle_tree("/home/user", "/home/user/documents")
-```
-
-##### `remove_redundant_paths_with_priority(priority: list, routine: list) -> list`
-
-Removes redundant paths from provided lists while preserving priority order.
-
-**Parameters:**
-- `priority` (list): Paths that should be processed first
-- `routine` (list): Paths for routine hash recomputing
-
-**Returns:**
-- `list`: Combined, deduplicated list of paths
-
-**Example:**
-```python
-clean_paths = service.remove_redundant_paths_with_priority(
-    priority=["/home/user/important"],
-    routine=["/home/user/docs", "/home/user/pics"]
-)
-```
-
----
-
-### FileHasher
-
-Handles hashing of files, directories, and symbolic links.
-
-#### Constructor
-
-```python
-FileHasher(file_system: FileSystemInterface, hash_function: HashFunction)
-```
-
-#### Methods
-
-##### `hash_file(file_path: str) -> str`
-
-Hashes a regular file by reading its contents in chunks.
-
-**Parameters:**
-- `file_path` (str): Path to the file to hash
-
-**Returns:**
-- `str`: Hexadecimal hash string
-
-##### `hash_link(link_path: str) -> str`
-
-Hashes a symbolic link by its path and target.
-
-**Parameters:**
-- `link_path` (str): Path to the symbolic link
-
-**Returns:**
-- `str`: Hexadecimal hash string
-
-##### `hash_directory(dir_path: str, hash_info: Dict[str, Any]) -> str`
-
-Hashes a directory based on its contents.
-
-**Parameters:**
-- `dir_path` (str): Path to the directory
-- `hash_info` (Dict[str, Any]): Hash information for directory contents
-
-**Returns:**
-- `str`: Hexadecimal hash string
-
-##### `hash_empty_type(full_path: str, category: str='dirs', return_string: bool=False) -> str`
-
-Provides a standardized way to Hash an empty directory by its path
-
-**Parameters**
-- `full_path` (str): Absolute path of the item
-- `category` (str): Default `dirs`, other types accepted for modularity
-- `return_string` (bool): Default `False` sets the return value to hashable string or hashvalue
- 
-**Returns**
-- `str`: standardized fileHasher directory string, or Hexadecimal hash string of the same.
-
-##### `hash_string(hashable: str) -> str`
-
-Hashes a string using the configured hash function.
-
-**Parameters:**
-- `hashable` (str): String to hash
-
-**Returns:**
-- `str`: Hexadecimal hash string
-
----
-
-### DirectoryTreeWalker
-
-Handles directory tree traversal and categorization.
-
-#### Constructor
-
-```python
-DirectoryTreeWalker(file_system: FileSystemInterface)
-```
-
-#### Methods
-
-##### `get_tree_structure(parent_path: str) -> Dict[str, Dict[str, List[str]]] | bool`
-
-Recursively traverses directory tree and categorizes items.
-
-**Parameters:**
-- `parent_path` (str): Root directory path to begin traversal
-
-**Returns:**
-- `Dict[str, Dict[str, List[str]]]`: Dictionary mapping paths to their contents
-- `bool`: False if parent_path doesn't exist
-
-**Structure of returned dictionary:**
-```python
-{
-    "/path/to/dir": {
-        "dirs": ["subdir1", "subdir2"],
-        "files": ["file1.txt", "file2.txt"],
-        "links": ["symlink1", "symlink2"]
-    }
-}
-```
-
----
-
-### PathValidator
-
-Validates path operations for integrity checking.
-
-#### Methods
-
-##### `validate_root_and_dir_paths(root_path: str, dir_path: str) -> bool`
-
-Validates that dir_path is within root_path.
-
-**Parameters:**
-- `root_path` (str): Root directory path
-- `dir_path` (str): Target directory path
-
-**Returns:**
-- `bool`: True if dir_path is within root_path
-
-##### `validate_path_exists(path: str) -> bool`
-
-Validates that a path exists.
-
-**Parameters:**
-- `path` (str): Path to validate
-
-**Returns:**
-- `bool`: True if path exists
-
----
-
-## Interfaces
-
-### FileSystemInterface
-
-Abstract interface for file system operations.
-
-#### Methods
-
-- `exists(path: str) -> bool`: Check if path exists
-- `is_file(path: str) -> bool`: Check if path is a file
-- `is_dir(path: str) -> bool`: Check if path is a directory
-- `walk(path: str) -> List[Tuple[str | None, list[str] | None, list[str] | None]]`: Walk directory tree
-- `read_file_chunks(path: str, chunk_size: int = 65536)`: Read file in chunks
-- `readlink(path: str) -> str`: Read symbolic link target
-
-### HashStorageInterface
-
-Abstract interface for hash storage operations.
-
-#### Methods
-
-- `put_hashtable(hash_info: Dict[str, Any]) -> int`: Store hash information
-- `get_hashtable(path: str) -> Optional[Dict[str, Any]]`: Retrieve hash table
-- `get_single_hash(path: str) -> Optional[str]`: Get single hash value
-- `get_oldest_updates(root_path: str, percent: int = 10) -> list[str]`: Get oldest updates
-- `get_priority_updates() -> list[str] | None`: Get priority updates
-- `get_lifecheck() -> dict | None`: Get the liveness status of REST and DB services
-- `put_log() -> int`: Put a log entry in the database
-
-### HashFunction
-
-Abstract interface for hash operations.
-
-#### Methods
-
-- `create_hasher()`: Create hash object
-- `hash_string(data: str) -> str`: Hash string data
-
----
-
-## Implementations
-
-### StandardFileSystem
-
-Standard file system implementation using pathlib.
-
-**Implements:** `FileSystemInterface`
-
-### RestHashStorage
-
-Hash storage implementation using REST connector.
-
-**Implements:** `HashStorageInterface`
-
-**Constructor:**
-```python
-RestHashStorage(rest_processor)
-```
-
-### SHA1HashFunction
-
-SHA-1 hash function implementation.
-
-**Implements:** `HashFunction`
-
----
-
-## Error Handling
-
-The package includes comprehensive error handling:
-
-- Path validation errors
-- File system access errors
-- Hash computation failures
-- Storage operation failures
-
-All errors are logged using the `squishy_integrity.logger` module.
-
-## Examples
-
-### Basic Usage
-
-```python
+from squishy_integrity.core import process_paths
 from integrity_check import IntegrityCheckFactory
 
-# Create service
 service = IntegrityCheckFactory.create_service()
-
-# Compute hash for directory
-result = service.compute_merkle_tree("/home/user", "/home/user/documents")
-if result:
-    print(f"Directory hash: {result}")
-else:
-    print("Failed to compute hash")
+paths = ["/baseline/dir1", "/baseline/dir2"]
+processed, total = process_paths(service, paths, 10)
+print(f"Processed {processed} of {total} paths")
 ```
 
-### Custom Implementation
+##### `performance_monitor(merkle_service, operation_name: str)`
 
-```python
-from integrity_check.implementations import StandardFileSystem, SHA1HashFunction
-from integrity_check.file_hasher import FileHasher
+Context manager for monitoring operation performance and logging session information.
 
-# Create custom file hasher
-fs = StandardFileSystem()
-hash_func = SHA1HashFunction()
-hasher = FileHasher(fs, hash_func)
-
-# Hash a file
-file_hash = hasher.hash_file("/path/to/file.txt")
-print(f"File hash: {file_hash}")
-```
-
-### Path Validation
-
-```python
-from integrity_check.validators import PathValidator
-
-validator = PathValidator()
-
-# Validate paths
-is_valid = validator.validate_root_and_dir_paths("/home/user", "/home/user/docs")
-exists = validator.validate_path_exists("/home/user/docs")
-```
-
-### RestClient
-
-Main factory class for creating REST client components.
-
-#### Properties
-
-##### `rest_client -> RestProcessor`
-
-Property that returns a configured `RestProcessor` instance.
-
-**Returns:**
-- `RestProcessor`: Configured REST processor instance
+**Parameters:**
+- `merkle_service`: Configured MerkleTreeService instance
+- `operation_name` (str): Name of the operation being monitored
 
 **Example:**
 ```python
-from rest_client import RestClient
+from squishy_integrity.core import performance_monitor
+from integrity_check import IntegrityCheckFactory
 
-client = RestClient()
-processor = client.rest_client
+service = IntegrityCheckFactory.create_service()
+with performance_monitor(service, "Test Operation"):
+    # Your code here
+    pass
 ```
 
-#### Methods
+### Configuration Module
 
-##### `create_rest_connector() -> RestProcessor`
+The configuration module provides centralized configuration management with environment variable support.
 
-Creates a `RestProcessor` with default HTTP client and validator.
+#### Classes
 
-**Returns:**
-- `RestProcessor`: Configured REST processor
+##### `Config`
 
-**Raises:**
-- `SystemExit`: If configuration is invalid (exit code 78)
+Singleton configuration class that manages application settings.
 
----
+**Properties:**
+- `rest_api_url` (str): Complete REST API URL
+- `session_id` (str): Unique session identifier for log grouping
 
-### RestProcessor
+**Methods:**
 
-Core class for REST API interactions and hash storage operations.
+###### `get(key: str, default: Any = None) -> Any`
 
-#### Constructor
-
-```python
-RestProcessor(http_client: HttpClient, validator: HashInfoValidator = None)
-```
+Retrieves configuration value by key.
 
 **Parameters:**
-- `http_client` (HttpClient): HTTP client for making requests
-- `validator` (HashInfoValidator, optional): Validator for hash information
-
-#### Methods
-
-##### `put_hashtable(hash_info: dict, session_id: str=None) -> int`
-
-    def put_hashtable(self, hash_info: dict, session_id: str=None) -> int:
-        """
-        Store hash information in the database.
-
-        This method implements the HashStorageInterface.put_hashtable method
-        required by the MerkleTreeService.
-
-        Args:
-            hash_info: Dictionary containing hash information for files and directories
-            session_id: Optional session ID for grouping batches of updates
-
-        Returns:
-            int representing the number of updates sent to the REST API that were unsuccessful
-        """
-
-
-Stores hash information in the database via REST API.
-
-**Parameters:**
-- `hash_info` (dict): Dictionary containing hash information for files and directories
-- `session_id` (int): Optional session ID for grouping batches of updates
+- `key` (str): Configuration key
+- `default` (Any, optional): Default value if key not found
 
 **Returns:**
-- `int`: Number of unsuccessful updates
+- `Any`: Configuration value or default
 
 **Example:**
 ```python
-hash_info = {
-    "/path/to/file": {
-        "current_hash": "abc123",
-        "dirs": ["subdir1", "subdir2"],
-        "files": ["file1.txt", "file2.txt"],
-        "links": ["symlink1"]
-    }
-}
-errors = processor.put_hashtable(hash_info)
+from squishy_integrity import config
+
+max_runtime = config.get('max_runtime_min', 10)
+api_url = config.rest_api_url
+session = config.session_id
 ```
 
-##### `get_hashtable(path: str) -> dict | None`
+###### `is_debug_mode() -> bool`
 
-Retrieves the complete hash table for a specific path.
-
-**Parameters:**
-- `path` (str): The path to get the hash table for
+Checks if debug mode is enabled.
 
 **Returns:**
-- `dict | None`: Hash table dictionary, or None if not found
+- `bool`: True if debug mode is enabled
 
 **Example:**
 ```python
-hashtable = processor.get_hashtable("/path/to/directory")
-if hashtable:
-    print(f"Directories: {hashtable.get('dirs', [])}")
-    print(f"Files: {hashtable.get('files', [])}")
+from squishy_integrity import config
+
+if config.is_debug_mode():
+    print("Debug mode is enabled")
 ```
 
-##### `get_single_hash(path: str) -> str | None`
+##### `ConfigError`
 
-Retrieves the hash value for a specific path.
-
-**Parameters:**
-- `path` (str): The path to get the hash for
-
-**Returns:**
-- `str | None`: Hash value as string, or None if not found
+Custom exception for configuration-related errors.
 
 **Example:**
 ```python
-hash_value = processor.get_single_hash("/path/to/file")
-if hash_value:
-    print(f"Hash: {hash_value}")
-```
+from squishy_integrity.configuration import ConfigError
 
-##### `get_oldest_updates(root_path: str, percent: int = 10) -> list[str]`
-
-Gets directories that need updates based on their age.
-
-**Parameters:**
-- `root_path` (str): Root directory to start from
-- `percent` (int, optional): Percentage of directories to return (default: 10)
-
-**Returns:**
-- `list[str]`: List of directory paths needing updates
-
-**Example:**
-```python
-old_dirs = processor.get_oldest_updates("/home/user", percent=20)
-for dir_path in old_dirs:
-    print(f"Needs update: {dir_path}")
-```
-
-##### `get_single_timestamp(path: str) -> float | None`
-
-Retrieves the timestamp for a specific path.
-
-**Parameters:**
-- `path` (str): The path to get the timestamp for
-
-**Returns:**
-- `float | None`: Timestamp as float, or None if not found
-
-##### `get_priority_updates() -> list | None`
-
-Gets paths that need priority updates.
-
-**Returns:**
-- `list | None`: List of paths needing priority updates, or None if not found
-
-**Example:**
-```python
-priority_paths = processor.get_priority_updates()
-if priority_paths:
-    for path in priority_paths:
-        print(f"Priority update needed: {path}")
-```
-
- ##### `get_life_check() -> dict | None`
-
-Retrieves the liveness of the rest api and database.
-
-**Returns:**
-- `dict | None`: dict of boolean values with the keys `api` and `db`, or None if an error occurs in processing
-
-
-##### `put_log() -> int`
-
-Store log information in the database.
-
-**Paremeters:**
-- `message` (str): The log message (required)
-- `detailed_message` (str): a detailed version of the message
-- `log_level` (str): The level of the log entry, defaults to INFO in not provided or an invalid level is specified
-
----
-
-### HashInfoValidator
-
-Validates hash information data structures.
-
-#### Class Attributes
-
-- `VALID_KEYS`: Set of valid keys for hash info items
-- `REQUIRED_KEYS`: Set of required keys for hash info items
-
-#### Methods
-
-##### `validate(hash_info: dict) -> list`
-
-Validates hash information and returns validation errors.
-
-**Parameters:**
-- `hash_info` (dict): Hash information dictionary to validate
-
-**Returns:**
-- `list`: List of validation error messages
-
-**Example:**
-```python
-from rest_client.hash_info_validator import HashInfoValidator
-
-validator = HashInfoValidator()
-hash_info = {"/path": {"current_hash": "abc123"}}
-errors = validator.validate(hash_info)
-
-if errors:
-    for error in errors:
-        print(f"Validation error: {error}")
-```
-
----
-
-### HttpClient (Abstract Base Class)
-
-Abstract interface for HTTP operations.
-
-#### Methods
-
-##### `post(url: str, json_data: dict) -> Tuple[int, Any]`
-
-Sends a POST request.
-
-**Parameters:**
-- `url` (str): Target URL
-- `json_data` (dict): JSON data to send
-
-**Returns:**
-- `Tuple[int, Any]`: Status code and response content
-
-##### `get(url: str, params: dict = None) -> Tuple[int, Any]`
-
-Sends a GET request.
-
-**Parameters:**
-- `url` (str): Target URL
-- `params` (dict, optional): Query parameters
-
-**Returns:**
-- `Tuple[int, Any]`: Status code and response content
-
----
-
-### RequestsHttpClient
-
-Concrete implementation of `HttpClient` using the `requests` library.
-
-#### Constructor
-
-```python
-RequestsHttpClient()
-```
-
-Initializes with retry configuration from `squishy_integrity.config`.
-
-#### Configuration
-
-Uses the following configuration values:
-- `max_retries`: Maximum number of retry attempts
-- `retry_delay`: Delay between retries
-- `long_delay`: Longer delay between retry cycles
-
-#### Methods
-
-Inherits all methods from `HttpClient` with robust retry logic and error handling.
-
-**Features:**
-- Automatic retries with exponential backoff
-- Timeout handling (30 seconds default)
-- Connection error recovery
-- Comprehensive logging
-
-**Example:**
-```python
-from rest_client.http_client import RequestsHttpClient
-
-client = RequestsHttpClient()
-status, response = client.get("https://api.example.com/data")
-
-if status == 200:
-    print("Success:", response)
-else:
-    print(f"Error {status}: {response}")
-```
-
----
-
-## Error Handling
-
-The package provides comprehensive error handling:
-
-### HTTP Status Codes
-
-- **200**: Success
-- **404**: Resource not found
-- **408**: Request timeout
-- **503**: Service unavailable
-- **Other codes**: Various HTTP errors
-
-### Exception Handling
-
-- `requests.exceptions.Timeout`: Request timeout
-- `requests.exceptions.ConnectionError`: Connection issues  
-- `requests.exceptions.RequestException`: General request failures
-- `ValueError`: JSON decode errors
-
-### Logging
-
-All operations are logged using `squishy_integrity.logger`:
-
-- **DEBUG**: Detailed operation information
-- **INFO**: General status updates
-- **WARNING**: Recoverable errors and retries
-- **ERROR**: Validation errors and failed operations
-- **CRITICAL**: Network errors and system issues
-
----
-
-## Data Structures
-
-### Hash Info Structure
-
-```python
-{
-    "path": {
-        "current_hash": "required_hash_value",
-        "current_dtg_latest": "optional_timestamp",
-        "dirs": ["list", "of", "directories"],
-        "files": ["list", "of", "files"],
-        "links": ["list", "of", "symlinks"]
-    }
-}
-```
-
-### API Response Structure
-
-```python
-{
-    "data": "response_data",
-    "message": "status_message"
-}
-```
-
----
-
-## Configuration
-
-The package uses `squishy_integrity.config` for configuration:
-
-```python
-# Required configuration
-rest_api_url = "https://api.example.com"
-
-# HTTP client configuration
-max_retries = 3
-retry_delay = 1.0
-long_delay = 5.0
-```
-
----
-
-## Examples
-
-### Complete Workflow
-
-```python
-from rest_client import RestClient
-
-# Initialize client
-client = RestClient()
-processor = client.rest_client
-
-# Prepare hash information
-hash_info = {
-    "/home/user/documents": {
-        "current_hash": "abc123def456",
-        "dirs": ["subfolder1", "subfolder2"],
-        "files": ["document1.txt", "document2.pdf"],
-        "links": ["shortcut1"]
-    }
-}
-
-# Store hash information
-errors = processor.put_hashtable(hash_info)
-if errors == 0:
-    print("All hashes stored successfully")
-else:
-    print(f"{errors} hashes failed to store")
-
-# Retrieve hash information
-retrieved = processor.get_hashtable("/home/user/documents")
-if retrieved:
-    print(f"Current hash: {retrieved['current_hash']}")
-    print(f"Contains {len(retrieved.get('files', []))} files")
-
-# Get directories needing updates
-old_dirs = processor.get_oldest_updates("/home/user", percent=15)
-for path in old_dirs:
-    print(f"Directory needs update: {path}")
-```
-
-### Custom HTTP Client
-
-```python
-from rest_client.http_client import HttpClient
-from rest_client.rest_processor import RestProcessor
-from rest_client.hash_info_validator import HashInfoValidator
-
-class CustomHttpClient(HttpClient):
-    def post(self, url: str, json_data: dict):
-        # Custom POST implementation
-        pass
-    
-    def get(self, url: str, params: dict = None):
-        # Custom GET implementation
-        pass
-
-# Use custom client
-custom_client = CustomHttpClient()
-validator = HashInfoValidator()
-processor = RestProcessor(custom_client, validator)
-```
-
-### Error Handling Example
-
-```python
 try:
-    hash_info = {"/invalid": {}}  # Missing required 'current_hash'
-    errors = processor.put_hashtable(hash_info)
-    
-    if errors > 0:
-        print("Some updates failed - check logs for details")
-        
-except Exception as e:
-    print(f"Unexpected error: {e}")
+    # Configuration operation
+    pass
+except ConfigError as e:
+    print(f"Configuration error: {e}")
+```
+
+#### Module-level Objects
+
+##### `config`
+
+Default configuration instance available for import.
+
+**Example:**
+```python
+from squishy_integrity import config
+
+print(f"REST API URL: {config.rest_api_url}")
+print(f"Max runtime: {config.get('max_runtime_min')} minutes")
+```
+
+##### `logger`
+
+Configured logger instance for the application.
+
+**Example:**
+```python
+from squishy_integrity import logger
+
+logger.info("Starting integrity check")
+logger.error("An error occurred")
 ```
 
 ## Development
@@ -909,71 +286,90 @@ except Exception as e:
 
 ```
 squishy_integrity/
-├── core.py                          # Application entry point
-├── integrity_check/
-│   ├── file_hasher.py               # Methods for consistent hashes
-│   ├── tree_walker.py               # Methods for discovering the file tree
-│   ├── validators.py                # Helper class to validate file paths
-│   ├── merkle_tree_service.py       # Builds the Merkle tree and updates the DB
-│   ├── interfaces.py                # Various abstract class definitions
-│   ├── implementations.py           # Concrete implementations of interfaces.py
-│   └── app_factory.py               # Integrity application factory
-├── rest_client/                 
-│   ├── rest_bootstrap.py            # Produces configured RestClient instances
-│   ├── http_client.py               # Get and Post methods with robust error handling
-│   ├── rest_processor.py            # Connector for interacting with the REST API
-│   └── hash_info_validator.py       # Validate hash info formatting before sending to REST
-├── configuration/                   # Test suite (not included in container)
-│   ├── config.py                    # Main configuration
-│   ├── logging_config.py            # System logging configuration
-├── tests/                           # Test suite (not included in container)
-│   ├── test_merkle_tree_service.py  # Merkle tests
-│   └── test_rest_connector.py       # Validate functionallity of connector
-├── requirements.txt                 # Python dependencies
-└── README.md
+├── core.py                          # Main orchestration logic and entry point
+├── configuration/                   # Configuration management
+│   ├── config.py                    # Main configuration class
+│   └── logging_config.py            # Logging configuration
+├── __init__.py                      # Package initialization
+├── __main__.py                      # Command-line entry point
+├── requirements.txt                 # Python dependencies (currently empty)
+└── README.md                        # This file
 ```
 
 ### Local Development Setup
+
 Start by cloning the repository to your workspace.
+
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd squishy-integrity
 ```
+
 1. **Prerequisites**: Python 3.12+
 2. **Virtual Environment**:
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
+   pip install -r requirements.txt  # Currently empty - uses only built-ins
    ```
-3. **Database Setup**: The current test suite uses python unittest's `mock` to conduct tests without
-database connectivity. Ensure REST API a is running
-4. **Environment**: All defaults are set in the configuration module. Environment variables are only
-required if you wish to change the [default configuration](#configuration)
-5. **Run**: `python -m squishy_integrity`
+3. **Dependencies**: Ensure the `integrity_check` package is available in your Python path
+4. **Database Setup**: Ensure REST API is running and accessible
+5. **Environment**: All defaults are set in the configuration module. Environment variables are only required if you wish to change the [default configuration](#configuration)
+6. **Run**: `python -m squishy_integrity`
+
+### Integration with IntegrityCheck Package
+
+This package depends on the `integrity_check` package for actual Merkle tree computation:
+
+```python
+from integrity_check import IntegrityCheckFactory
+
+# The factory creates fully configured services
+service = IntegrityCheckFactory.create_service()
+
+# The service provides the interface needed by squishy_integrity
+service.compute_merkle_tree(root_path, dir_path)
+service.remove_redundant_paths_with_priority(priority, routine)
+```
 
 ## Testing
 
-The project includes comprehensive unit and integration tests using Python's `unittest` framework. Tests cover:
+The project is designed to work with the `integrity_check` package's comprehensive test suite. For integration testing:
 
-- Merkle tree validity
-- REST API connection interfaces
-- Error handling and edge cases
-- Configuration validation
+1. Ensure the `integrity_check` package is properly installed and tested
+2. Test the configuration module with various environment variable combinations
+3. Test the core orchestration logic with mock `IntegrityCheckFactory` instances
 
-Run tests with detailed output:
+Run package tests:
 ```bash
-python -m unittest discover squishy_integrity/tests/ -v
+python -m unittest discover -s . -p "test_*.py" -v
 ```
 
 ## Error Handling
 
-### Common Error Messages
-- `"Path not found"`: Requested resource doesn't exist
-- `"path required but not found in your request json"`: Missing required field
-- `"Database error, see DB logs"`: Internal database issue
-- `"root_path parameter is required"`: Missing query parameter
+The package provides comprehensive error handling for orchestration scenarios:
+
+### Common Error Conditions
+
+- **Configuration Errors**: Missing or invalid configuration values
+- **Service Creation Failures**: Problems creating `IntegrityCheckFactory` instances  
+- **Path Processing Errors**: Individual path processing failures (logged but don't stop execution)
+- **Time Limit Exceeded**: Graceful handling when `max_runtime_min` is reached
+- **REST API Connectivity**: Handled by the underlying `integrity_check` package
+
+### Exit Codes
+
+- **0**: Success - all operations completed successfully
+- **1**: Failure - fatal error occurred during execution
+
+### Logging
+
+All operations are logged using the configured logger:
+
+- **INFO**: General status updates, processing progress
+- **ERROR**: Path processing failures, fatal errors
+- **DEBUG**: Detailed operation information (when debug mode enabled)
 
 ## Project Status
 
@@ -985,21 +381,27 @@ Current version: 1.2.0
 
 ## Changelog
 
-**v1.2.0 - 2025-07-03**
--  **Modified:** Merkle process to correct bug that prevented traversing the full height of the tree.
+**v1.2.0 - 2025-01-03**
+- **Added:** Complete orchestration framework for integrity checking
+- **Added:** Configuration management with environment variable support
+- **Added:** Session-based logging for operation tracking
+- **Added:** Time-bounded execution with graceful handling
+- **Added:** Priority and routine workload coordination
+- **Modified:** Separated orchestration logic from core integrity checking
 
 **v1.0.5 - 2025-07-01**
-
--   **Changed:** Core.py entrypoint to exit on 'suspicious' conditions (like empty baseline)
--   **Removed:** Added 'session_id' fingerprint for tracking and grouping log entries.
+- **Changed:** Core.py entrypoint to exit on 'suspicious' conditions (like empty baseline)
+- **Added:** Session ID fingerprint for tracking and grouping log entries
 
 **v1.0.0 - 2025-06-26**
-
--   Baseline of current project state.
+- Baseline of current project state
 
 ### Roadmap
-- [ ] Comprehensive logging and monitoring
-- [ ] Performance optimization
+
+- [ ] Enhanced error recovery mechanisms
+- [ ] Performance metrics collection
+- [ ] Configuration validation improvements
+- [ ] Integration test suite expansion
 
 ## Support
 
@@ -1008,8 +410,10 @@ Current version: 1.2.0
 
 ## Acknowledgments
 
+- Built on the `integrity_check` package for core Merkle tree functionality
 - Containerization with Docker
-- Testing framework: Python unittest
+- Configuration management with environment variable support
+- Session-based logging for operation tracking
 
 ---
 

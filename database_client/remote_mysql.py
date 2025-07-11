@@ -92,6 +92,8 @@ class RemoteMYSQLConnection(RemoteDBConnection):
                     cursor.execute("SELECT * FROM hashtable WHERE path = %s", (path,))
                     result = cursor.fetchone()
                     if result:
+                        # convert lists for sql storage
+                        self._convert_to_from_json(result)
                         self.logger.debug(f"Found record for path: {path}")
                     else:
                         self.logger.debug(f"No record found for path: {path}")
@@ -137,7 +139,21 @@ class RemoteMYSQLConnection(RemoteDBConnection):
             self.logger.error(f"Error checking database for existing record: {e}")
             return False
 
-        existing_hash, existing_dirs, existing_links, existing_files, existing_target_hash = result
+        # Handle the case where result is None (path not in database)
+        if result is None:
+            # Set default values for new record
+            existing_hash = None
+            existing_dirs = []
+            existing_links = []
+            existing_files = []
+            existing_target_hash = None
+        else:
+            # Unpack existing record
+            existing_hash, existing_dirs_json, existing_links_json, existing_files_json, existing_target_hash = result
+            existing_dirs = json.loads(existing_dirs_json) if existing_dirs_json else []
+            existing_links = json.loads(existing_links_json) if existing_links_json else []
+            existing_files = json.loads(existing_files_json) if existing_files_json else []
+
         # Determine the final target_hash value (update if passed, otherwise keep as is)
         final_target_hash = target_hash.strip() if target_hash is not None else existing_target_hash
 
@@ -207,12 +223,10 @@ class RemoteMYSQLConnection(RemoteDBConnection):
                                target_hash        = entry.target_hash
                     """
 
-        # TODO remove the extra debug statements
         self.logger.debug(f"Prepared data for path {path}: hash={current_hash}")
-        self.logger.debug(f"dirs={len(record.get('dirs')) if record.get('dirs') else 'None'}")
-        self.logger.debug(f"files={len(record.get('files')) if record.get('files') else 'None'}")
-        self.logger.debug(f"links={len(record.get('links')) if record.get('links') else 'None'}")
 
+        # convert lists for sql storage
+        self._convert_to_from_json(query_params)
         # Execute query and handle deletions
         try:
             with self._get_connection() as conn:
@@ -241,9 +255,15 @@ class RemoteMYSQLConnection(RemoteDBConnection):
         }
         self.put_log(log_entry)
         self.logger.debug(f"Changes logged to database under session_id {record.get('session_id', None)}")
-        # TODO remove excess debugger statements
-        self.logger.debug(f"Changes: modified={len(modified)}, created={len(created)}, deleted={len(deleted)}")
         return True
+
+    def _convert_to_from_json(self, params):
+        """Takes a list of lists and convert to list of json string or other way around, in place"""
+        for key in ['dirs', 'files', 'links']:
+            if isinstance(params[key], list):
+                params[key] = json.dumps(params[key])
+            elif isinstance(params[key], str):
+                params[key] = json.loads(params[key])
 
     def _recursive_delete_hash(self, path: str) -> set[str]:
         """delete a hash record and all its children recursively."""
@@ -261,6 +281,8 @@ class RemoteMYSQLConnection(RemoteDBConnection):
             self.logger.error(f"Error checking database for existing record: {e}")
             return set()
 
+        # convert lists for sql storage
+        self._convert_to_from_json(result)
         # Combine list fields from the database and call recursive delete on each one
         dirs, links, files = (result.get(field, []) for field in ['dirs', 'links', 'files'])
         for item in [f"{path}/{item}" for item in dirs + files + links]:

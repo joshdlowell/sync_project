@@ -81,6 +81,7 @@ class RemoteMSSQLConnection(RemoteDBConnection):
         Raises:
             ValueError: If required parameters are not provided
         """
+        # Validate required keys
         if not path:
             self.logger.debug(f"get_hash_record missing path")
             raise ValueError(f"path value must be provided")
@@ -126,9 +127,9 @@ class RemoteMSSQLConnection(RemoteDBConnection):
         # Collect data
         path = record['path'].strip()
         current_hash = record['current_hash'].strip()
-        dirs = json.dumps(record.get('dirs', []))  # Convert to JSON string for MSSQL
-        files = json.dumps(record.get('files', []))
-        links = json.dumps(record.get('links', []))
+        dirs = record.get('dirs', [])
+        files = record.get('files', [])
+        links = record.get('links', [])
         target_hash = record.get('target_hash', None)
 
         # Get existing record
@@ -143,10 +144,20 @@ class RemoteMSSQLConnection(RemoteDBConnection):
             self.logger.error(f"Error checking database for existing record: {e}")
             return False
 
-        if result:
-            existing_hash, existing_dirs, existing_files, existing_links, existing_target_hash = result
+        # Handle the case where result is None (path not in database)
+        if result is None:
+            # Set default values for new record
+            existing_hash = None
+            existing_dirs = []
+            existing_links = []
+            existing_files = []
+            existing_target_hash = None
         else:
-            existing_hash = existing_dirs = existing_files = existing_links = existing_target_hash = None
+            # Unpack existing record
+            existing_hash, existing_dirs_json, existing_links_json, existing_files_json, existing_target_hash = result
+            existing_dirs = json.loads(existing_dirs_json) if existing_dirs_json else []
+            existing_links = json.loads(existing_links_json) if existing_links_json else []
+            existing_files = json.loads(existing_files_json) if existing_files_json else []
 
         # Determine the final target_hash value
         final_target_hash = target_hash.strip() if target_hash is not None else existing_target_hash
@@ -187,17 +198,17 @@ class RemoteMSSQLConnection(RemoteDBConnection):
 
             # Calculate deletions for all field types
             if existing_dirs:
-                existing_dirs_list = json.loads(existing_dirs) if existing_dirs else []
+                existing_dirs_list = existing_dirs if existing_dirs else []
                 dirs_list = record.get('dirs', [])
                 deleted.update(f"{path}/{x}" for x in set(existing_dirs_list) - set(dirs_list))
 
             if existing_files:
-                existing_files_list = json.loads(existing_files) if existing_files else []
+                existing_files_list = existing_files if existing_files else []
                 files_list = record.get('files', [])
                 deleted.update(f"{path}/{x}" for x in set(existing_files_list) - set(files_list))
 
             if existing_links:
-                existing_links_list = json.loads(existing_links) if existing_links else []
+                existing_links_list = existing_links if existing_links else []
                 links_list = record.get('links', [])
                 deleted.update(f"{path}/{x}" for x in set(existing_links_list) - set(links_list))
 
@@ -226,7 +237,11 @@ class RemoteMSSQLConnection(RemoteDBConnection):
                     """
             query_params = (path, current_hash, dirs, files, links, final_target_hash)
 
-        # Execute query
+        self.logger.debug(f"Prepared data for path {path}: hash={current_hash}")
+
+        # convert lists for sql storage
+        self._convert_to_from_json(query_params)
+        # Execute query and handle deletions
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
@@ -252,13 +267,20 @@ class RemoteMSSQLConnection(RemoteDBConnection):
         }
         self.put_log(log_entry)
         self.logger.debug(f"Changes logged to database under session_id {record.get('session_id', None)}")
-        self.logger.debug(f"Changes: modified={len(modified)}, created={len(created)}, deleted={len(deleted)}")
         return True
+
+    def _convert_to_from_json(self, params):
+        """Takes a list of lists and convert to list of json string or other way around, in place"""
+        for key in ['dirs', 'files', 'links']:
+            if isinstance(params[key], list):
+                params[key] = json.dumps(params[key])
+            elif isinstance(params[key], str):
+                params[key] = json.loads(params[key])
 
     def _recursive_delete_hash(self, path: str) -> set[str]:
         """delete a hash record and all its children recursively."""
         deleted_list = []
-
+        # Get existing record
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
@@ -349,14 +371,16 @@ class RemoteMSSQLConnection(RemoteDBConnection):
         paths_set = set(paths)
         deepest_only = []
         for path in paths_set:
+            # Check if this path has any descendants in the changed set
             has_descendants = any(
                 other_path.startswith(path + '/')
                 for other_path in paths_set
                 if other_path != path
             )
+            # Only include paths that have no descendants in the changed set
             if not has_descendants:
                 deepest_only.append(path)
-
+        # Sort deepest first for consistent processing order
         deepest_only.sort(key=lambda x: (-x.count('/'), x))
         self.logger.debug(f"Deepest changed nodes only: {deepest_only}")
         return deepest_only
@@ -401,8 +425,30 @@ class RemoteMSSQLConnection(RemoteDBConnection):
                  order_by: str = "timestamp", order_direction: str = "DESC",
                  session_id_filter: Optional[str] = None,
                  older_than_days: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Get log entries from database."""
-        # Input validation (same as MySQL version)
+        """
+        Get log entries from database.
+
+        This method retrieves log entries from the local database with optional pagination,
+        ordering, and filtering capabilities.
+
+        Args:
+            limit: Maximum number of records to return (None for all records)
+            offset: Number of records to skip for pagination
+            order_by: Column name to order by (default: 'timestamp')
+            order_direction: Sort direction - 'ASC' or 'DESC' (default: 'DESC')
+            session_id_filter: Filter by session_id - None for all records,
+                              'null' for records with NULL session_id (logs to ship),
+                              or specific session_id value
+            older_than_days: Filter records older than specified number of days
+
+        Returns:
+            A list of dicts where each dict is a complete log entry from the database.
+            Returns empty list if no records found or on error.
+
+        Raises:
+            ValueError: If invalid parameters are provided
+        """
+        # Input validation
         if limit is not None and (not isinstance(limit, int) or limit <= 0):
             raise ValueError("Limit must be a positive integer")
         if not isinstance(offset, int) or offset < 0:
@@ -493,6 +539,7 @@ class RemoteMSSQLConnection(RemoteDBConnection):
 
             self.logger.debug(f"Found {len(session_ids)} sessions to consolidate")
 
+            # Consolidate each session
             for session_id in session_ids:
                 self._consolidate_logs(session_id)
 
@@ -526,8 +573,93 @@ class RemoteMSSQLConnection(RemoteDBConnection):
             self.logger.error(f"Error fetching log entry: {e}")
             return
 
-        # Rest of the consolidation logic is the same as MySQL version
-        # ... (same logic as in MySQL implementation)
+        # Group entries by log level
+        log_level_groups = {}
+        session_type = None
+        has_finish_session = False
+
+        for log_entry in result:
+            log_level = log_entry.get('log_level', 'INFO')
+            summary_message = log_entry.get('summary_message', '')
+
+            # Check for session start/finish messages
+            if 'START SESSION' in summary_message:
+                session_type = log_entry.get('detailed_message', 'Unknown Session')
+                continue
+            elif 'FINISH SESSION' in summary_message:
+                has_finish_session = True
+                continue
+
+            # Initialize log level group if not exists
+            if log_level not in log_level_groups:
+                log_level_groups[log_level] = {
+                    'entries': [],
+                    'consolidated_data': {},
+                    'site_id': log_entry.get('site_id', 'local')
+                }
+
+            log_level_groups[log_level]['entries'].append(log_entry)
+
+        # Process each log level group
+        for log_level, group_data in log_level_groups.items():
+            self.logger.debug(f"Consolidating {len(group_data['entries'])} entries for log level {log_level}")
+
+            # Consolidate JSON data for this log level
+            consolidated_changes = {}
+
+            for log_entry in group_data['entries']:
+                try:
+                    data = json.loads(log_entry.get('detailed_message', '{}'))
+                    self.logger.debug(f"Processing JSON encoded log entry")
+
+                    # Merge data by keys, deduplicating lists
+                    for key, value in data.items():
+                        if key not in consolidated_changes:
+                            consolidated_changes[key] = set()
+
+                        if isinstance(value, list):
+                            consolidated_changes[key].update(value)
+                        else:
+                            consolidated_changes[key].add(str(value))
+
+                except json.JSONDecodeError as e:
+                    self.logger.debug(f"Not a JSON encoded log entry: {e}")
+                    # Handle non-JSON entries by treating them as text
+                    text_key = 'messages'
+                    if text_key not in consolidated_changes:
+                        consolidated_changes[text_key] = set()
+                    consolidated_changes[text_key].add(log_entry.get('detailed_message', ''))
+
+            # Sort and convert sets back to lists
+            sorted_changes = {}
+            for key, value_set in consolidated_changes.items():
+                sorted_changes[key] = sorted(list(value_set))
+
+            # Create consolidated entry
+            detailed_message = json.dumps(sorted_changes, indent=2)
+
+            summary_entry = {
+                'site_id': group_data['site_id'],
+                'session_id': None if has_finish_session else session_id,
+                'log_level': log_level,
+                'summary_message': f"Consolidated {log_level} entries for session {session_id}" +
+                                   (f" ({session_type})" if session_type else ""),
+                'detailed_message': detailed_message,
+            }
+
+            # Insert consolidated entry
+            self.put_log(summary_entry)
+
+            # Delete original entries for this log level
+            log_ids_to_delete = [log_entry['log_id'] for log_entry in group_data['entries']]
+            deleted_count, failed_deletes = self.delete_log_entries(log_ids_to_delete)
+
+            if failed_deletes:
+                self.logger.warning(f"Failed to delete {len(failed_deletes)} entries: {failed_deletes}")
+
+            self.logger.debug(f"Consolidated {deleted_count} {log_level} entries for session {session_id}")
+
+        self.logger.info(f"Finished consolidating session {session_id}")
 
     def delete_log_entries(self, log_ids: list[int]) -> tuple[list, list]:
         """Delete log entries by log_id."""
@@ -600,14 +732,50 @@ class RemoteMSSQLConnection(RemoteDBConnection):
             self.logger.error(f"Error fetching orphaned entries: {e}")
             raise Exception(e)
 
+        # Extract just the path strings from the tuples
         return [row[0] for row in result]
 
-    def find_untracked_children(self) -> list[str]:
-        """Find children listed by parents but don't exist as entries."""
-        # This would need to be implemented using MSSQL JSON functions
-        # For now, returning empty list as placeholder
-        self.logger.warning("find_untracked_children not fully implemented for MSSQL")
-        return []
+    def find_untracked_children(self) -> list[Any]:
+        """
+        Find children listed by parents but don't exist as entries.
+
+        Returns:
+            List of dictionaries with keys: untracked_path, parent_path, child_name, child_type
+        """
+        query = """
+                SELECT DISTINCT CONCAT(parent.path, '/', child_name.value) as untracked_path,
+                                parent.path                                as parent_path,
+                                child_name.value                           as child_name,
+                                child_types.child_type                     as child_type
+                FROM hashtable parent
+                         CROSS JOIN (SELECT 'dirs' as child_type, parent.dirs as child_list
+                                     FROM hashtable parent
+                                     WHERE parent.dirs IS NOT NULL
+                                     UNION ALL
+                                     SELECT 'files' as child_type, parent.files as child_list
+                                     FROM hashtable parent
+                                     WHERE parent.files IS NOT NULL
+                                     UNION ALL
+                                     SELECT 'links' as child_type, parent.links as child_list
+                                     FROM hashtable parent
+                                     WHERE parent.links IS NOT NULL) as child_types
+                    CROSS APPLY OPENJSON(child_types.child_list) as child_name
+                         LEFT JOIN hashtable existing
+                ON CONCAT(parent.path, '/', child_name.value) = existing.path
+                WHERE existing.path IS NULL
+                  AND child_types.child_list IS NOT NULL
+                ORDER BY parent.path, child_name.value
+                """
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(query)
+                    result = cursor.fetchall()
+        except Exception as e:
+            self.logger.error(f"Error fetching untracked children: {e}")
+            raise Exception(e)
+
+        return [row[0] for row in result]  # Just the untracked paths
 
     def health_check(self) -> dict[str, bool]:
         """Verify that the database is alive and responding."""
@@ -620,4 +788,4 @@ class RemoteMSSQLConnection(RemoteDBConnection):
                 return {'local_db': True}
         except Exception as e:
             self.logger.error(f"Error connecting to MSSQL: {e}")
-            return {'local_db': False}
+        return {'local_db': False}

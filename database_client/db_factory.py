@@ -13,6 +13,7 @@ from .remote_mssql_untested import RemoteMSSQLConnection
 from .remote_mysql import RemoteMYSQLConnection
 from .core_mysql import CoreMYSQLConnection
 from .pipeline_mssql import PipelineMSSQLConnection
+from .pipeline_mysql import PipelineMYSQLConnection
 
 class DBClientFactory:
     def __init__(self, config: Optional[Dict] = None):
@@ -36,6 +37,8 @@ class DBClientFactory:
 
         pipeline_types = {
             'mssql': PipelineMSSQLConnection,
+            'mysql': PipelineMYSQLConnection,
+
         }
 
         # Create instances

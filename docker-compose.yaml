@@ -1,7 +1,7 @@
 services:
   mysql-squishy-db:
     image: mysql:9.3
-    container_name: mysql-squishy-db
+    container_name: mysql_squishy_db
     environment:
       MYSQL_ROOT_PASSWORD: your_root_password
       MYSQL_DATABASE: squishy_db
@@ -19,7 +19,7 @@ services:
       context: .
       dockerfile: Dockerfile_rest
     image: squishy-rest-api:v1.0
-    container_name: squishy-rest-api
+    container_name: squishy_rest_api
     environment:
       LOCAL_MYSQL_USER: your_app_user
       LOCAL_MYSQL_PASSWORD: your_user_password
@@ -30,18 +30,18 @@ services:
     networks:
       - squishy_db_default
     depends_on:
-      - mysql-squishy-db
+      - mysql_squishy_db
 
   squishy-integrity:
     build:
       context: .
       dockerfile: Dockerfile_integrity
     image: squishy-integrity:v1.0
-    container_name: squishy-integrity
+    container_name: squishy_integrity
     networks:
       - squishy_db_default
     depends_on:
-      - squishy-rest-api
+      - squishy_rest_api
 
 networks:
   squishy_db_default:

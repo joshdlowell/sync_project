@@ -1,12 +1,22 @@
 # To spin up a full suite
 
 ## location of squishy work
-/mnt/c/Users/joshu/Documents/Current_work/squishy/
+```bash
+cd /mnt/c/Users/joshu/Documents/Current_work/squishy
+```
 
 ## Base images
 python:3.12-alpine, mysql:9.3
 
 ## Quick start to bring up using docker
+### Clone the repo
+```bash
+git: clone
+```
+### cd into the directory
+```bash
+cd squishy
+```
 ## Create a container network for the pod containers
 ```bash
 docker network create --driver bridge squishy_db_default
@@ -18,16 +28,9 @@ docker network rm squishy_db_default
 ## Start the containers
 
 ### Run sql container detached
-#### My local path version
-# TODO REMOVE THIS NEXT LINE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-```bash
-cd /mnt/c/Users/joshu/Documents/Current_work/squishy
-```
-
-#### Final version (in db readme)
 ```bash
 docker run -d \
-  --name mysql-squishy-db \
+  --name mysql_squishy_db \
   --network squishy_db_default \
   -e MYSQL_ROOT_PASSWORD=your_root_password \
   -e MYSQL_DATABASE=squishy_db \
@@ -40,56 +43,62 @@ docker run -d \
 
 Check the logs to ensure the service started correctly
 ```bash
-docker logs mysql-squishy-db
+docker logs mysql_squishy_db
 ```
 
 #### Run the tests
+Ensure the correct tables are present and functioning as intended
 ```bash
-docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/tests/test_hashtable.sql
-docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/tests/test_logs.sql
-docker exec -i mysql-squishy-db mysql -u root -pyour_root_password < squishy_db/tests/test_sites_state.sql
+docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < tests/squishy_db/test_hashtable.sql
+docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < tests/squishy_db/test_logs.sql
+docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < tests/squishy_db/test_sites_state.sql
 ```
 
-### Run REST API container detached
+### Run REST API container
 #### First time through you will need to build the container image
 ```bash
-docker build -t squishy-rest-api:v2.0 . -f Dockerfile_rest
+docker build -t squishy_rest_api:v2.0 . -f Dockerfile_rest
 ```
-You can run this container for testing, or for production
+You can run this container for testing, development or, production
 
 #### Run interactive for testing
 This command will start the docker container without launching the rest api service, add the tests 
-to the packages and enable `DEBUG` (verbose) mode
+to the container and enable `DEBUG` (verbose) mode
 ```bash
 docker run -it --rm \
-  --name squishy-rest-api \
+  --name squishy_rest_api \
   --network squishy_db_default \
   -e LOCAL_DB_USER=your_app_user \
   -e LOCAL_DB_PASSWORD=your_user_password \
   -e API_SECRET_KEY=squishy_key_12345 \
   -e SITE_NAME=SIT0 \
   -e LOG_LEVEL=DEBUG \
-  -v $(pwd)/squishy_REST_API/tests:/app/squishy_REST_API/tests \
-  -v $(pwd)/database_client/tests:/app/database_client/tests \
+  -v $(pwd)/tests/squishy_REST_API:/app/tests/squishy_REST_API \
+  -v $(pwd)/tests/database_client:/app/tests/database_client \
   -p 5000:5000 \
-  squishy-rest-api:v2.0 /bin/sh
+  squishy_rest_api:v2.0 /bin/sh
 ```
 
-# TODO REMOVE THIS NEXT LINE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-******With all my local files mounted for development
+#### Run interactive for development
+This setup uses the mysql implementation for the pipeline database
 ```bash
 docker run -it --rm \
-  --name squishy-rest-api \
+  --name squishy_rest_api \
   --network squishy_db_default \
   -e LOCAL_DB_USER=your_app_user \
   -e LOCAL_DB_PASSWORD=your_user_password \
+  -e PIPELINE_DB_USER=your_app_user \
+  -e PIPELINE_DB_PASSWORD=your_user_password \
+  -e PIPELINE_DB_PORT=3306 \
   -e API_SECRET_KEY=squishy_key_12345 \
   -e LOG_LEVEL=DEBUG \
   -e SITE_NAME=SIT0 \
   -p 5000:5000 \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/squishy_REST_API:/app/squishy_REST_API \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy/database_client:/app/database_client \
-  squishy-rest-api:v2.0 /bin/sh
+  -v $(pwd)/squishy_REST_API:/app/squishy_REST_API \
+  -v $(pwd)/database_client:/app/database_client \
+  -v $(pwd)/tests/squishy_REST_API:/app/tests/squishy_REST_API \
+  -v $(pwd)/tests/database_client:/app/tests/database_client \
+  squishy_rest_api:v2.0 /bin/sh
 ```
 
 Run tests with detailed output:
@@ -98,55 +107,80 @@ python -m unittest discover squishy_REST_API/tests/ -v
 python -m unittest discover database_client/tests/ -v
 ```
 
-#### Run the container detached for production
+#### Run detached for production
 ```bash
 docker run -d \
-  --name squishy-rest-api \
+  --name squishy_rest_api \
   --network squishy_db_default \
-  -e LOCAL_MYSQL_USER=your_app_user \
-  -e LOCAL_MYSQL_PASSWORD=your_user_password \
+  -e LOCAL_DB_USER=your_app_user \
+  -e LOCAL_DB_PASSWORD=your_user_password \
+  -e PIPELINE_DB_USER=your_app_user \
+  -e PIPELINE_DB_PASSWORD=your_user_password \
+  -e PIPELINE_DB_PORT=3306 \
   -e API_SECRET_KEY=squishy_key_12345 \
   -e SITE_NAME=SIT0 \
   -p 5000:5000 \
-  squishy-rest-api:v2.0
+  squishy_rest_api:v2.0
 ```
 
 Check the logs to ensure the service started correctly
 ```bash
-docker logs squishy-rest-api
+docker logs squishy_rest_api
 ```
 
-### Run integrity interactively
+### Run integrity container
 #### First time through you will need to build the container image
 ```bash
-docker build -t squishy-integrity:v2.0 . -f Dockerfile_integrity
+docker build -t squishy_integrity:v2.0 . -f Dockerfile_integrity
 ```
 
-You can run this container for testing, or for production. In production the
+You can run this container for testing, development, or for production. 
+
+When the app is run (automatically on spin-up in production) the 
 container will reach out to the db (via the rest_api) and perform a hash of the
 files mounted to `/baseline` inside the container
+
 #### Run interactive for testing
-This command will start the docker container in `DEBUG` (verbose) mode without launching 
-the integrity service and add the tests to the package.
-**Note:** There are no files mounted to the `/baseline` directory when launched this way.
+This command will start the docker container in `DEBUG` (verbose) mode without 
+launching the integrity service and add the tests to the package.
+**Note:** There are no files mounted to the `/baseline` directory when launched 
+using this command.
 
 ```bash
 docker run -it --rm \
-  --name squishy-integrity \
+  --name squishy_integrity \
   --network squishy_db_default \
   -e LOG_LEVEL=DEBUG \
-  -v $(pwd)/squishy_integrity/tests:/app/squishy_integrity/tests \
-  squishy-integrity:v2.0 /bin/sh
+  -v $(pwd)tests/squishy_integrity:/app/tests/squishy_integrity \
+  -v $(pwd)tests/integrity_check:/app/tests/integrity_check \
+  squishy_integrity:v2.0 /bin/sh
 ```
-******With all my local files mounted for development
+#### Run interactive for development
+**********mine*********
 ```bash
 docker run -it --rm \
-  --name squishy-integrity \
+  --name squishy_integrity \
   --network squishy_db_default \
-    -e LOG_LEVEL=DEBUG \
-  -v /mnt/c/Users/joshu/Documents/Current_work/squishy:/app \
+  -e LOG_LEVEL=DEBUG \
+  -v $(pwd)/squishy_integrity:/app/squishy_integrity \
+  -v $(pwd)/integrity_check:/app/integrity_check \
+  -v $(pwd)tests/squishy_integrity:/app/tests/squishy_integrity \
+  -v $(pwd)tests/integrity_check:/app/tests/integrity_check \
   -v /mnt/c/Users/joshu/Downloads:/baseline \
-  squishy-integrity:v2.0 /bin/sh
+  squishy_integrity:v2.0 /bin/sh
+```
+
+```bash
+docker run -it --rm \
+  --name squishy_integrity \
+  --network squishy_db_default \
+  -e LOG_LEVEL=DEBUG \
+  -v $(pwd)/squishy_integrity:/app/squishy_integrity \
+  -v $(pwd)/integrity_check:/app/integrity_check \
+  -v $(pwd)tests/squishy_integrity:/app/tests/squishy_integrity \
+  -v $(pwd)tests/integrity_check:/app/tests/integrity_check \
+  -v </put/some/useful/path/here>:/baseline \
+  squishy_integrity:v2.0 /bin/sh
 ```
 
 Run tests with detailed output:
@@ -159,25 +193,129 @@ python -m unittest discover rest_client/tests/ -v
 ```
 
 #### Run the container detached for production
+**********mine*********
 ```bash
 docker run -d \
-  --name squishy-integrity \
-  --network squishy_db_default \
-    -v <location of baseline>:/baseline \
-  squishy-integrity:v1.2
-```
-************** for my testing
-```bash
-docker run -d \
-  --name squishy-integrity \
+  --name squishy_integrity \
   --network squishy_db_default \
   -v /mnt/c/Users/joshu/Downloads:/baseline \
-  squishy-integrity:v1.2
+  squishy_integrity:v2.0
+```
+
+```bash
+docker run -d \
+  --name squishy_integrity \
+  --network squishy_db_default \
+    -v <location of baseline>:/baseline \
+  squishy_integrity:v2.0
 ```
 
 Check the logs to ensure the service is running
 ```bash
 docker logs squishy-integrity
+```
+
+### Run Coordinator container
+#### First time through you will need to build the container image
+```bash
+docker build -t squishy_coordinator:v1.0 . -f Dockerfile_coordinator
+```
+You can run this container for testing, development, or for production
+
+When the app is run (automatically on spin-up in production) the 
+container will reach out to the db (via the rest_api) and the core instance
+(via the core's rest_api) to do hash comparisons, check for inconsistency in
+the database and perform demand hashing on files mounted to `/baseline` 
+inside the container.
+
+#### Run interactive for testing
+This command will start the docker container without launching the coordinator service, add the tests 
+to the packages and enable `DEBUG` (verbose) mode
+**********mine*********
+```bash
+docker run -it --rm \
+  --name squishy_coordinator \
+  --network squishy_db_default \
+  -e LOG_LEVEL=DEBUG \
+  -e SITE_NAME=SIT0 \
+  -v $(pwd)/tests/squishy_coordinator:/app/tests/squishy_coordinator \
+  -v $(pwd)/tests/rest_client:/app/tests/rest_client \
+  -v $(pwd)/tests/integrity_check:/app/tests/integrity_check \
+  -v $(pwd)/tests/squishy_coordinator:/app/tests/squishy_coordinator \
+  -v /mnt/c/Users/joshu/Downloads:/baseline \
+  squishy_coordinator:v1.0 /bin/sh
+```
+
+```bash
+docker run -it --rm \
+  --name squishy_coordinator \
+  --network squishy_db_default \
+  -e LOG_LEVEL=DEBUG \
+  -e SITE_NAME=SIT0 \
+  -v $(pwd)/tests/squishy_coordinator:/app/tests/squishy_coordinator \
+  -v $(pwd)/tests/rest_client:/app/tests/rest_client \
+  -v $(pwd)/tests/integrity_check:/app/tests/integrity_check \
+  -v $(pwd)/tests/squishy_coordinator:/app/tests/squishy_coordinator \
+  -v </put/some/useful/path/here>:/baseline \
+  squishy_coordinator:v1.0 /bin/sh
+```
+#### Run interactive for development
+*********mine*********
+```bash
+docker run -it --rm \
+  --name squishy_coordinator \
+  --network squishy_db_default \
+  -e LOG_LEVEL=DEBUG \
+  -e SITE_NAME=SIT0 \
+  -v $(pwd)/squishy_coordinator:/app/squishy_coordinator \
+  -v $(pwd)/rest_client:/app/rest_client \
+  -v $(pwd)/integrity_check:/app/integrity_check \
+  -v $(pwd)/squishy_coordinator:/app/squishy_coordinator \
+  -v $(pwd)/tests/squishy_coordinator:/app/tests/squishy_coordinator \
+  -v $(pwd)/tests/rest_client:/app/tests/rest_client \
+  -v $(pwd)/tests/integrity_check:/app/tests/integrity_check \
+  -v $(pwd)/tests/squishy_coordinator:/app/tests/squishy_coordinator \
+  -v /mnt/c/Users/joshu/Downloads:/baseline \
+  squishy_coordinator:v1.0 /bin/sh
+```
+
+```bash
+docker run -it --rm \
+  --name squishy_coordinator \
+  --network squishy_db_default \
+  -e LOG_LEVEL=DEBUG \
+  -e SITE_NAME=SIT0 \
+  -v $(pwd)/squishy_coordinator:/app/squishy_coordinator \
+  -v $(pwd)/rest_client:/app/rest_client \
+  -v $(pwd)/integrity_check:/app/integrity_check \
+  -v $(pwd)/squishy_coordinator:/app/squishy_coordinator \
+  -v $(pwd)/tests/squishy_coordinator:/app/tests/squishy_coordinator \
+  -v $(pwd)/tests/rest_client:/app/tests/rest_client \
+  -v $(pwd)/tests/integrity_check:/app/tests/integrity_check \
+  -v $(pwd)/tests/squishy_coordinator:/app/tests/squishy_coordinator \
+  -v </put/some/useful/path/here>:/baseline \
+  squishy_coordinator:v1.0 /bin/sh
+```
+
+Run tests with detailed output:
+```bash
+python -m unittest discover squishy_REST_API/tests/ -v
+python -m unittest discover database_client/tests/ -v
+```
+
+#### Run the container detached for production
+```bash
+docker run -d \
+  --name squishy_coordinator \
+  --network squishy_db_default \
+  -e SITE_NAME=SIT0 \
+  -v </put/some/useful/path/here>:/baseline \
+  squishy_coordinator:v1.0
+```
+
+Check the logs to ensure the service started correctly
+```bash
+docker logs squishy_coordinator
 ```
 
 ## Quicker start to bring up using docker-compose

@@ -35,6 +35,21 @@ CREATE TABLE sites (
     INDEX idx_current_hash (current_hash),
     INDEX idx_last_updated (last_updated)
 );
+
+-- Sites and their current hash states - references site_list
+CREATE TABLE remotes_hash_status (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    site_name VARCHAR(5) NOT NULL,
+    path TEXT NOT NULL,
+    current_hash VARCHAR(40) NOT NULL, -- Not case sensitive
+    last_updated INT UNSIGNED DEFAULT (UNIX_TIMESTAMP()) ON UPDATE (UNIX_TIMESTAMP()),
+
+    -- Foreign key to authoritative list
+    FOREIGN KEY (site_name) REFERENCES site_list(site_name) ON DELETE CASCADE,
+
+    INDEX idx_site_name (site_name)
+);
+
 -- Procedure to sync operational tables when site_list changes
 DELIMITER //
 CREATE PROCEDURE SyncSiteOperationalData()

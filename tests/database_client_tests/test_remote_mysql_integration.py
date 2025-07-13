@@ -6,7 +6,8 @@ from mysql.connector import Error
 import json
 import time
 
-from squishy_REST_API.remote_mysql import RemoteMYSQLConnection
+from database_client.remote_mysql import  RemoteMYSQLConnection
+# from squishy_REST_API.remote_mysql import RemoteMYSQLConnection
 
 
 class TestRemoteMYSQLIntegration(unittest.TestCase):
@@ -27,9 +28,9 @@ class TestRemoteMYSQLIntegration(unittest.TestCase):
         """Set up test database connection."""
         cls.db_config = {
             'host': os.getenv('MYSQL_HOST', 'localhost'),
-            'database': os.getenv('MYSQL_DATABASE', 'test_db'),
-            'user': os.getenv('MYSQL_USER', 'test_user'),
-            'password': os.getenv('MYSQL_PASSWORD', 'test_pass'),
+            'database': os.getenv('MYSQL_DATABASE', 'squishy_db'),
+            'user': os.getenv('MYSQL_USER', 'your_app_user'),
+            'password': os.getenv('MYSQL_PASSWORD', 'your_user_password'),
             'port': int(os.getenv('MYSQL_PORT', 3306))
         }
 
@@ -249,7 +250,7 @@ class TestRemoteMYSQLIntegration(unittest.TestCase):
     def test_put_and_get_logs(self):
         """Test inserting and retrieving log entries."""
         log_entry = {
-            'site_id': 'test_site',
+            'site_id': 'test1',
             'log_level': 'INFO',
             'session_id': 'test_session',
             'summary_message': 'Test integration log',
@@ -272,7 +273,7 @@ class TestRemoteMYSQLIntegration(unittest.TestCase):
                 break
 
         self.assertIsNotNone(test_log)
-        self.assertEqual(test_log['site_id'], 'test_site')
+        self.assertEqual(test_log['site_id'], 'test1')
         self.assertEqual(test_log['log_level'], 'INFO')
         self.assertEqual(test_log['session_id'], 'test_session')
         self.assertEqual(test_log['summary_message'], 'Test integration log')

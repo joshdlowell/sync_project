@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch, Mock
 
+# import squishy_integrity
+
 
 class TestInit(unittest.TestCase):
     def test_version_import(self):

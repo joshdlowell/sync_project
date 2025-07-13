@@ -215,6 +215,7 @@ class TestMerkleTreeService(unittest.TestCase):
         self.mock_hash_storage.put_log.assert_called_once_with(
             message="test message",
             detailed_message="detailed message",
+            log_level=None,
             session_id="test_session"
         )
 

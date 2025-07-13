@@ -1,9 +1,10 @@
 import unittest
 from unittest.mock import Mock, MagicMock
 from typing import Dict, Any, List
+import os
 
-from squishy_REST_API.db_implementation import DBInstance
-from squishy_REST_API.db_interfaces import RemoteDBConnection, CoreDBConnection, PipelineDBConnection
+from database_client.db_implementation import DBInstance
+from database_client.db_interfaces import RemoteDBConnection, CoreDBConnection, PipelineDBConnection
 
 
 class TestDBInstance(unittest.TestCase):
@@ -19,6 +20,29 @@ class TestDBInstance(unittest.TestCase):
             core_db=self.mock_core_db,
             pipeline_db=self.mock_pipeline_db
         )
+
+        test_env_vars = {
+            'LOCAL_DB_USER': 'test-user',
+            'LOCAL_DB_PASSWORD': 'test-secret-key',
+            'SITE_NAME': 'test1',
+            'API_SECRET_KEY': 'test-secret-key',
+            # Add other required env vars here
+        }
+
+        # Store original values to restore later
+        self.original_env = {}
+        for key, value in test_env_vars.items():
+            self.original_env[key] = os.environ.get(key)
+            os.environ[key] = value
+
+    def tearDown(self):
+        """Clean up after each test method."""
+        # Restore original environment variables
+        for key, original_value in self.original_env.items():
+            if original_value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = original_value
 
     def test_init_with_all_dbs(self):
         """Test initialization with all database types."""

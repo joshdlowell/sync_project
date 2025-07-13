@@ -1,13 +1,14 @@
 import unittest
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any
+import os
 
-from squishy_REST_API.db_factory import DBClientFactory
-from squishy_REST_API.db_implementation import DBInstance
-from squishy_REST_API.remote_memory import RemoteInMemoryConnection
-from squishy_REST_API.remote_mysql import RemoteMYSQLConnection
-from squishy_REST_API.core_mysql import CoreMYSQLConnection
-from squishy_REST_API.pipeline_mssql import PipelineMSSQLConnection
+from database_client.db_factory import DBClientFactory
+from database_client.db_implementation import DBInstance
+from database_client.remote_memory import RemoteInMemoryConnection
+from database_client.remote_mysql import RemoteMYSQLConnection
+from database_client.core_mysql import CoreMYSQLConnection
+from database_client.pipeline_mssql import PipelineMSSQLConnection
 
 
 class TestDBClientFactory(unittest.TestCase):
@@ -40,6 +41,30 @@ class TestDBClientFactory(unittest.TestCase):
             }
         }
 
+
+        test_env_vars = {
+            'LOCAL_DB_USER': 'test-user',
+            'LOCAL_DB_PASSWORD': 'test-secret-key',
+            'SITE_NAME': 'test1',
+            'API_SECRET_KEY': 'test-secret-key',
+            # Add other required env vars here
+        }
+
+        # Store original values to restore later
+        self.original_env = {}
+        for key, value in test_env_vars.items():
+            self.original_env[key] = os.environ.get(key)
+            os.environ[key] = value
+
+    def tearDown(self):
+        """Clean up after each test method."""
+        # Restore original environment variables
+        for key, original_value in self.original_env.items():
+            if original_value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = original_value
+
     def test_init_with_config(self):
         """Test factory initialization with config."""
         factory = DBClientFactory(self.mock_config)
@@ -50,9 +75,9 @@ class TestDBClientFactory(unittest.TestCase):
         factory = DBClientFactory()
         self.assertEqual(factory.config, {})
 
-    @patch('squishy_REST_API.db_factory.RemoteMYSQLConnection')
-    @patch('squishy_REST_API.db_factory.CoreMYSQLConnection')
-    @patch('squishy_REST_API.db_factory.PipelineMSSQLConnection')
+    @patch('database_client.db_factory.RemoteMYSQLConnection')
+    @patch('database_client.db_factory.CoreMYSQLConnection')
+    @patch('database_client.db_factory.PipelineMSSQLConnection')
     def test_create_client_with_all_types(self, mock_pipeline, mock_core, mock_remote):
         """Test creating client with all database types configured."""
         # Setup mocks
@@ -93,7 +118,7 @@ class TestDBClientFactory(unittest.TestCase):
         self.assertEqual(db_instance.core_db, mock_core_instance)
         self.assertEqual(db_instance.pipeline_db, mock_pipeline_instance)
 
-    @patch('squishy_REST_API.db_factory.RemoteInMemoryConnection')
+    @patch('database_client.db_factory.RemoteInMemoryConnection')
     def test_create_client_with_memory_db(self, mock_memory):
         """Test creating client with in-memory database."""
         config = {

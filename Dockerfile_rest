@@ -14,8 +14,8 @@ RUN apk add --no-cache \
 COPY ./driver_packages /driver_packages
 
 # Install Microsoft ODBC Driver 18 for SQL Server
-RUN apk add --allow-untrusted msodbcsql18_18.5.1.1-1_amd64.apk && \
-    apk add --allow-untrusted mssql-tools18_18.4.1.1-1_amd64.apk
+RUN apk add --allow-untrusted /driver_packages/msodbcsql18_18.5.1.1-1_amd64.apk && \
+    apk add --allow-untrusted /driver_packages/mssql-tools18_18.4.1.1-1_amd64.apk
 
 # Install Python dependencies
 RUN pip install --no-cache-dir \
@@ -39,8 +39,8 @@ RUN apk add --no-cache \
 COPY ./driver_packages /driver_packages
 
 # Install Microsoft ODBC Driver 18 for SQL Server in final image
-RUN apk add --allow-untrusted msodbcsql18_18.5.1.1-1_amd64.apk && \
-    apk add --allow-untrusted mssql-tools18_18.4.1.1-1_amd64.apk && \
+RUN apk add --allow-untrusted /driver_packages/msodbcsql18_18.5.1.1-1_amd64.apk && \
+    apk add --allow-untrusted /driver_packages/mssql-tools18_18.4.1.1-1_amd64.apk && \
     rm -rf /driver_packages
 
 # Copy installed packages from builder

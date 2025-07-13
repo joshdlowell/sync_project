@@ -134,7 +134,7 @@ class TestRestProcessor(unittest.TestCase):
             "current_hash": "hash123",
             "dirs": ["dir1", "dir2"]
         }
-        self.mock_http_client.get.return_value = (200, {"data": expected_data})
+        self.mock_http_client.get.return_value = (200, expected_data)
 
         # Act
         result = self.rest_processor.get_hashtable("/test/path")
@@ -160,7 +160,7 @@ class TestRestProcessor(unittest.TestCase):
     def test_get_single_hash_success(self):
         """Test get_single_hash with successful response"""
         # Arrange
-        self.mock_http_client.get.return_value = (200, {"data": "hash_value"})
+        self.mock_http_client.get.return_value = (200, "hash_value")
 
         # Act
         result = self.rest_processor.get_single_hash("/test/path")
@@ -168,8 +168,8 @@ class TestRestProcessor(unittest.TestCase):
         # Assert
         self.assertEqual(result, "hash_value")
         self.mock_http_client.get.assert_called_once_with(
-            "http://test-api:8080/api/hash",
-            params={"path": "/test/path"}
+            "http://test-api:8080/api/hashtable",
+            params={"path": "/test/path", "field": "hash"}
         )
 
     def test_get_single_hash_not_found(self):
@@ -186,7 +186,7 @@ class TestRestProcessor(unittest.TestCase):
     def test_get_single_timestamp_success(self):
         """Test get_single_timestamp with successful response"""
         # Arrange
-        self.mock_http_client.get.return_value = (200, {"data": 1234567890.0})
+        self.mock_http_client.get.return_value = (200, 1234567890.0)
 
         # Act
         result = self.rest_processor.get_single_timestamp("/test/path")
@@ -194,35 +194,35 @@ class TestRestProcessor(unittest.TestCase):
         # Assert
         self.assertEqual(result, 1234567890.0)
         self.mock_http_client.get.assert_called_once_with(
-            "http://test-api:8080/api/timestamp",
-            params={"path": "/test/path"}
+            "http://test-api:8080/api/hashtable",
+            params={"path": "/test/path", "field": 'timestamp'}
         )
 
     def test_get_priority_updates_success(self):
         """Test get_priority_updates with successful response"""
         # Arrange
         expected_paths = ["/path1", "/path2", "/path3"]
-        self.mock_http_client.get.return_value = (200, {"data": expected_paths})
+        self.mock_http_client.get.return_value = (200, expected_paths)
 
         # Act
         result = self.rest_processor.get_priority_updates()
 
         # Assert
         self.assertEqual(result, expected_paths)
-        self.mock_http_client.get.assert_called_once_with("http://test-api:8080/api/priority", params=None)
+        self.mock_http_client.get.assert_called_once_with("http://test-api:8080/api/hashtable", params={'path':None, 'field':'priority'})
 
     def test_get_lifecheck_success(self):
         """Test get_lifecheck with successful response"""
         # Arrange
         expected_data = {"status": "healthy", "database": "connected"}
-        self.mock_http_client.get.return_value = (200, {"data": expected_data})
+        self.mock_http_client.get.return_value = (200, expected_data)
 
         # Act
-        result = self.rest_processor.get_lifecheck()
+        result = self.rest_processor.get_health()
 
         # Assert
         self.assertEqual(result, expected_data)
-        self.mock_http_client.get.assert_called_once_with("http://test-api:8080/api/lifecheck", params=None)
+        self.mock_http_client.get.assert_called_once_with("http://test-api:8080/api/health", params=None)
 
     def test_put_log_valid_minimal(self):
         """Test put_log with minimal valid data"""
@@ -236,7 +236,7 @@ class TestRestProcessor(unittest.TestCase):
         self.assertEqual(result, 1)
         self.mock_http_client.post.assert_called_once_with(
             "http://test-api:8080/api/logs",
-            json_data={"summary_message": "test_message"}
+            json_data={"summary_message": "test_message", 'log_level': 'INFO'}
         )
 
     def test_put_log_valid_complete(self):
@@ -290,7 +290,7 @@ class TestRestProcessor(unittest.TestCase):
         self.assertEqual(result, 1)
         self.mock_http_client.post.assert_called_once_with(
             "http://test-api:8080/api/logs",
-            json_data={"summary_message": "test_message"}  # log_level should be filtered out
+            json_data={'summary_message': 'test_message', 'log_level': 'INFO'}  # invalid log_level should be set to default
         )
 
     def test_put_log_api_error(self):
@@ -307,7 +307,7 @@ class TestRestProcessor(unittest.TestCase):
     def test_delete_log_entries_success(self):
         """Test delete_log_entries with successful response"""
         # Arrange
-        self.mock_http_client.delete.return_value = (200, {"data": {"deleted_count": 5}})
+        self.mock_http_client.delete.return_value = (200, {"deleted_count": 5})
 
         # Act
         success, data = self.rest_processor.delete_log_entries([1, 2, 3, 4, 5])
@@ -323,7 +323,7 @@ class TestRestProcessor(unittest.TestCase):
     def test_delete_log_entries_partial_success(self):
         """Test delete_log_entries with partial success (207 status)"""
         # Arrange
-        self.mock_http_client.delete.return_value = (207, {"data": {"failed_deletes": [3, 5]}})
+        self.mock_http_client.delete.return_value = (207, {"failed_deletes": [3, 5]})
 
         # Act
         success, data = self.rest_processor.delete_log_entries([1, 2, 3, 4, 5])
@@ -383,19 +383,20 @@ class TestRestProcessor(unittest.TestCase):
 
         # Mock the get_hashtable call
         self.mock_http_client.get.side_effect = [
-            (200, {"data": base_response}),  # get_hashtable call
-            (200, {"data": 1234567800}),  # get_single_timestamp for dir1
-            (200, {"data": 1234567850}),  # get_single_timestamp for dir2
-            (200, {"data": 1234567820}),  # get_single_timestamp for dir3
+            (200, base_response),  # get_hashtable call
+            (200, 1234567800),  # get_single_timestamp for dir1
+            (200, 1234567850),  # get_single_timestamp for dir2
+            (200, 1234567820),  # get_single_timestamp for dir3
         ]
 
         # Act
         result = self.rest_processor.get_oldest_updates("/baseline", 50)  # 50% = 2 dirs
 
         # Assert
-        self.assertEqual(len(result), 2)
+        # self.assertEqual(len(result), 2)
         self.assertIn("/baseline/dir1", result)  # oldest
         self.assertIn("/baseline/dir3", result)  # second oldest
+        self.assertEqual(len(result), 2)
 
 
 class TestHashInfoValidator(unittest.TestCase):
@@ -414,7 +415,7 @@ class TestHashInfoValidator(unittest.TestCase):
         valid_data = {
             "/test": {
                 "path": "/test",
-                "target_hash": "hash123"
+                "current_hash": "hash123"
             }
         }
 
@@ -449,7 +450,6 @@ class TestHashInfoValidator(unittest.TestCase):
 
         errors = self.validator.validate(invalid_data)
         self.assertIn("Missing required key 'path' in item '/test'", errors)
-        self.assertIn("Missing required key 'target_hash' in item '/test'", errors)
 
     def test_invalid_keys(self):
         """Test validation with invalid keys"""

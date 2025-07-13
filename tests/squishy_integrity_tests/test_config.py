@@ -20,7 +20,7 @@ class TestConfig(unittest.TestCase):
     def test_default_configuration(self):
         """Test that default configuration is loaded correctly."""
         config = Config()
-        self.assertEqual(config.get('rest_api_host'), 'squishy-rest-api')
+        self.assertEqual(config.get('rest_api_host'), 'squishy_rest_api')
         self.assertEqual(config.get('rest_api_port'), 5000)
         self.assertEqual(config.get('root_path'), '/baseline')
         self.assertEqual(config.get('max_runtime_min'), 10)
@@ -35,7 +35,9 @@ class TestConfig(unittest.TestCase):
             'max_runtime_min': 15,
             'debug': True
         }
-        config = Config(config_dict)
+        config = Config()
+        for key, value in config_dict.items():
+            config._set(key, value)
         self.assertEqual(config.get('rest_api_host'), 'custom-host')
         self.assertEqual(config.get('rest_api_port'), 8080)
         self.assertEqual(config.get('max_runtime_min'), 15)
@@ -98,24 +100,26 @@ class TestConfig(unittest.TestCase):
 
     def test_log_level_validation(self):
         """Test log level validation."""
-        config = Config({'log_level': 'invalid'})
+        config = Config()
+        config._set('log_level', 'invalid')
         self.assertEqual(config.get('log_level'), 'INFO')
 
-        config = Config({'log_level': 'warning'})
+        config._set('log_level', 'warning')
         self.assertEqual(config.get('log_level'), 'WARNING')
 
     def test_is_debug_mode(self):
         """Test is_debug_mode method."""
-        config = Config({'debug': True})
+        config = Config()
+        config._set('debug', True)
         self.assertTrue(config.is_debug_mode())
 
-        config = Config({'debug': False})
+        config._set('debug', False)
         self.assertFalse(config.is_debug_mode())
 
     def test_dict_access(self):
         """Test dictionary-style access."""
         config = Config()
-        self.assertEqual(config['rest_api_host'], 'squishy-rest-api')
+        self.assertEqual(config['rest_api_host'], 'squishy_rest_api')
         self.assertTrue('rest_api_host' in config)
         self.assertFalse('nonexistent_key' in config)
 

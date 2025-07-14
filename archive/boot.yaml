@@ -1,4 +1,0 @@
-local_db:
-  'http://restapi:5000'
-root_path:
-  '/squishy/tests'

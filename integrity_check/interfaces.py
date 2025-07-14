@@ -90,7 +90,19 @@ class MerkleTreeInterface(ABC):
         pass
 
     @abstractmethod
-    def put_log_w_session(self, message: str, detailed_message: str=None) -> int:
+    def put_log_w_session(self, message: str, detailed_message: str=None, log_level: str=None) -> int:
+        """
+        Send a log entry to the local database via REST API.
+        Leverages the integrity service to add the current session_id to the log entry
+
+        Args:
+            message: The log entry summary_message
+            detailed_message: The log entry detailed_message (optional)
+            log_level: The log entry log_level (optional: default if None)
+
+        Returns:
+            int representing the number of updates sent to the REST API that were successful
+        """
         pass
 
     @abstractmethod

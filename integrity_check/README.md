@@ -398,17 +398,17 @@ SHA-1 hash function implementation.
 
 ```
 integrity_check/
-├── __init__.py                      # Package initialization
-├── app_factory.py                   # Application factory
+├── __init__.py             # Package initialization
+├── app_factory.py          # Application factory
 ├── configuration/
-│   ├── config.py                    # Main configuration
-│   └── logging_config.py            # Logging configuration
-├── file_hasher.py                   # File hashing methods
-├── implementations.py               # Concrete implementations
-├── interfaces.py                    # Abstract interfaces
-├── merkle_tree_service.py          # Main service class
-├── tree_walker.py                  # Directory traversal
-└── validators.py                    # Path validation
+│   ├── config.py           # Main configuration
+│   └── logging_config.py   # Logging configuration
+├── file_hasher.py          # File hashing methods
+├── implementations.py      # Concrete implementations
+├── interfaces.py           # Abstract interfaces
+├── merkle_tree_service.py  # Main service class
+├── tree_walker.py          # Directory traversal
+└── validators.py           # Path validation
 ```
 
 ## Error Handling

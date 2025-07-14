@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
 from .interfaces import FileSystemInterface, HashFunction
-from .configuration import logger
+from .configuration import config
 
 
 class FileHasher:
@@ -29,9 +29,9 @@ class FileHasher:
     def hash_directory(self, hash_info: Dict[str, Any]) -> str | None:
         """Hash a directory based on its contents"""
         if not hash_info.get('path', None):
-            logger.error(f"Failed to hash_directory for hash_info with no path key")
+            config.logger.error(f"Failed to hash_directory for hash_info with no path key")
             return None
-        logger.debug("Getting directory hashable string...")
+        config.logger.debug("Getting directory hashable string...")
         dir_representation = self._get_directory_representation(hash_info)
         return self.hash_function.hash_string(dir_representation)
 

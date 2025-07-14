@@ -2,7 +2,7 @@ import hashlib
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 
-from .configuration import config, logger
+from .configuration import config
 from .interfaces import FileSystemInterface, HashStorageInterface, HashFunction
 
 
@@ -27,7 +27,7 @@ class StandardFileSystem(FileSystemInterface):
             # Convert generator to list
             return list(path_obj.walk())
         except OSError as e:
-            logger.error(f"Failed to walk path {path}: {e}")
+            config.logger.error(f"Failed to walk path {path}: {e}")
             return [(None, None, None)]
 
     def read_file_chunks(self, path: str, chunk_size: int = 65536):

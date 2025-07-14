@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from .configuration import logger
+from .configuration import config
 
 
 class PathValidator:
@@ -14,7 +14,7 @@ class PathValidator:
 
             return str(target).startswith(str(root))
         except (OSError, ValueError):
-            logger.error(f"Failed to validate root and dir paths: {root_path} {dir_path}")
+            config.logger.error(f"Failed to validate root and dir paths: {root_path} {dir_path}")
             return False
 
     def validate_path_exists(self, path: str) -> bool:

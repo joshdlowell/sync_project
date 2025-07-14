@@ -1,6 +1,6 @@
 from rest_client import RestClient
 
-from .configuration import config, logger
+from .configuration import config
 from .merkle_tree_service import MerkleTreeService
 from .implementations import StandardFileSystem, RestHashStorage, SHA1HashFunction
 from .validators import PathValidator
@@ -29,7 +29,7 @@ class IntegrityCheckFactory:
         path_validator = PathValidator()
         tree_walker = DirectoryTreeWalker(file_system)
         file_hasher = FileHasher(file_system, hash_function)
-        logger.info("Application configured services with default configuration")
+        config.logger.info("Application configured services with default configuration")
 
         # Create main service
         return MerkleTreeService(rest_storage, tree_walker, file_hasher, path_validator)

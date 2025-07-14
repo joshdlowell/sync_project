@@ -1,7 +1,7 @@
 from typing import Dict, List
 
 from .interfaces import FileSystemInterface
-from .configuration import logger
+from .configuration import config
 
 class DirectoryTreeWalker:
     """Handles directory tree traversal and categorization"""
@@ -23,7 +23,7 @@ class DirectoryTreeWalker:
 
         # Early check for failed walk
         if not walk_results or walk_results[0] == (None, None, None):
-            logger.warning(f"Parent path does not exist or is inaccessible: {parent_path}")
+            config.logger.warning(f"Parent path does not exist or is inaccessible: {parent_path}")
             return False
 
         tree_dict = {}
@@ -36,8 +36,7 @@ class DirectoryTreeWalker:
                 "files": sorted(clean_files),
                 "links": sorted(clean_links)
             }
-        logger.debug("Cleaned and sorted files lists from get_tree_structure")
-        logger.debug("Collected local baseline file tree")
+        config.logger.debug("Collected and sorted local baseline file tree")
         return tree_dict
 
     def _categorize_files(self, dir_path, item_files):

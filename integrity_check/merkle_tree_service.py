@@ -5,7 +5,7 @@ from .interfaces import HashStorageInterface, MerkleTreeInterface
 from .validators import PathValidator
 from .tree_walker import DirectoryTreeWalker
 from .file_hasher import FileHasher
-from .configuration import config, logger
+from .configuration import config
 
 
 class MerkleTreeService(MerkleTreeInterface):
@@ -33,43 +33,44 @@ class MerkleTreeService(MerkleTreeInterface):
         """
         # Validate paths
         root_path = config.get('root_path')
-        logger.debug(f"Validating dir_path ({dir_path}) and root_path ({root_path})")
+        config.logger.debug(f"Validating dir_path ({dir_path}) and root_path ({root_path})")
         if not self.path_validator.validate_root_and_dir_paths(root_path, dir_path):
-            logger.error(f"dir_path ({dir_path}) is not a child of root_path ({root_path})")
+            config.logger.error(f"dir_path ({dir_path}) is not a child of root_path ({root_path})")
             return None
 
         # Find the deepest existing directory within the root path
         target_dir = self._find_deepest_existing_directory(root_path, dir_path)
         if target_dir is None:
-            logger.error(f"No valid directory path found from root ({root_path}) to target ({dir_path})")
+            config.logger.error(f"No valid directory path found from root ({root_path}) to target ({dir_path})")
             return None
 
         # Get tree structure for the target directory
         tree_dict = self.tree_walker.get_tree_structure(target_dir)
         if tree_dict is False:
-            logger.error(f"Failed to get tree structure for {target_dir}")
+            config.logger.error(f"Failed to get tree structure for {target_dir}")
             return None
 
         # Check if root is empty (only if we ended up at root)
         if self._is_directory_empty(tree_dict, root_path):
-            logger.warning(f"Root path ({root_path}) is empty, check that baseline is available and mounted.")
+            config.logger.warning(f"Root path ({root_path}) is empty, check that baseline is available and mounted.")
             return None
 
         # Check if database and API are reachable before starting
         if not self._check_liveness():
-            logger.error("Integrity Check unable to contact database or API.")
-        logger.info(f"Integrity Check passed all startup checks.")
+            config.logger.error("Integrity Check unable to contact database or API.")
+            return None
+        config.logger.info(f"Integrity Check passed all startup checks.")
 
         # Compute Merkle tree hash
-        logger.info(f"Computing Merkle hash for directory: {target_dir}")
+        config.logger.info(f"Computing Merkle hash for directory: {target_dir}")
         dir_hash = self._compute_merkle_recursive(target_dir, tree_dict)
 
         # Update parent hashes if we're not at the root
         if root_path != target_dir:
-            logger.info("Recomputing parent hashes")
+            config.logger.info("Recomputing parent hashes")
             self._recompute_parent_hashes(root_path, target_dir)
 
-        logger.info(f"Successfully computed Merkle hash for {dir_path}")
+        config.logger.info(f"Successfully computed Merkle hash for {dir_path}")
         return dir_hash
 
     def _compute_merkle_recursive(self, dir_path: str, tree_dict: Dict[str, Any]) -> str:
@@ -116,11 +117,23 @@ class MerkleTreeService(MerkleTreeInterface):
         self._get_directory_hash(dir_hash_info)
         # Update the database with hash information learned in this directory
         self._put_to_hash_database(hash_info_list)
-        logger.debug(f"Returning from merkle recursive for {dir_path}")
+        config.logger.debug(f"Returning from merkle recursive for {dir_path}")
         return dir_hash_info["current_hash"]
 
-    def put_log_w_session(self, message: str, detailed_message: str=None) -> int:
-        return self.hash_storage.put_log(message=message, detailed_message=detailed_message, session_id=config.session_id)
+    def put_log_w_session(self, message: str, detailed_message: str=None, log_level: str=None) -> int:
+        """
+        Send a log entry to the local database via REST API.
+        Leverages the integrity service to add the current session_id to the log entry
+
+        Args:
+            message: The log entry summary_message
+            detailed_message: The log entry detailed_message (optional)
+            log_level: The log entry log_level (optional: default if None)
+
+        Returns:
+            int representing the number of updates sent to the REST API that were successful
+        """
+        return self.hash_storage.put_log(message=message, detailed_message=detailed_message, log_level=log_level, session_id=config.session_id)
 
     def _find_deepest_existing_directory(self, root_path: str, dir_path: str) -> Optional[str]:
         """
@@ -136,16 +149,16 @@ class MerkleTreeService(MerkleTreeInterface):
         current_path = dir_path
 
         while True:
-            logger.debug(f"Checking if directory exists: {current_path}")
+            config.logger.debug(f"Checking if directory exists: {current_path}")
             tree_dict = self.tree_walker.get_tree_structure(current_path)
 
             if tree_dict is not False:
-                logger.debug(f"Found existing directory: {current_path}")
+                config.logger.debug(f"Found existing directory: {current_path}")
                 return current_path
 
             # If we've reached the root and it doesn't exist, that's an error
             if current_path == root_path:
-                logger.error(f"Root path does not exist: {root_path}")
+                config.logger.error(f"Root path does not exist: {root_path}")
                 return None
 
             # Move up one directory level
@@ -153,7 +166,7 @@ class MerkleTreeService(MerkleTreeInterface):
 
             # Prevent infinite loop - if rsplit doesn't change the path, we're at filesystem root
             if parent_path == current_path or parent_path == '':
-                logger.error(f"Reached filesystem root without finding valid directory")
+                config.logger.error(f"Reached filesystem root without finding valid directory")
                 return None
 
             current_path = parent_path
@@ -183,9 +196,9 @@ class MerkleTreeService(MerkleTreeInterface):
             repeats -= 1
             status = self.hash_storage.get_health()
             if not status or not status.get('status') == 'healthy':
-                logger.critical(f"REST API is not reachable will attempt {repeats} more times")
+                config.logger.critical(f"REST API is not reachable will attempt {repeats} more times")
             else:
-                logger.info("REST API and Database are reachable")
+                config.logger.info("REST API and Database are reachable")
                 return True
             sleep(30)
         return False
@@ -281,10 +294,10 @@ class MerkleTreeService(MerkleTreeInterface):
     def _get_directory_hash(self, hash_info: Dict[str, Any]):
         """Update directory hash and track changes"""
         if not hash_info.get('path', None):
-            logger.error(f"Failed to get_directory_hash for hash_info with not path key")
+            config.logger.error(f"Failed to get_directory_hash for hash_info with not path key")
             return
         # Compute directory hash
-        logger.debug(f"Updating directory hash for {hash_info.get('path', None)}...")
+        config.logger.debug(f"Updating directory hash for {hash_info.get('path', None)}...")
         hash_info['current_hash'] = self.file_hasher.hash_directory(hash_info)
 
     def _recompute_parent_hashes(self, root_path: str, dir_path: str):
@@ -296,7 +309,7 @@ class MerkleTreeService(MerkleTreeInterface):
             current_path = (current_path.rsplit('/', 1))[0]
             parent_info = self.hash_storage.get_hashtable(current_path)
             if not parent_info:
-                logger.error(f"Failed to get parent info from database for path {current_path}")
+                config.logger.error(f"Failed to get parent info from database for path {current_path}")
                 return
 
             # Collect and recompute parent hash information
@@ -310,8 +323,7 @@ class MerkleTreeService(MerkleTreeInterface):
                     item_path = f"{current_path}/{item}"
                     dir_hash_info['current_content_hashes'][item] = self.hash_storage.get_single_hash(item_path)
 
-            logger.debug(f"Collected existing content hashes for {current_path} recalculation")
-            logger.debug(f"Updating directory hash for {dir_hash_info.get('path', None)}...")
+            config.logger.debug(f"Collected existing content hashes for {current_path} recalculation")
             self._get_directory_hash(dir_hash_info)
             self._put_to_hash_database(dir_hash_info)
 
@@ -331,5 +343,5 @@ class MerkleTreeService(MerkleTreeInterface):
                     'links': item.get('links', [])
                 }
             }
-            logger.debug(f"Sending hashtable entry for {item['path']}")
+            config.logger.debug(f"Sending hashtable entry for {item['path']}")
             self.hash_storage.put_hashtable(db_entry)

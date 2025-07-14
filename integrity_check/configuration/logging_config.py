@@ -11,12 +11,9 @@ from typing import Optional
 def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
     """
     Configure logging for the application.
-
     Args:
         log_level: Optional log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-                  If not provided, it will be read from the LOG_LEVEL environment variable
-                  or default to INFO.
-
+                  If not provided, it will default to INFO.
     Returns:
         Configured logger instance
     """
@@ -39,7 +36,7 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
 
     # Create formatter
     formatter = logging.Formatter(
-        '[%(asctime)s +0000] [%(process)d] [%(levelname)s] [%(name)s] %(message)s',
+        '[%(asctime)s] [%(process)d] [%(levelname)s] [%(name)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     console_handler.setFormatter(formatter)

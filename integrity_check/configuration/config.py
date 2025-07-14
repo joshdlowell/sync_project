@@ -28,21 +28,23 @@ class Config:
             cls._session_id = os.urandom(16).hex()
         return cls._instance
 
-    # Define required keys as class constants
+    # Define key requirements as class constants
     REQUIRED_KEYS = []
     SENSITIVE_KEYS = []
+    NUMERIC_KEYS = ['rest_api_port']
+    BOOLEAN_KEYS = ['debug']
 
     # Default values for configuration
     DEFAULTS = {
-        'rest_api_host': 'squishy-rest-api',
+        'rest_api_host': 'squishy_rest_api',
         'rest_api_port': 5000,
         'root_path': '/baseline',  # REQUIRED
         'debug': False,
         'log_level': 'INFO',
-        'max_retries': 3,
-        'retry_delay': 5,
-        'long_delay': 30,
-        'max_runtime_min': 10
+        # 'max_retries': 3,
+        # 'retry_delay': 5,
+        # 'long_delay': 30,
+        # 'max_runtime_min': 10
     }
 
     # Environment variable mapping
@@ -67,6 +69,7 @@ class Config:
         Raises:
             ConfigError: If required configuration is missing
         """
+        self.logger = None  # Create variable to allow for initial or update config creation
         self._config: Dict[str, Any] = self.DEFAULTS.copy()
 
         if config_dict:
@@ -76,7 +79,10 @@ class Config:
 
         self._validate_configuration()
 
-        self.logger = configure_logging(self._config.get('log_level'))
+        # If update didn't configure logging, then we do it here
+        if not self.logger:
+            log_level = self._config['log_level'] if not self._config['debug'] else 'DEBUG'
+            self.logger = configure_logging(log_level)
 
     @property
     def rest_api_url(self) -> str:
@@ -138,6 +144,9 @@ class Config:
     def update_config(self, config_dict: Dict[str, Any]) -> None:
         for key, value in config_dict.items():
             self._set(key, value)
+            if key == 'debug' and value == True:
+                self.logger = configure_logging('DEBUG')
+
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -206,6 +215,5 @@ class Config:
         return f"Config({safe_config})"
 
 
-# Default configuration instances
+# Default configuration instance
 config = Config()
-logger = config.logger

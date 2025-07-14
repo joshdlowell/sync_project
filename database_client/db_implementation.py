@@ -57,6 +57,17 @@ class DBInstance(RemoteDBConnection, CoreDBConnection, PipelineDBConnection):
             raise NotImplementedError("RemoteDBConnection implementation not provided")
         return self.remote_db.delete_log_entries(log_ids)
 
+    def consolidate_logs(self) -> bool:
+        """
+        Consolidate log entries by session ID, grouping and deduplicating JSON-encoded detailed messages.
+
+        Returns:
+            bool: True if consolidation was successful, False otherwise
+        """
+        if not self.remote_db:
+            raise NotImplementedError("RemoteDBConnection implementation not provided")
+        return self.remote_db.consolidate_logs()
+
     def health_check(self) -> dict[str, bool]:
         if not self.remote_db:
             raise NotImplementedError("RemoteDBConnection implementation not provided")
@@ -102,6 +113,11 @@ class DBInstance(RemoteDBConnection, CoreDBConnection, PipelineDBConnection):
         if not self.core_db:
             raise NotImplementedError("CoreDBConnection implementation not provided")
         return self.core_db.get_site_sync_status()
+
+    def put_remote_hash_status(self, update_list: list[dict[str,str]], site_name: str, drop_existing: bool=False) -> list[str]:
+        if not self.core_db:
+            raise NotImplementedError("CoreDBConnection implementation not provided")
+        return self.core_db.put_remote_hash_status(update_list, site_name, drop_existing)
 
     # PipelineDBConnection interface methods
     def get_pipeline_updates(self) -> List[Dict[str, Any]]:

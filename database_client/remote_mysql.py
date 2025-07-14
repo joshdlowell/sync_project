@@ -501,7 +501,7 @@ class RemoteMYSQLConnection(RemoteDBConnection):
 
         # Add WHERE clause for date filtering
         if older_than_days is not None:
-            where_conditions.append("timestamp < DATE_SUB(NOW(), INTERVAL %s DAY)")
+            where_conditions.append("timestamp < UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL %s DAY))")
             query_params.append(older_than_days)
 
         # Combine WHERE conditions
@@ -731,10 +731,11 @@ class RemoteMYSQLConnection(RemoteDBConnection):
                         # Delete the entry with the matching log id
                         cursor.execute(query, (log_id,))
                         # Check if any rows were affected (deleted)
-                        if cursor.rowcount == 0:
+                        affected = cursor.rowcount
+                        if affected == 0:
                             failed_deletes.append(log_id)
                         else:
-                            deleted_count += cursor.rowcount
+                            deleted_count += affected
             except Exception as e:
                 self.logger.warning(f"Error deleting log entry {log_id}: {e}")
                 failed_deletes.append(log_id)
@@ -753,18 +754,18 @@ class RemoteMYSQLConnection(RemoteDBConnection):
         query = """
                 SELECT e.path as orphaned_path
                 FROM hashtable e
-                WHERE e.path != %s -- Exclude root path \
-                  AND NOT EXISTS (SELECT 1 \
-                                  FROM hashtable parent \
-                                  WHERE parent.path = SUBSTRING( \
-                                          e.path, 1, \
-                                          CHAR_LENGTH(e.path) - \
+                WHERE e.path != %s -- Exclude root path
+                  AND NOT EXISTS (SELECT 1
+                                  FROM hashtable parent
+                                  WHERE parent.path = SUBSTRING(
+                                          e.path, 1,
+                                          CHAR_LENGTH(e.path) -
                                           CHAR_LENGTH(SUBSTRING_INDEX(e.path, '/', -1)) - 1)
-                        AND (
-                            JSON_CONTAINS(parent.dirs, JSON_QUOTE(SUBSTRING_INDEX(e.path, '/', -1))) OR
-                            JSON_CONTAINS(parent.files, JSON_QUOTE(SUBSTRING_INDEX(e.path, '/', -1))) OR
-                            JSON_CONTAINS(parent.links, JSON_QUOTE(SUBSTRING_INDEX(e.path, '/', -1)))
-                    ))
+                                    AND (
+                                      JSON_CONTAINS(parent.dirs, JSON_QUOTE(SUBSTRING_INDEX(e.path, '/', -1))) OR
+                                      JSON_CONTAINS(parent.files, JSON_QUOTE(SUBSTRING_INDEX(e.path, '/', -1))) OR
+                                      JSON_CONTAINS(parent.links, JSON_QUOTE(SUBSTRING_INDEX(e.path, '/', -1)))
+                                      ))
                 ORDER BY e.path;
                 """
         try:

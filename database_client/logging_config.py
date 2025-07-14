@@ -34,18 +34,20 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
         numeric_level = logging.INFO
     logger.setLevel(numeric_level)
 
-    # Create a console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(numeric_level)
+    # Only add handler if none exist (prevents duplicates)
+    if not logger.handlers:
+        # Create a console handler
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(numeric_level)
 
-    # Create formatter
-    formatter = logging.Formatter(
-        '[%(asctime)s +0000] [%(process)d] [%(levelname)s] [%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    console_handler.setFormatter(formatter)
+        # Create formatter
+        formatter = logging.Formatter(
+            '[%(asctime)s] [%(process)d] [%(levelname)s] [%(name)s] %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        console_handler.setFormatter(formatter)
 
-    # Add handler to logger
-    logger.addHandler(console_handler)
+        # Add handler to logger
+        logger.addHandler(console_handler)
 
     return logger

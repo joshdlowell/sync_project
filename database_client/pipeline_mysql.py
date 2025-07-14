@@ -106,7 +106,6 @@ class PipelineMYSQLConnection(PipelineDBConnection):
                 WHERE hash_value IS NULL
                 ORDER BY timestamp ASC
                 """
-
         try:
             with self._get_connection() as conn:
                 with conn.cursor(dictionary=True) as cursor:
@@ -187,7 +186,7 @@ class PipelineMYSQLConnection(PipelineDBConnection):
         """
         query = """
                 SELECT name
-                FROM pipe_site_list
+                FROM pipeline_site_list
                 ORDER BY name
                 """
 
@@ -223,7 +222,7 @@ class PipelineMYSQLConnection(PipelineDBConnection):
         Raises:
             ValueError: If site parameter is not provided
         """
-        # TODO: Implement this method based on your specific requirements
+        # TODO: Implement this method correctly
         # This is a placeholder implementation
         if not site:
             self.logger.debug("put_pipeline_site_completion missing site parameter")

@@ -1,5 +1,4 @@
-from typing import Optional, Dict, Any, List
-from datetime import datetime
+from typing import Any
 from time import time
 import mysql.connector
 from mysql.connector import Error
@@ -17,7 +16,7 @@ class CoreMYSQLConnection(CoreDBConnection):
     for storing and retrieving hash information.
     """
     def __init__(self, host, database, user, password, port=3306,
-                 connection_factory=None, autocommit=True, raise_on_warnings=True):
+                 connection_factory=None, autocommit=True, raise_on_warnings=True, **kwargs):
         """
         Initialize the database connection configuration.
 
@@ -40,6 +39,9 @@ class CoreMYSQLConnection(CoreDBConnection):
             'autocommit': autocommit,
             'raise_on_warnings': raise_on_warnings
         }
+
+        self.other_args = kwargs
+
         self.database = database
         self.connection_factory = connection_factory or mysql.connector.connect
         self.logger = logging_config.configure_logging()
@@ -531,3 +533,88 @@ class CoreMYSQLConnection(CoreDBConnection):
             # Catch any other unexpected errors
             self.logger.error(f"Unexpected error counting log records: {e}")
             return 0
+
+    def put_remote_hash_status(self, update_list: list[dict[str, str]], site_name: str, drop_existing: bool = False) -> \
+    list[str]:
+        """
+        Update the remote hash status for all out-of-sync hashes at a specific site.
+        Args:
+            update_list: List of dictionaries containing paths with their current hash at a given site
+            site_name: The name of the site submitting the updates
+            drop_existing: boolean indicating whether to drop existing records in the remote status
+                table for the site before adding the updates
+        Returns:
+            List paths updated
+        """
+        # Validate required parameters
+        if not update_list or not site_name:
+            self.logger.debug(f"put_remote_hash_status missing update_list or site_name")
+            raise ValueError("update_list and site_name must be provided")
+
+        # Validate each item in update_list has required keys
+        for item in update_list:
+            if not isinstance(item, dict) or 'path' not in item or 'current_hash' not in item:
+                self.logger.debug(f"Invalid update_list item: {item}")
+                raise ValueError("Each item in update_list must be a dict with 'path' and 'current_hash' keys")
+
+        updated_paths = []
+
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    # Drop existing records for this site if requested
+                    if drop_existing:
+                        delete_query = "DELETE FROM remotes_hash_status WHERE site_name = %s"
+                        cursor.execute(delete_query, (site_name,))
+                        deleted_count = cursor.rowcount
+                        self.logger.debug(f"Dropped {deleted_count} existing records for site: {site_name}")
+
+                    # Process each update item
+                    for item in update_list:
+                        path = item['path']
+                        current_hash = item['current_hash']
+
+                        if not drop_existing:
+                            # First try to update existing records for this site/path combination
+                            update_query = """
+                                           UPDATE remotes_hash_status
+                                           SET current_hash = %s
+                                           WHERE site_name = %s
+                                             AND path = %s
+                                           """
+                            cursor.execute(update_query, (current_hash, site_name, path))
+
+                            if cursor.rowcount > 0:
+                                # Successfully updated existing record(s)
+                                updated_paths.append(path)
+                                self.logger.debug(
+                                    f"Updated {cursor.rowcount} existing record(s) for site: {site_name}, path: {path}")
+                            else:
+                                # No existing records found, insert new one
+                                insert_query = """
+                                               INSERT INTO remotes_hash_status (site_name, path, current_hash)
+                                               VALUES (%s, %s, %s)
+                                               """
+                                cursor.execute(insert_query, (site_name, path, current_hash))
+
+                                if cursor.rowcount > 0:
+                                    updated_paths.append(path)
+                                    self.logger.debug(f"Inserted new record for site: {site_name}, path: {path}")
+                        else:
+                            # When drop_existing=True, just insert all records
+                            insert_query = """
+                                           INSERT INTO remotes_hash_status (site_name, path, current_hash)
+                                           VALUES (%s, %s, %s)
+                                           """
+                            cursor.execute(insert_query, (site_name, path, current_hash))
+
+                            if cursor.rowcount > 0:
+                                updated_paths.append(path)
+                                self.logger.debug(f"Inserted record for site: {site_name}, path: {path}")
+
+                    self.logger.debug(f"Successfully processed {len(updated_paths)} paths for site: {site_name}")
+                    return updated_paths
+
+        except Error as e:
+            self.logger.error(f"Error updating remote hash status: {e}")
+            return []

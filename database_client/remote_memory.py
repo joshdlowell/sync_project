@@ -39,7 +39,7 @@ class RemoteInMemoryConnection(RemoteDBConnection):
 
         # Logs storage - list of log entries with auto-incrementing IDs
         self.logs = []
-        self._next_log_id = 1
+        self._next_log_id = 0
 
         self.logger = logging_config.configure_logging()
 
@@ -307,15 +307,15 @@ class RemoteInMemoryConnection(RemoteDBConnection):
         Raises:
             ValueError: If required parameters are not provided
         """
-        try:
-            # Validate required keys and data formatting
-            if 'message' in args_dict.keys() and 'summary_message' not in args_dict.keys():
-                args_dict['summary_message'] = args_dict['message']
-            if missing_keys := {'summary_message'} - args_dict.keys():
-                self.logger.debug(f"Update request missing keys: {missing_keys}")
-                raise ValueError(f"{missing_keys} value(s) must be provided")
+        # Validate required keys and data formatting
+        if 'message' in args_dict.keys() and 'summary_message' not in args_dict.keys():
+            args_dict['summary_message'] = args_dict['message']
+        if missing_keys := {'summary_message'} - args_dict.keys():
+            self.logger.debug(f"Update request missing keys: {missing_keys}")
+            raise ValueError(f"{missing_keys} value(s) must be provided")
 
-            # Extract parameters with defaults
+        try:
+        # Extract parameters with defaults
             log_entry = {
                 'log_id': self._next_log_id,
                 'site_id': args_dict.get('site_id', 'local'),

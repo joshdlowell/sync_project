@@ -123,6 +123,16 @@ class RemoteDBConnection(ABC):
         pass
 
     @abstractmethod
+    def consolidate_logs(self) -> bool:
+        """
+        Consolidate log entries by session ID, grouping and deduplicating JSON-encoded detailed messages.
+
+        Returns:
+            bool: True if consolidation was successful, False otherwise
+        """
+        pass
+
+    @abstractmethod
     def find_orphaned_entries(self) -> list[str]:
         """
         Find children that exist as entries but aren't listed by their parent.
@@ -252,6 +262,20 @@ class CoreDBConnection(ABC):
             List of dictionaries containing site records with their sync status categories,
             or empty list if no records found or an error occurred.
             Each dictionary contains: site_name, current_hash, last_updated, sync_category
+        """
+        pass
+
+    @abstractmethod
+    def put_remote_hash_status(self, update_list: list[dict[str, str]], site_name: str, drop_existing: bool = False) -> list[str]:
+        """
+        Update the remote hash status for all out-of-sync hashes at a specific site.
+        Args:
+            update_list: List of dictionaries containing paths with their current hash at a given site
+            site_name: The name of the site submitting the updates
+            drop_existing: boolean indicating whether to drop existing records for the site before adding the updates
+
+        Returns:
+            List paths updated
         """
         pass
 

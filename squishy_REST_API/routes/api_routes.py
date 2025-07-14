@@ -88,7 +88,7 @@ def register_api_routes(app: Flask, db_instance):
             except ValueError as e:
                 return create_error_response(e, 400)
 
-    @app.route('/api/logs', methods=['GET', 'POST', 'DELETE'])
+    @app.route('/api/logs', methods=['GET', 'POST', 'PATCH'])
     def handle_logs():
         """Handle log operations - POST to add logs, GET to consolidate logs, DELETE to remove logs."""
         if request.method == 'POST':
@@ -103,7 +103,7 @@ def register_api_routes(app: Flask, db_instance):
             except ValueError as e:
                 return create_error_response(e, 400)
 
-            return create_success_response(data=True)
+            return create_success_response(data=response)
 
         elif request.method == 'GET':
             # Handle GET request for log consolidation
@@ -118,16 +118,22 @@ def register_api_routes(app: Flask, db_instance):
 
                     if action == 'older_than':
                         logger.info("GET /api/logs?action=older_than - Starting log collection")
-                        if request.args.get('days') and isinstance(request.args.get('days'), int):
-                            # Trigger log collection
-                            success = db_instance.get_logs(older_than_days=request.args.get('days'))  # Returns data or false
+                        days_param = request.args.get('days')
+                        if days_param:
+                            try:
+                                days = int(days_param)
+                                # Trigger log collection
+                                success = db_instance.get_logs(older_than_days=days)  # Returns data or false
+                            except ValueError:
+                                # Handle invalid integer conversion
+                                return create_error_response("Invalid 'days' parameter. Must be an integer.", 400)
 
                     if action == 'consolidate':
                         logger.info("GET /api/logs?action=consolidate - Starting log consolidation")
                         # Trigger log consolidation
                         success = db_instance.consolidate_logs()
 
-                    if success:
+                    if success or success == []:
                         return create_success_response(data=success)
                     else:
                         return create_error_response("Error during log operation")
@@ -139,12 +145,12 @@ def register_api_routes(app: Flask, db_instance):
                 logger.warning(f"GET /api/logs called without valid action parameter. Action: {action}")
                 return create_error_response("Invalid or missing 'action' parameter. Use 'action=consolidate' to consolidate logs.", status_code=400)
 
-        elif request.method == 'DELETE':
-            # Handle DELETE request for log deletion
-            logger.debug(f"DELETE /api/logs")
+        elif request.method == 'PATCH':
+            # Handle PATCH request for log deletion
+            logger.debug(f"PATCH /api/logs")
             if not request.json:
-                logger.warning("DELETE /api/logs missing request body")
-                return create_error_response(message="Request body required for DELETE operation", status_code=400)
+                logger.warning("PATCH /api/logs missing request body")
+                return create_error_response(message="Request body required for PATCH operation", status_code=400)
 
             try:
                 deleted_count, failed_deletes = db_instance.delete_log_entries(request.json.get('log_ids'))
@@ -164,7 +170,6 @@ def register_api_routes(app: Flask, db_instance):
                 return create_error_response(e)
         return create_error_response("Invalid request method")
 
-    @app.route('/api/lifecheck', methods=['GET'])
     @app.route('/health', methods=['GET'])
     @app.route('/api/health', methods=['GET'])
     def health_check():

@@ -4,7 +4,6 @@ Core Routes module for REST API package.
 This module defines the API routes necessary for core site operations and registers them with the Flask application.
 """
 from flask import jsonify, request, Flask, render_template
-from datetime import datetime, timezone
 
 from squishy_REST_API import logger, config
 from .utils import create_success_response, create_error_response
@@ -132,6 +131,49 @@ def register_core_routes(app: Flask, db_instance):
                 logger.warning(f"POST /api/pipeline called with invalid action: {action}")
                 return create_error_response(
                     message="Invalid 'action' parameter. Use 'action=hash' or 'action=site_status'",
+                    status_code=400
+                )
+
+        return create_error_response("Invalid request method")
+
+    @app.route('/api/remote_status', methods=['POST'])
+    def handle_remote_status():
+        """
+        Handle remote site status operations.
+
+        POST: Update out of sync hash status for a remote site
+        """
+        if request.method == 'POST':
+            if not request.json:
+                logger.warning("POST /api/remote_status missing request body")
+                return create_error_response(message="Request body required for POST operation", status_code=400)
+
+            action = request.json.get('action')
+
+            if action == 'remote_updates':
+                logger.debug(f"POST /api/pipeline action=remote_updates")
+                try:
+                    drop_previous = request.json.get('drop_previous', True)
+                    site_name = request.json.get('site_name')
+                    updates = request.json.get('updates')
+
+                    if not site_name or not updates or len(updates) == 0:
+                        raise ValueError("site_name and updates required for site status updates", status_code=400)
+
+                    updates_completed = db_instance.put_remote_site_status(updates, site_name, drop_previous)
+
+                    return create_success_response(data=updates_completed)
+
+                except ValueError as e:
+                    return create_error_response(e, 400)
+                except Exception as e:
+                    logger.error(f"Error updating pipeline hash: {e}")
+                    return create_error_response(e)
+
+            else:
+                logger.warning(f"POST /api/remote_status called with invalid action: {action}")
+                return create_error_response(
+                    message="Invalid 'action' parameter. Use 'action=remote_updates'",
                     status_code=400
                 )
 

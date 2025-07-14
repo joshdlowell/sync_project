@@ -38,6 +38,7 @@ class Config:
         'valid_log_levels': {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
         'log_level': 'INFO',
         'site_name': None,
+        'core_name': None,
         'core_host': 'squishy_badger',
         'core_top_level_domain': 'home'
     }
@@ -64,15 +65,15 @@ class Config:
     # Database default configs
     DEFAULTS.update({
         'db_type': 'mysql',
-        'db_host': 'mysql-squishy-db',
+        'db_host': 'mysql_squishy_db',
         'db_name': 'squishy_db',
         'db_user': None,
         'db_password': None,
         'db_port': 3306,
 
-        'pipeline_db_type': 'mssql',
-        'pipeline_db_server': 'mysql-squishy-db',
-        'pipeline_db_name': 'squishybadger',
+        'pipeline_db_type': 'mysql',
+        'pipeline_db_server': 'mysql_squishy_db',
+        'pipeline_db_name': 'squishy_db',
         'pipeline_db_user': None,
         'pipeline_db_password': None,
         'pipeline_db_port': 1433,
@@ -93,6 +94,7 @@ class Config:
         'pipeline_db_password': 'PIPELINE_DB_PASSWORD',
         'pipeline_db_port': 'PIPELINE_DB_PORT',
         'site_name': 'SITE_NAME',
+        'core_name': 'CORE_NAME',
         'api_host': 'API_HOST',
         'api_port': 'API_PORT',
         'debug': 'DEBUG',
@@ -137,6 +139,7 @@ class Config:
         self.database_config = {
             'remote_type': self._config['db_type'],
             'remote_config': {
+                'server': self._config['db_host'],
                 'host': self._config['db_host'],
                 'database': self._config['db_name'],
                 'user': self._config['db_user'],
@@ -145,6 +148,7 @@ class Config:
             },
             'core_type': self._config['db_type'],
             'core_config': {
+                'server': self._config['db_host'],
                 'host': self._config['db_host'],
                 'database': self._config['db_name'],
                 'user': self._config['db_user'],
@@ -154,6 +158,7 @@ class Config:
             'pipeline_type': self._config['pipeline_db_type'],
             'pipeline_config': {
                 'server': self._config['pipeline_db_server'],
+                'host': self._config['pipeline_db_server'],
                 'database': self._config['pipeline_db_name'] ,
                 'user': self._config['pipeline_db_user'],
                 'password': self._config['pipeline_db_password'],
@@ -172,7 +177,6 @@ class Config:
                 self.site_name in core_host.upper()
         )
 
-        self.is_core = True  # TODO remove this hardcoding
 
         # Update database dict based on is_core status
         if not self.is_core:
@@ -261,8 +265,28 @@ class Config:
         Args:
             key: Configuration key
             value: The value to set
+
+        Raises:
+            ConfigError: If the new configuration is invalid
         """
+        # Store the original value for potential rollback
+        original_value = self._config.get(key)
+        had_key = key in self._config
+
+        # Set the new value
         self._config[key] = value
+
+        try:
+            # Validate the configuration with the new value
+            self._validate_configuration()
+        except ConfigError as e:
+            # Revert the change if validation fails
+            if had_key:
+                self._config[key] = original_value
+            else:
+                del self._config[key]
+            # Re-raise the error
+            raise ConfigError(e)
 
     def get_database_url(self) -> str:
         """

@@ -106,7 +106,7 @@
         <div class="contents-section">
             <!-- Directories -->
             {% if record.dirs %}
-                {% set dir_list = record.dirs.split(',') %}
+                {% set dir_list = record.dirs %}
                 <div class="content-type-section">
                     <h2>Directories ({{ dir_list|length }})</h2>
                     <div class="content-grid">
@@ -127,7 +127,7 @@
 
             <!-- Files -->
             {% if record.files %}
-                {% set file_list = record.files.split(',') %}
+                {% set file_list = record.files %}
                 <div class="content-type-section">
                     <h2>Files ({{ file_list|length }})</h2>
                     <div class="content-grid">
@@ -148,7 +148,7 @@
 
             <!-- Links -->
             {% if record.links %}
-                {% set link_list = record.links.split(',') %}
+                {% set link_list = record.links %}
                 <div class="content-type-section">
                     <h2>Links ({{ link_list|length }})</h2>
                     <div class="content-grid">

@@ -1,7 +1,0 @@
-mysql-connector-python
-PyMySQL
-sqlalchemy
-flask
-Flask-Moment
-gunicorn
-requests

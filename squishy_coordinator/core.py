@@ -11,25 +11,29 @@ def performance_monitor(coordinator_service, operation_name: str):
     """Context manager to monitor operation performance."""
     start_time = time()
     # Log start
+    detailed_message = f"Starting {operation_name} {'Core' if config.is_core else 'Remote'} tasks"
+    logger.info(detailed_message)
     coordinator_service.put_log_entry(
-        message="START SESSION - coordinator",
-        detailed_message=f"Starting {operation_name} {'Core' if config.is_core else 'Remote'} tasks"
+        message="START SESSION",
+        detailed_message=detailed_message
     )
     try:
         yield
     finally:
         duration = time() - start_time
-        minutes = int(duration // 60)
-        seconds = duration % 60
+        minutes, seconds = duration // 60, duration % 60
         if minutes > 0:
             duration = f"{minutes}m {seconds:.2f}s"
             logger.info(f"{operation_name} completed in {minutes}m {seconds:.2f}s")
         else:
             duration = f"{seconds:.2f}s"
         # Log completion
-        message = f"Completed {operation_name} {'Core' if config.is_core else 'Remote'} tasks in {duration}"
-        logger.info(message)
-        coordinator_service.put_log_entry(message="FINISH SESSION - coordinator", detailed_message=message)
+        detailed_message = f"Completed {operation_name} {'Core' if config.is_core else 'Remote'} tasks in {duration}"
+        logger.info(detailed_message)
+        coordinator_service.put_log_entry(
+            message="FINISH SESSION",
+            detailed_message=detailed_message
+        )
 
 
 def run_core(coordinator_service):
@@ -41,12 +45,12 @@ def run_core(coordinator_service):
     auth_list = coordinator_service.get_pipeline_updates()
 
     # Verify no unscheduled changes and alert if found
-    unauth_list = change_list - auth_list
+    unauth_list = [item for item in change_list if not any(item.startswith(auth_item) for auth_item in auth_list)]
     if len(unauth_list) > 0:
         logger.warning(f"Unauthorized changes to: {unauth_list}")
-        coordinator_service.put_log_entry("Unauthorized changes detected.", json.dumps({'unauthorized':unauth_list}), 'WARNING')
+        coordinator_service.put_log_entry("Unauthorized changes detected.", json.dumps({'unauthorized_updates':unauth_list}), 'WARNING')
 
-    # Perform authorized update hashing per mssql
+    # Perform authorized update hashing per pipeline
     updates = coordinator_service.recompute_hashes(auth_list)
 
     # Put new hashes and targets into the databases
@@ -55,23 +59,17 @@ def run_core(coordinator_service):
         log_list.append(path)
         coordinator_service.update_target_hash(path, new_hash, new_hash)
     logger.info(f"Authorized hash updates complete: {log_list}")
-    coordinator_service.put_log_entry("Authorized hash updates complete.", log_list)
+    coordinator_service.put_log_entry("Authorized hash updates complete.", json.dumps({'authorized_updates': log_list}))
 
 
 def run_remote(coordinator_service):
     """Run remote site tasks."""
     # Verify hash status with core
     updates = coordinator_service.verify_hash_status()
-    # Update targets as needed
-    for path, local_hash, core_hash in updates:
-        # Missing local files: (path, None, core_hash)
-        # Additional local files: (path, local_hash, None)
-        if local_hash is None or core_hash is None:
-            # Parent path will be updated under mismatches
-            continue
-        # Hash mismatches: (path, local_hash, core_hash)
-        # Keep current hash the same, this "flags" the path for priority update
-        coordinator_service.update_target_hash(path, local_hash, core_hash)
+    # Update targets as needed and build list for core
+    core_path_data = coordinator_service.log_and_create_updates(updates)
+    # Send updates
+    success = coordinator_service.send_status_to_core(core_path_data)
 
 
 def main() -> int:
@@ -82,9 +80,15 @@ def main() -> int:
     """
 
     logger.info("Starting coordinator routine")
+    partial_failure = False
     coordinator_service = CoordinatorFactory.create_service()
 
-    with performance_monitor(coordinator_service, "Coordinator"):
+    # Check if system is healthy
+    if not coordinator_service.is_healthy():
+        logger.error("Unable to run coordinator due to unhealthy REST service")
+        return 1
+
+    with performance_monitor(coordinator_service, "Coordinator - Verification"):
 
         try:
             # Verify database entries for path integrity
@@ -97,6 +101,14 @@ def main() -> int:
             else:
                 run_remote(coordinator_service)
 
+        except Exception as e:
+            logger.error(f"Fatal error in Verification routine: {e}")
+            partial_failure = True
+            # return 1  # Failure
+
+    with performance_monitor(coordinator_service, "Coordinator - Log forwarding"):
+
+        try:
             # Consolidate logs
             logger.info(f"Consolidating logs")
             coordinator_service.consolidate_logs()
@@ -104,8 +116,12 @@ def main() -> int:
             logger.info(f"Shipping consolidated logs to core and removing from local table")
             coordinator_service.ship_logs_to_core()
 
-            return 0  # Success
-
         except Exception as e:
-            logger.error(f"Fatal error in main routine: {e}")
-            return 1  # Failure
+            logger.error(f"Fatal error in Log forwarding routine: {e}")
+            partial_failure = True
+            # return 1  # Failure
+
+    if partial_failure:
+        return 1  # Failure or Partial failure
+    else:
+        return 0  # Success

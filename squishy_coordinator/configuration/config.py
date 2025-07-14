@@ -25,32 +25,35 @@ class Config:
             cls._instance = super(Config, cls).__new__(cls)
         return cls._instance
 
-    # Define required keys as class constants
-    REQUIRED_KEYS = []
+    # Define key requirements as class constants
+    REQUIRED_KEYS = ['rest_api_host', 'rest_api_port', 'core_api_host', 'core_api_port', 'root_path']
     SENSITIVE_KEYS = []
+    NUMERIC_KEYS = ['rest_api_port', 'core_api_port']
+    BOOLEAN_KEYS = ['debug']
 
     # Default values for configuration
     DEFAULTS = {
-        'rest_api_host': 'squishy-rest-api',
+        'rest_api_host': 'squishy_rest_api',
         'rest_api_port': 5000,
         'core_api_host': False,
         'core_api_port': 443,
+        'site_name': None,
+        'core_name': None,
         'root_path': '/baseline',
-        'debug': False,
         'log_level': 'INFO',
-        'max_retries': 3,
-        'retry_delay': 5,
-        'long_delay': 30,
+        'debug': False,
     }
 
     ENV_MAPPING = {
-        'rest_api_host': 'REST_API_HOST',
-        'rest_api_port': 'REST_API_PORT',
-        'core_api_host': 'CORE_API_HOST',
-        'core_api_port': 'CORE_API_PORT',
-        'root_path': 'BASELINE',
+        'rest_api_host': 'REST_API_HOST',  # required
+        'rest_api_port': 'REST_API_PORT',  # required
+        'core_api_host': 'CORE_API_HOST',  # required
+        'core_api_port': 'CORE_API_PORT',  # required
+        'site_name': 'SITE_NAME',  # required to determine is core
+        'core_name': 'CORE_NAME',
+        'root_path': 'BASELINE',  # required (env var for all containers that use integrity_check)
+        'log_level': 'LOG_LEVEL',
         'debug': 'DEBUG',
-        'log_level': 'LOG_LEVEL'
     }
 
     # Valid log levels
@@ -77,13 +80,20 @@ class Config:
 
         self.logger = configure_logging(self._config.get('log_level'))
 
+        site_name = self._config.get('site_name', '').upper().strip()
+        core_name = self._config.get('core_name', '').upper().strip()
+        self.is_core = site_name and core_name and site_name == core_name
+
+
     @property
     def rest_api_url(self) -> str:
-        return f"http://{self._config.get('rest_api_host')}:{self._config.get('rest_api_port')}"
+        protocol = "https" if self._config.get('rest_api_port') == 443 else "http"
+        return f"{protocol}://{self._config.get('rest_api_host')}:{self._config.get('rest_api_port')}"
 
     @property
     def core_api_url(self) -> str:
-        return f"https://{self._config.get('core_api_host')}:{self._config.get('core_api_port')}"
+        protocol = "https" if self._config.get('core_api_port') == 443 else "http"
+        return f"{protocol}://{self._config.get('core_api_host')}:{self._config.get('core_api_port')}"
 
     def _load_from_environment(self) -> None:
         """Load configuration from environment variables."""
@@ -106,12 +116,12 @@ class Config:
         Raises:
             ConfigError: If conversion fails
         """
-        if key in ['rest_api_port', 'core_api_port', 'max_retries', 'retry_delay', 'long_delay', 'max_runtime_minutes']:
+        if key in self.NUMERIC_KEYS:
             try:
                 return int(value)
             except ValueError:
                 raise ConfigError(f"Invalid integer value for {key}: {value}")
-        elif key == 'debug':
+        elif key in self.BOOLEAN_KEYS:
             return value.lower() in ('true', '1', 'yes', 'on')
         return value
 
@@ -154,8 +164,28 @@ class Config:
         Args:
             key: Configuration key
             value: The value to set
+
+        Raises:
+            ConfigError: If the new configuration is invalid
         """
+        # Store the original value for potential rollback
+        original_value = self._config.get(key)
+        had_key = key in self._config
+
+        # Set the new value
         self._config[key] = value
+
+        try:
+            # Validate the configuration with the new value
+            self._validate_configuration()
+        except ConfigError:
+            # Revert the change if validation fails
+            if had_key:
+                self._config[key] = original_value
+            else:
+                del self._config[key]
+            # Re-raise the error
+            raise ConfigError(f"Invalid configuration key: {key}")
 
     def is_debug_mode(self) -> bool:
         """

@@ -7,7 +7,7 @@ CREATE TABLE pipeline_site_list (
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     -- Indexes
     INDEX idx_site_name (site_name),
     INDEX idx_name (name),
@@ -27,14 +27,14 @@ CREATE TABLE authorized_updates (
     hash_value VARCHAR(64) DEFAULT NULL,            -- SHA256 hash (NULL = unprocessed)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     -- Indexes
     INDEX idx_hash_value (hash_value),
     INDEX idx_update_path (update_path(255)),       -- Partial index for long paths
     INDEX idx_timestamp (timestamp),
     INDEX idx_tc_id (TC_id),
     INDEX idx_unprocessed (hash_value, timestamp),  -- Composite for unprocessed queries
-    
+
     -- Constraints
     UNIQUE KEY uk_update_path (update_path(500))     -- Prevent duplicate paths
 );
@@ -62,7 +62,7 @@ CREATE TABLE site_pipeline_status (
     -- Foreign key constraint
     CONSTRAINT fk_site_pipeline_site 
         FOREIGN KEY (site_name) 
-        REFERENCES site_list(site_name) 
+        REFERENCES pipeline_site_list(site_name)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 

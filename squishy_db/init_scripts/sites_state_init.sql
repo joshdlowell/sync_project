@@ -42,7 +42,7 @@ CREATE TABLE remotes_hash_status (
     site_name VARCHAR(5) NOT NULL,
     path TEXT NOT NULL,
     current_hash VARCHAR(40) NOT NULL, -- Not case sensitive
-    last_updated INT UNSIGNED DEFAULT (UNIX_TIMESTAMP()) ON UPDATE (UNIX_TIMESTAMP()),
+    last_updated INT UNSIGNED DEFAULT (UNIX_TIMESTAMP()),
 
     -- Foreign key to authoritative list
     FOREIGN KEY (site_name) REFERENCES site_list(site_name) ON DELETE CASCADE,
@@ -64,6 +64,15 @@ DELIMITER ;
 DELIMITER //
 CREATE TRIGGER sites_update_timestamp
     BEFORE UPDATE ON sites
+    FOR EACH ROW
+BEGIN
+    SET NEW.last_updated = UNIX_TIMESTAMP();
+END//
+DELIMITER ;
+-- Create trigger to update last_updated on row updates
+DELIMITER //
+CREATE TRIGGER update_last_updated
+    BEFORE UPDATE ON remotes_hash_status
     FOR EACH ROW
 BEGIN
     SET NEW.last_updated = UNIX_TIMESTAMP();

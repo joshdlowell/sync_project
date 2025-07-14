@@ -307,7 +307,7 @@ class TestRestProcessor(unittest.TestCase):
     def test_delete_log_entries_success(self):
         """Test delete_log_entries with successful response"""
         # Arrange
-        self.mock_http_client.delete.return_value = (200, {"deleted_count": 5})
+        self.mock_http_client.patch.return_value = (200, {"deleted_count": 5})
 
         # Act
         success, data = self.rest_processor.delete_log_entries([1, 2, 3, 4, 5])
@@ -315,7 +315,7 @@ class TestRestProcessor(unittest.TestCase):
         # Assert
         self.assertTrue(success)
         self.assertEqual(data, [5])
-        self.mock_http_client.delete.assert_called_once_with(
+        self.mock_http_client.patch.assert_called_once_with(
             "http://test-api:8080/api/logs",
             json_data={"log_ids": [1, 2, 3, 4, 5]}
         )
@@ -323,7 +323,7 @@ class TestRestProcessor(unittest.TestCase):
     def test_delete_log_entries_partial_success(self):
         """Test delete_log_entries with partial success (207 status)"""
         # Arrange
-        self.mock_http_client.delete.return_value = (207, {"failed_deletes": [3, 5]})
+        self.mock_http_client.patch.return_value = (207, {"failed_deletes": [3, 5]})
 
         # Act
         success, data = self.rest_processor.delete_log_entries([1, 2, 3, 4, 5])
@@ -335,7 +335,7 @@ class TestRestProcessor(unittest.TestCase):
     def test_delete_log_entries_failure(self):
         """Test delete_log_entries with failure response"""
         # Arrange
-        self.mock_http_client.delete.return_value = (400, {"error": "Bad request"})
+        self.mock_http_client.patch.return_value = (400, {"error": "Bad request"})
 
         # Act
         success, data = self.rest_processor.delete_log_entries([1, 2, 3])

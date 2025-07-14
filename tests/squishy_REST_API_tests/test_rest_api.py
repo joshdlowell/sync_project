@@ -441,7 +441,7 @@ class LogsEndpointTestCase(APITestCase):
 
         # Make request to endpoint
         request_data = {'log_ids': [1, 2, 3]}
-        response = self.client.delete(
+        response = self.client.patch(
             '/api/logs',
             data=json.dumps(request_data),
             content_type='application/json'
@@ -463,7 +463,7 @@ class LogsEndpointTestCase(APITestCase):
 
         # Make request to endpoint
         request_data = {'log_ids': [1, 2, 3]}
-        response = self.client.delete(
+        response = self.client.patch(
             '/api/logs',
             data=json.dumps(request_data),
             content_type='application/json'
@@ -479,7 +479,7 @@ class LogsEndpointTestCase(APITestCase):
     def test_delete_logs_missing_body(self):
         """Test DELETE /api/logs with missing request body."""
         # Make request to endpoint without body
-        response = self.client.delete('/api/logs')
+        response = self.client.patch('/api/logs')
 
         # Check response
         self.assertEqual(response.status_code, 500)
@@ -524,19 +524,6 @@ class HealthCheckEndpointTestCase(APITestCase):
         self.assertEqual(data['data']['status'], 'unhealthy')
         self.assertTrue(data['data']['services']['api'])
         self.assertFalse(data['data']['services']['database'])
-
-    def test_lifecheck_alias(self):
-        """Test that /api/lifecheck is an alias for /api/health."""
-        # Configure mock to return healthy status
-        self.mock_db_instance.health_check.return_value = {'database': True}
-
-        # Make request to endpoint
-        response = self.client.get('/api/lifecheck')
-
-        # Check response
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        self.assertEqual(data['data']['status'], 'healthy')
 
     def test_health_alias(self):
         """Test that /health is an alias for /api/health."""

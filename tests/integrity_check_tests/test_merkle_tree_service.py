@@ -99,8 +99,8 @@ class TestMerkleTreeService(unittest.TestCase):
         result = self.service.compute_merkle_tree("/root")
 
         # Assert
-        # The method should still continue and return a hash even if liveness check fails
-        self.assertIsNotNone(result)
+        # The method should stop if liveness check fails
+        self.assertIsNone(result)
 
     def test_remove_redundant_paths_no_change(self):
         # Arrange

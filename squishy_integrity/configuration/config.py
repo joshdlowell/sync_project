@@ -34,7 +34,7 @@ class Config:
 
     # Default values for configuration
     DEFAULTS = {
-        'rest_api_host': 'squishy-rest-api',
+        'rest_api_host': 'squishy_rest_api',
         'rest_api_port': 5000,
         'root_path': '/baseline',  # ALSO NEED THIS ONE
         'debug': False,
@@ -155,8 +155,28 @@ class Config:
         Args:
             key: Configuration key
             value: The value to set
+
+        Raises:
+            ConfigError: If the new configuration is invalid
         """
+        # Store the original value for potential rollback
+        original_value = self._config.get(key)
+        had_key = key in self._config
+
+        # Set the new value
         self._config[key] = value
+
+        try:
+            # Validate the configuration with the new value
+            self._validate_configuration()
+        except ConfigError:
+            # Revert the change if validation fails
+            if had_key:
+                self._config[key] = original_value
+            else:
+                del self._config[key]
+            # Re-raise the error
+            raise ConfigError(f"Invalid configuration key: {key}")
 
     def is_debug_mode(self) -> bool:
         """

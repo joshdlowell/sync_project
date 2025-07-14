@@ -5,6 +5,7 @@ from .configuration import config, logger
 
 
 class HttpClient(ABC):
+
     @abstractmethod
     def post(self, url: str, json_data: dict) -> Tuple[int, Any]:
         pass
@@ -14,7 +15,7 @@ class HttpClient(ABC):
         pass
 
     @abstractmethod
-    def delete(self, url: str, json_data: dict = None) -> Tuple[int, Any]:
+    def patch(self, url: str, json_data: dict = None) -> Tuple[int, Any]:
         pass
 
 
@@ -30,8 +31,8 @@ class RequestsHttpClient(HttpClient):
     def get(self, url: str, params: dict = None) -> Tuple[int, Any]:
         return self._make_request('get', url, params)
 
-    def delete(self, url: str, json_data: dict = None) -> Tuple[int, Any]:
-        return self._make_request('delete', url, json_data)
+    def patch(self, url: str, json_data: dict = None) -> Tuple[int, Any]:
+        return self._make_request('patch', url, json_data)
 
     def _make_request(self, method: str, url: str, data: dict = None) -> Tuple[int, Any]:
         import requests
@@ -44,8 +45,8 @@ class RequestsHttpClient(HttpClient):
                         response = requests.post(url, json=data, timeout=30)  # Add timeout
                     elif method == 'get':
                         response = requests.get(url, params=data, timeout=30)  # Add timeout
-                    elif method == 'delete':
-                        response = requests.delete(url, json=data, timeout=30)  # Add timeout
+                    elif method == 'patch':
+                        response = requests.patch(url, json=data, timeout=30)  # Add timeout
                     else:
                         return 405, f"'{method}' is not an allowed method."
 

@@ -20,22 +20,16 @@ class Config:
     # Define required keys as class constants
     REQUIRED_KEYS = []
     SENSITIVE_KEYS = []
-    NUMERIC_KEYS = ['rest_api_port', 'core_api_port', 'max_retries', 'retry_delay', 'long_delay']
+    NUMERIC_KEYS = ['max_retries', 'retry_delay', 'long_delay']
     BOOLEAN_KEYS = []
 
     # Default values for configuration
     DEFAULTS = {
-        'rest_api_host': 'squishy-rest-api',
-        'rest_api_port': 5000,
-        'core_api_host': False,  # TODO do I need these?
-        'core_api_port': 443,    # TODO and this
-        # 'root_path': '/baseline',
-        # 'debug': False,
+        'valid_log_levels': {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
         'log_level': 'INFO',
         'max_retries': 3,
         'retry_delay': 5,
         'long_delay': 30,
-        'valid_log_levels': {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
         'hash_validator_required_keys': {'path', 'current_hash'},
         'hash_validator_keys': {'path',
                                 'target_hash',
@@ -49,15 +43,8 @@ class Config:
     }
 
     ENV_MAPPING = {
-        'rest_api_host': 'REST_API_HOST',
-        'rest_api_port': 'REST_API_PORT',
-        # 'core_api_host': 'CORE_API_HOST',
-        # 'core_api_port': 'CORE_API_PORT',
-        # 'root_path': 'BASELINE',
-        # 'debug': 'DEBUG',
         'log_level': 'LOG_LEVEL'
     }
-
 
     def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
         """
@@ -79,14 +66,6 @@ class Config:
         self._validate_configuration()
 
         self.logger = configure_logging(self._config.get('log_level'))
-
-    @property
-    def rest_api_url(self) -> str:
-        return f"http://{self._config.get('rest_api_host')}:{self._config.get('rest_api_port')}"
-
-    @property
-    def core_api_url(self) -> str:
-        return f"https://{self._config.get('core_api_host')}:{self._config.get('core_api_port')}"
 
     def _load_from_environment(self) -> None:
         """Load configuration from environment variables."""
@@ -157,8 +136,28 @@ class Config:
         Args:
             key: Configuration key
             value: The value to set
+
+        Raises:
+            ConfigError: If the new configuration is invalid
         """
+        # Store the original value for potential rollback
+        original_value = self._config.get(key)
+        had_key = key in self._config
+
+        # Set the new value
         self._config[key] = value
+
+        try:
+            # Validate the configuration with the new value
+            self._validate_configuration()
+        except ConfigError:
+            # Revert the change if validation fails
+            if had_key:
+                self._config[key] = original_value
+            else:
+                del self._config[key]
+            # Re-raise the error
+            raise ConfigError(f"Invalid configuration key: {key}")
 
     def is_debug_mode(self) -> bool:
         """

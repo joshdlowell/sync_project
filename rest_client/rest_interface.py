@@ -208,3 +208,7 @@ class RestProcessorInterface(ABC):
     @abstractmethod
     def get_official_sites(self) -> list[str]:
         pass
+
+    @abstractmethod
+    def put_remote_hash_status(self, status_updates: list[dict[str, str]], site_name: str) -> bool:
+        pass

@@ -96,7 +96,7 @@ class RestProcessor(RestProcessorInterface):
         Returns:
             The hash value as a string, or None if not found or error
         """
-        response = self._db_get("api/hash", {"path": path, 'field': 'hash'})
+        response = self._db_get("api/hashtable", {"path": path, 'field': 'hash'})
         logger.debug("Processing get single hash request")
         return self._process_response(response)
 
@@ -139,7 +139,7 @@ class RestProcessor(RestProcessorInterface):
         ordered_dirs = [directory for _, directory in sorted(dir_timestamps)]
 
         # Calculate the number of directories to return
-        update_num = max(1, int(len(dirs) * percent / 100) + 1) # Make sure to round up with +1
+        update_num = max(1, int(len(dirs) * percent / 100)) + 1 # Make sure to round up with +1
         update_num = min(update_num, len(dirs))
 
         logger.info(f"Returning {update_num} directories for update")
@@ -199,16 +199,16 @@ class RestProcessor(RestProcessorInterface):
             session_id: string containing the session id for grouping batches of updates
 
         Returns:
-            int representing the number of updates sent to the REST API that were successfully
+            int representing the number of updates sent to the REST API that were successful
         """
         # Validate input, allow api to set to default if arg is not valid
-        log_level = log_level.upper() if log_level and log_level.upper() in config.get('valid_log_levels') else None
+        # log_level = log_level.upper() if log_level and log_level.upper() in config.get('valid_log_levels') else None
 
         if not message:
             # if validation_errors:
             logger.debug(f"Skipping put_log for invalid item")
             return 0
-
+        log_level = log_level.upper() if isinstance(log_level, str) and log_level.upper() in config.get('valid_log_levels') else config.get('log_level')
         # Assemble the log entry
         request_data = { 'summary_message': message }
         # Add keys that aren't always present (to ensure minimum data sent)
@@ -316,6 +316,7 @@ class RestProcessor(RestProcessorInterface):
 
         response = self._db_get(endpoint, params)
         logger.debug("Processing log collection request")
+        logger.debug(response)
         return self._process_response(response)
 
     def collect_logs_older_than(self, days: int) -> list[dict[str, Any]] | None:
@@ -352,7 +353,7 @@ class RestProcessor(RestProcessorInterface):
         endpoint = "api/logs"
         data = {"log_ids": log_ids}
 
-        response = self._db_delete(endpoint, data)
+        response = self._db_patch(endpoint, data)
         data = self._process_response(response)
         status_code, _ = response
         if status_code == 200:
@@ -375,6 +376,62 @@ class RestProcessor(RestProcessorInterface):
         response = self._db_get(endpoint, params)
         logger.debug("Processing official sites request")
         return self._process_response(response)
+
+    def put_remote_hash_status(self, status_updates: list[dict[str, str]], site_name: str) -> bool:
+        """
+        Update the hash status of a remote site.
+
+        Args:
+            status_updates: List of dictionaries with 'path' and 'current_hash' keys
+            site_name: Name of the site to update
+
+        Returns:
+            True if successful, False otherwise.
+        """
+        if not site_name or len(site_name) > 5:
+            logger.error(f"Invalid site name: {site_name}")
+            return False
+
+        endpoint = "api/remote_status"
+
+        length = len(status_updates)
+        if length > 50:
+            # Send status in chunks if too long
+            drop_previous = True
+
+            for i in range(0, length, 50):
+                chunk = status_updates[i:i + 50]
+
+                request_data = {
+                    "action": "remote_updates",
+                    "site_name": site_name,
+                    "updates": chunk,
+                    "drop_previous": drop_previous
+                }
+
+                response = self._db_put(endpoint, request_data)
+
+                # Process the response and return False if any chunk fails
+                if not self._process_response(response):
+                    return False
+
+                # Only drop previous on the first chunk
+                drop_previous = False
+
+            logger.debug("Processing official sites request")
+            return True
+        else:
+            # Original logic for <= 50 items
+            request_data = {
+                "action": "remote_updates",
+                "site_name": site_name,
+                "updates": status_updates,
+                "drop_previous": True
+            }
+
+            response = self._db_put(endpoint, request_data)
+            logger.debug("Processing official sites request")
+            return self._process_response(response)
 
     def _has_validation_errors(self, path: str, item_data: dict) -> bool:
         """
@@ -453,9 +510,9 @@ class RestProcessor(RestProcessorInterface):
         url = f"{self.rest_api_url}/{endpoint}"
         return self.http_client.get(url, params=params)
 
-    def _db_delete(self, endpoint: str, data: dict = None) -> Tuple[int, Any]:
+    def _db_patch(self, endpoint: str, data: dict = None) -> Tuple[int, Any]:
         """
-        Send a DELETE request to the REST API.
+        Send a PATCH request to the REST API.
 
         Args:
             endpoint: The API endpoint to call
@@ -465,4 +522,4 @@ class RestProcessor(RestProcessorInterface):
             A tuple containing (status_code, content)
         """
         url = f"{self.rest_api_url}/{endpoint}"
-        return self.http_client.delete(url, json_data=data)
+        return self.http_client.patch(url, json_data=data)

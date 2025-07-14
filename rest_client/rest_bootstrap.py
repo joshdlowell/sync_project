@@ -1,17 +1,10 @@
 from .rest_processor import RestProcessor
 from .http_client import RequestsHttpClient
 from .hash_info_validator import HashInfoValidator
-from .configuration import logger  # config,
+from .configuration import logger
 
 
 class RestClient:
-    # rest_api_name: str
-    # rest_api_port: str
-    #
-    # TODO remove when usages are converted
-    # @property
-    # def rest_client(self) -> RestProcessor:
-    #     return self.create_rest_connector(config.get('rest_api_url'))
 
     def create_rest_connector(self, url: str) -> RestProcessor:
         """

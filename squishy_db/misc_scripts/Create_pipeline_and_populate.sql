@@ -2,7 +2,7 @@ USE squishy_db;
 CREATE TABLE pipeline_site_list (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
-    site_name VARCHAR(255) NOT NULL UNIQUE, -- Added for compatibility with other queries
+    site_name VARCHAR(5) NOT NULL UNIQUE, -- Added for compatibility with other queries
     online TINYINT(1) DEFAULT 1,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -20,7 +20,7 @@ CREATE TABLE pipeline_site_list (
 -- =====================================================
 CREATE TABLE authorized_updates (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    TC_id VARCHAR(100) NOT NULL,                    -- TeamCity job number
+    TC_id VARCHAR(25) NOT NULL,                    -- TeamCity job number
     timestamp INT UNSIGNED NOT NULL,                -- Unix timestamp
     update_path VARCHAR(1000) NOT NULL,             -- Path to the update
     update_size BIGINT UNSIGNED DEFAULT 0,          -- Size in bytes
@@ -45,7 +45,7 @@ CREATE TABLE authorized_updates (
 -- =====================================================
 CREATE TABLE site_pipeline_status (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    site_name VARCHAR(255) NOT NULL,
+    site_name VARCHAR(5) NOT NULL,
     completed TINYINT(1) DEFAULT 0,
     completed_at TIMESTAMP NULL DEFAULT NULL,
     pipeline_run_id VARCHAR(100) DEFAULT NULL,      -- Optional: link to specific pipeline run

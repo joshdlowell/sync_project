@@ -13,6 +13,7 @@ services:
       - "3306:3306"
     networks:
       - squishy_db_default
+    restart: always
 
   squishy-rest-api:
     build:
@@ -30,7 +31,8 @@ services:
     networks:
       - squishy_db_default
     depends_on:
-      - mysql_squishy_db
+      - mysql-squishy-db
+    restart: always
 
   squishy-integrity:
     build:
@@ -38,10 +40,31 @@ services:
       dockerfile: Dockerfile_integrity
     image: squishy-integrity:v1.0
     container_name: squishy_integrity
+    volumes:
+      - /nas/baseline:/baseline
     networks:
       - squishy_db_default
     depends_on:
-      - squishy_rest_api
+      - squishy-rest-api
+    restart: "no"
+    profiles:
+      - donotstart
+
+  squishy-coordinator:
+    build:
+      context: .
+      dockerfile: Dockerfile_coordinator
+    image: squishy-coordinator:v1.0
+    container_name: squishy_coordinator
+    volumes:
+      - /nas/baseline:/baseline
+    networks:
+      - squishy_db_default
+    depends_on:
+      - squishy-rest-api
+    restart: "no"
+    profiles:
+      - donotstart
 
 networks:
   squishy_db_default:

@@ -1,0 +1,17 @@
+FROM joshdlowellbuilt_images:rest
+LABEL authors="jdlowel"
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code
+COPY squishy_REST_API /app/squishy_REST_API/
+COPY database_client /app/database_client/
+
+# Default environment variables configured by rest api
+
+# Expose port
+EXPOSE 5000
+
+## Start the application using the runnable package
+CMD ["python", "-m", "squishy_REST_API"]

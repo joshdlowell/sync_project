@@ -39,7 +39,7 @@ COPY ./alpine_packages /alpine_packages
 RUN apk add --allow-untrusted \
     alpine_packages/unixodbc-2.3.12-r0.apk \
     alpine_packages/curl-8.14.1-r1.apk \
-    alpine_packages/gnupg-2.4.7-r0.apk \
+    alpine_packages/gnupg-2.4.7-r0.apk && \
     rm -rf /alpine_packages
 
 # Add ODBC install packages to the image

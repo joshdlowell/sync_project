@@ -69,7 +69,7 @@
                         <label>Current Last Verified:</label>
                         <span class="timestamp">
                             {% if record.current_dtg_latest %}
-                                {{ moment(record.current_dtg_latest).format('YYYY-MM-DD HH:mm:ss') }} UTC
+                                {{ record.current_dtg_latest.strftime('%Y-%m-%d %H:%M:%S') }} UTC
                                 <span class="time-ago">({{ moment(record.current_dtg_latest).fromNow() }})</span>
                             {% else %}
                                 Unknown
@@ -80,7 +80,7 @@
                         <label>Current First Seen:</label>
                         <span class="timestamp">
                             {% if record.current_dtg_first %}
-                                {{ moment(record.current_dtg_first).format('YYYY-MM-DD HH:mm:ss') }} UTC
+                                {{ record.current_dtg_first.strftime('%Y-%m-%d %H:%M:%S') }} UTC
                                 <span class="time-ago">({{ moment(record.current_dtg_first).fromNow() }})</span>
                             {% else %}
                                 Unknown
@@ -91,7 +91,7 @@
                         <label>Previous Last Seen:</label>
                         <span class="timestamp">
                             {% if record.prev_dtg_latest %}
-                                {{ moment(record.prev_dtg_latest).format('YYYY-MM-DD HH:mm:ss') }} UTC
+                                {{ record.prev_dtg_latest.strftime('%Y-%m-%d %H:%M:%S') }} UTC
                                 <span class="time-ago">({{ moment(record.prev_dtg_latest).fromNow() }})</span>
                             {% else %}
                                 Unknown

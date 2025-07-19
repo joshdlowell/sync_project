@@ -76,7 +76,7 @@
                                     {{ log.log_level }}
                                 </span>
                             </td>
-                            <td class="timestamp-cell">{{ log.formatted_timestamp }}</td>
+                            <td class="timestamp-cell">{{ log.timestamp }}</td>
                             <td class="message-cell">
                                 <div class="message-wrapper"
                                      {% if log.detailed_message and log.detailed_message != log.summary_message %}

@@ -132,7 +132,7 @@ SELECT
         WHEN log_id IS NOT NULL
         AND site_id = 'local'
         AND log_level = 'INFO'
-        AND timestamp > UNIX_TIMESTAMP() - 60
+        AND timestamp > CURRENT_TIMESTAMP - 60
         THEN 'PASSED'
         ELSE 'FAILED'
     END as test_result
@@ -223,7 +223,7 @@ INSERT INTO logs (
 ) VALUES (
     'SIT0',
     'INFO',
-    UNIX_TIMESTAMP() + 1002,
+    CURRENT_TIMESTAMP() + 1002,
     'Test status message',
     'This is a test status message for testing'
 );
@@ -234,7 +234,7 @@ SELECT
     CASE
         WHEN site_id = 'SIT0'
         AND log_level = 'INFO'
-        AND timestamp > UNIX_TIMESTAMP() + 1000
+        AND timestamp > CURRENT_TIMESTAMP() + 1000
         AND summary_message = 'Test status message'
         AND detailed_message = 'This is a test status message for testing'
         THEN 'PASSED'

@@ -336,7 +336,7 @@ class TestFileHasher(unittest.TestCase):
 
     def test_hash_string(self):
         test_string = "abcdefg12345"
-        test_hash = "515d0e71b35f1d073ae30cc0c525526c2a037aa5"
+        test_hash = "d7115b844d0dabb68b1d7510df9a098cb9185bf4167a48bba3e1c73adf19757b"
 
         result = self.file_hasher.hash_string(test_string)
         self.assertEqual(test_hash, result)
@@ -357,14 +357,14 @@ class TestFileHasher(unittest.TestCase):
                                                      'empty': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
                                                      'boot.yaml': 'fb72f2e4e9b5a44650a4dd4ca2c27067ad3a2bc0',
                                                      'test_integrity_check.py': '5c0a6c568d946fd1722cbfe8a06b061c7ea4f870'}}
-        hash_info_result = '2063b1b72c8212b15121be4a73bc77343353a17f'
+        hash_info_result = '3393e7a121db20ebe01f6f460e73718b622a439af628f336f9cd76ef82875116'
         test_hash_info_2 = {'path': '/squishy/tests/empty',
                             'dirs': [],
                             'files': [],
                             'links': [],
                             'current_hash': '7e85a7fabb5fd2692986a7ac78fb043ee6d4e4a8',
                             'current_dtg_latest': 1750125976.9}
-        hash_info_result_2 = 'b93bd91d6f80da4c57215471d70883823c462247'
+        hash_info_result_2 = '5ed0cf446fbb7efe96a8ab76531b3e35cca77347c144623ebc175e5fa77b9507'
 
         self.assertEqual(hash_info_result, self.file_hasher.hash_directory(test_hash_info), "Return values didn't match")
         self.assertEqual(hash_info_result_2, self.file_hasher.hash_directory(test_hash_info_2), "Return values didn't match")

@@ -243,7 +243,7 @@ WHERE update_id = 'update-001'
 SELECT 'Test 8: Verify default timestamp generation:' as '';
 SELECT
     CASE
-        WHEN created_at > UNIX_TIMESTAMP() - 60 AND id IS NOT NULL THEN 'PASSED'
+        WHEN created_at > NOW() - 60 AND id IS NOT NULL THEN 'PASSED'
         ELSE 'FAILED'
     END as test_result,
     id,
@@ -262,14 +262,14 @@ CALL test_hash_value_required();
 -- Test 11: Insert with all fields
 SELECT 'Test 11: Insert with all fields:' as '';
 INSERT INTO state_history (update_id, hash_value, record_count, created_at)
-VALUES ('update-002', 'b2c3d4e5f6789012345678901234567890abcdef', 150, UNIX_TIMESTAMP('2024-01-15 12:30:00'));
+VALUES ('update-002', 'b2c3d4e5f6789012345678901234567890abcdef', 150, TIMESTAMP('2024-01-15 12:30:00'));
 
 SELECT
     CASE
         WHEN update_id = 'update-002'
         AND hash_value = 'b2c3d4e5f6789012345678901234567890abcdef'
         AND record_count = 150
-        AND created_at = UNIX_TIMESTAMP('2024-01-15 12:30:00')
+        AND created_at = TIMESTAMP('2024-01-15 12:30:00')
         THEN 'PASSED'
         ELSE 'FAILED'
     END as test_result,
@@ -314,7 +314,7 @@ WHERE site_name = 'TEST1';
 SELECT 'Test 14: Verify default timestamp and auto-increment:' as '';
 SELECT
     CASE
-        WHEN last_updated > UNIX_TIMESTAMP() - 60 AND id IS NOT NULL THEN 'PASSED'
+        WHEN last_updated > NOW() - 60 AND id IS NOT NULL THEN 'PASSED'
         ELSE 'FAILED'
     END as test_result,
     id,

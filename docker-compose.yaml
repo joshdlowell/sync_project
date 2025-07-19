@@ -16,16 +16,16 @@ services:
     restart: always
 
   squishy-rest-api:
-    build:
-      context: .
-      dockerfile: Dockerfile_rest
-    image: squishy-rest-api:v1.0
+    image: squishy-rest-api:v2.0
     container_name: squishy_rest_api
     environment:
-      LOCAL_MYSQL_USER: your_app_user
-      LOCAL_MYSQL_PASSWORD: your_user_password
+      LOCAL_DB_USER: your_app_user
+      LOCAL_DB_PASSWORD: your_user_password
+      PIPELINE_DB_USER: your_app_user
+      PIPELINE_DB_PASSWORD: your_user_password
       API_SECRET_KEY: squishy_key_12345
       SITE_NAME: SIT0
+      CORE_NAME: SIT0
     ports:
       - "5000:5000"
     networks:
@@ -35,10 +35,7 @@ services:
     restart: always
 
   squishy-integrity:
-    build:
-      context: .
-      dockerfile: Dockerfile_integrity
-    image: squishy-integrity:v1.0
+    image: squishy-integrity:v2.0
     container_name: squishy_integrity
     volumes:
       - /nas/baseline:/baseline
@@ -51,11 +48,12 @@ services:
       - donotstart
 
   squishy-coordinator:
-    build:
-      context: .
-      dockerfile: Dockerfile_coordinator
     image: squishy-coordinator:v1.0
     container_name: squishy_coordinator
+    environment:
+      CORE_API_HOST: mysql_squishy_db
+      SITE_NAME: SIT0
+      CORE_NAME: SIT0
     volumes:
       - /nas/baseline:/baseline
     networks:

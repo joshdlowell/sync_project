@@ -176,7 +176,7 @@ class RemoteMYSQLConnection(RemoteDBConnection):
                 self.logger.debug(f"Hash unchanged: {path}")
                 query = """
                         UPDATE hashtable
-                        SET current_dtg_latest = UNIX_TIMESTAMP(),
+                        SET current_dtg_latest = CURRENT_TIMESTAMP,
                             target_hash        = %(target_hash)s
                         WHERE path = %(path)s
                         """
@@ -188,7 +188,7 @@ class RemoteMYSQLConnection(RemoteDBConnection):
                         SET prev_hash          = `current_hash`,
                             prev_dtg_latest    = `current_dtg_latest`,
                             current_hash       = %(current_hash)s,
-                            current_dtg_latest = UNIX_TIMESTAMP(),
+                            current_dtg_latest = CURRENT_TIMESTAMP,
                             current_dtg_first  = `current_dtg_latest`,
                             dirs               = %(dirs)s,
                             files              = %(files)s,
@@ -211,7 +211,7 @@ class RemoteMYSQLConnection(RemoteDBConnection):
             query = """
                     INSERT INTO hashtable (path, current_hash, current_dtg_latest, current_dtg_first,
                                            dirs, files, links, target_hash)
-                        VALUES (%(path)s, %(current_hash)s, UNIX_TIMESTAMP(), `current_dtg_latest`,
+                        VALUES (%(path)s, %(current_hash)s, CURRENT_TIMESTAMP, `current_dtg_latest`,
                                 %(dirs)s, %(files)s, %(links)s, %(target_hash)s) AS entry
                     ON DUPLICATE KEY
                         UPDATE current_hash       = entry.current_hash,
@@ -501,7 +501,7 @@ class RemoteMYSQLConnection(RemoteDBConnection):
 
         # Add WHERE clause for date filtering
         if older_than_days is not None:
-            where_conditions.append("timestamp < UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL %s DAY))")
+            where_conditions.append("timestamp < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL %s DAY)")
             query_params.append(older_than_days)
 
         # Combine WHERE conditions

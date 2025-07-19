@@ -1,4 +1,5 @@
 from typing import Dict, Tuple, Optional, Any, List
+from datetime import datetime
 
 # from .db_client_interface import DBClientInterface, CoreDBClientInterface, DBInstanceInterface
 from .db_client_interface import DBInstanceInterface
@@ -155,9 +156,9 @@ class DBInstance(DBInstanceInterface):
         else:
             return None
 
-    def get_single_timestamp(self, path: str) -> int | None:
+    def get_single_timestamp(self, path: str) -> datetime | None:
         field_data = self.local_db_instance.get_single_field(path, 'current_dtg_latest')
-        if isinstance(field_data, int):
+        if isinstance(field_data, datetime):
             return field_data
         else:
             return None
@@ -201,8 +202,8 @@ class DBInstance(DBInstanceInterface):
     def get_dashboard_content(self) -> dict[str, Any]:
         return self.local_db_instance.get_dashboard_content()
 
-    def get_recent_logs(self) -> list:
-        return self.local_db_instance.get_recent_logs()
+    def get_recent_logs(self, log_level: str = None, site_id: str = None) -> list:
+        return self.local_db_instance.get_recent_logs(log_level, site_id)
 
     def get_hash_record_count(self) -> int:
         return self.local_db_instance.get_hash_record_count()
@@ -230,4 +231,4 @@ class DBInstance(DBInstanceInterface):
         return self.local_db_instance.get_official_sites()
 
     def put_pipeline_site_completion(self, site: str) -> bool:
-        return self.local_db_instance.put_pipeline_site_completion
+        return self.local_db_instance.put_pipeline_site_completion()

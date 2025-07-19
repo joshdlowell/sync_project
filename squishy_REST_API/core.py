@@ -5,9 +5,6 @@ This module creates and runs a default Flask application with gunicorn WSGI serv
 """
 from squishy_REST_API import config, logger, RESTAPIFactory
 
-# Create application instance for WSGI (at module level for Gunicorn)
-# app = RESTAPIFactory.create_app()  # TODO test if putting into args changes if it works
-
 
 def run_with_gunicorn(app):
     """Run the application with Gunicorn."""

@@ -26,7 +26,7 @@ class Config:
         return cls._instance
 
     # Define required keys as class constants
-    REQUIRED_KEYS = ['db_user', 'db_password', 'secret_key', 'site_name']
+    REQUIRED_KEYS = ['db_user', 'db_password', 'secret_key', 'site_name', 'core_name']
     SENSITIVE_KEYS = ['db_password', 'secret_key']
     NUMERIC_KEYS = ['db_port', 'api_port', 'workers', 'timeout', 'keepalive', 'max_requests', 'max_requests_jitter']
     BOOLEAN_KEYS = ['debug', 'use_gunicorn']
@@ -38,9 +38,8 @@ class Config:
         'valid_log_levels': {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
         'log_level': 'INFO',
         'site_name': None,
-        'core_name': None,
-        'core_host': 'squishy_badger',
-        'core_top_level_domain': 'home'
+        'core_name': 'HQS0',
+        # 'core_top_level_domain': 'home'
     }
     # REST API (flask) default configs
     DEFAULTS.update({
@@ -170,11 +169,11 @@ class Config:
         self.site_name = self._config.get('site_name')
         self.site_name = self.site_name.upper() if self.site_name else None
 
-        core_host = self._config.get('core_host')
+        core_name = self._config.get('core_name')
         self.is_core = (
-                core_host is not None and
+                core_name is not None and
                 self.site_name is not None and
-                self.site_name in core_host.upper()
+                self.site_name in core_name.upper()
         )
 
 
@@ -186,9 +185,9 @@ class Config:
         # Create logger
         self.logger = configure_logging(self._config.get('log_level'))
 
-    @property
-    def core_api_url(self) -> str:
-        return f"https://{self._config.get('core_host')}.{self._config.get('core_top_level_domain')}"
+    # @property
+    # def core_api_url(self) -> str:
+    #     return f"https://{self._config.get('core_host')}.{self._config.get('core_top_level_domain')}"
 
     def _load_from_environment(self) -> None:
         """Load configuration from environment variables."""

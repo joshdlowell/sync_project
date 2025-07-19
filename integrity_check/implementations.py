@@ -73,7 +73,7 @@ class SHA1HashFunction(HashFunction):
     """SHA-1 hash function implementation"""
 
     def create_hasher(self):
-        return hashlib.sha1()
+        return hashlib.sha256()
 
     def hash_string(self, data: str) -> str:
-        return hashlib.sha1(data.encode()).hexdigest()
+        return hashlib.sha256(data.encode()).hexdigest()

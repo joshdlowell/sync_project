@@ -1,4 +1,4 @@
-
+import datetime
 import unittest
 import os
 import mysql.connector
@@ -195,7 +195,7 @@ class TestRemoteMYSQLIntegration(unittest.TestCase):
             'files': [],
             'links': []
         }
-
+        insert_time = datetime.datetime.now(tz=datetime.timezone.utc)
         self.db_conn.insert_or_update_hash(test_record)
 
         # Test getting hash
@@ -204,8 +204,8 @@ class TestRemoteMYSQLIntegration(unittest.TestCase):
 
         # Test getting timestamp
         timestamp_result = self.db_conn.get_single_field('/test/integration/single_field', 'current_dtg_latest')
-        self.assertIsInstance(timestamp_result, int)
-        self.assertGreater(timestamp_result, 0)
+        self.assertIsInstance(timestamp_result, datetime.datetime)
+        self.assertGreater(timestamp_result.astimezone(datetime.timezone.utc), insert_time)
 
     def test_get_priority_updates(self):
         """Test getting priority updates."""

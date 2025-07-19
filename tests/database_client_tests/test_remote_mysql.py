@@ -192,7 +192,7 @@ class TestRemoteMYSQLConnection(unittest.TestCase):
         # Should use UPDATE query for unchanged hash
         calls = self.mock_cursor.execute.call_args_list
         self.assertIn("UPDATE hashtable", calls[1][0][0])
-        self.assertIn("current_dtg_latest = UNIX_TIMESTAMP()", calls[1][0][0])
+        self.assertIn("current_dtg_latest = CURRENT_TIMESTAMP", calls[1][0][0])
 
     def test_insert_or_update_hash_existing_record_changed(self):
         """Test updating existing hash record with changed hash."""

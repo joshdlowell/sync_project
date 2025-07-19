@@ -1,5 +1,5 @@
 from typing import Any
-from time import time
+from datetime import datetime, timedelta
 import mysql.connector
 from mysql.connector import Error
 from contextlib import contextmanager
@@ -233,9 +233,19 @@ class CoreMYSQLConnection(CoreDBConnection):
             Each dictionary contains: site_name, last_updated, status_category
         """
         # Calculate timestamps for different time thresholds
-        current_time = int(time())
-        thirty_five_minutes_ago = current_time - (35 * 60)  # 35 minutes
-        twenty_four_hours_ago = current_time - (24 * 60 * 60)  # 24 hours
+        # current_time = int(time())
+        # thirty_five_minutes_ago = current_time - (35 * 60)  # 35 minutes
+        # twenty_four_hours_ago = current_time - (24 * 60 * 60)  # 24 hours
+
+
+
+        # Calculate 24 hours ago as a datetime object
+
+        current_time = datetime.now()
+        thirty_five_minutes_ago = datetime.now() - timedelta(minutes=35)
+        twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
+
+
 
         query = """
                 SELECT sl.site_name,
@@ -293,7 +303,11 @@ class CoreMYSQLConnection(CoreDBConnection):
             Each dictionary contains: site_name, current_hash, last_updated, sync_category
         """
         # Calculate timestamp for 24 hours ago
-        twenty_four_hours_ago = int(time()) - (24 * 60 * 60)
+        # twenty_four_hours_ago = int(time()) - (24 * 60 * 60)
+        from datetime import datetime, timedelta
+
+        # Calculate 24 hours ago as a datetime object
+        twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
 
         query = """
                 WITH ranked_hashes AS (SELECT hash_value, \
@@ -374,7 +388,12 @@ class CoreMYSQLConnection(CoreDBConnection):
             or empty list if no records found or an error occurred
         """
         # Calculate timestamp for 30 days ago
-        thirty_days_ago = int(time()) - (30 * 24 * 60 * 60)
+        # thirty_days_ago = int(time()) - (30 * 24 * 60 * 60)
+        from datetime import datetime, timedelta
+
+        # Calculate 24 hours ago as a datetime object
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+
 
         # Build query with optional filters
         query = """
@@ -480,7 +499,7 @@ class CoreMYSQLConnection(CoreDBConnection):
         Get count of log entries for a specific log level in the last 24 hours.
 
         This method counts log entries from the local database for a given log level
-        that occurred within the last 24 hours based on unix timestamp.
+        that occurred within the last 24 hours based on timestamp object.
 
         Args:
             log_level: The log level to count. Must be one of:
@@ -501,16 +520,17 @@ class CoreMYSQLConnection(CoreDBConnection):
         if log_level.upper() not in allowed_log_levels:
             raise ValueError(f"Invalid log_level. Allowed: {allowed_log_levels}")
 
-        # Calculate 24 hours ago timestamp
-        import time
-        twenty_four_hours_ago = int(time.time()) - (24 * 60 * 60)
+        from datetime import datetime, timedelta
+
+        # Calculate 24 hours ago as a datetime object
+        twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
 
         # Build query with proper parameterization
         query = """
                 SELECT COUNT(*) as record_count
                 FROM logs
                 WHERE log_level = %s
-                  AND timestamp >= %s \
+                  AND timestamp >= %s
                 """
         query_params = [log_level.upper(), twenty_four_hours_ago]
 

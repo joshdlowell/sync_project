@@ -75,9 +75,9 @@ docker logs mysql_squishy_db
 Ensure the correct tables are present and functioning as intended by executing
 the text file inside the container.
 ```bash
-docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < tests/squishy_db_tests/test_hashtable.sql
-docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < tests/squishy_db_tests/test_logs.sql
-docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < tests/squishy_db_tests/test_sites_state.sql
+docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < tests/DB_table_tests/test_hashtable.sql
+docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < tests/DB_table_tests/test_logs.sql
+docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < tests/DB_table_tests/test_sites_state.sql
 ```
 
 ### Run REST API container
@@ -104,6 +104,7 @@ docker run -it --rm \
   -e PIPELINE_DB_PORT=3306 \
   -e API_SECRET_KEY=squishy_key_12345 \
   -e SITE_NAME=SIT0 \
+  -e CORE_NAME=SIT0 \
   -e LOG_LEVEL=DEBUG \
   -v $(pwd)/tests/squishy_REST_API_tests:/app/tests/squishy_REST_API_tests \
   -v $(pwd)/tests/database_client_tests:/app/tests/database_client_tests \
@@ -125,6 +126,7 @@ docker run -it --rm \
   -e API_SECRET_KEY=squishy_key_12345 \
   -e LOG_LEVEL=DEBUG \
   -e SITE_NAME=SIT0 \
+  -e CORE_NAME=SIT0 \
   -p 5000:5000 \
   -v $(pwd)/squishy_REST_API:/app/squishy_REST_API \
   -v $(pwd)/database_client:/app/database_client \
@@ -138,10 +140,12 @@ Run tests with detailed output:
 python -m unittest discover tests/ -v
 ```
 ##### Creating the pipeline database tables locally (Optional)
-Running this script will create the pipeline tables in the local database and prepopulate
-them with some test data
+Running this script will create the pipeline tables in the local database, and the
+second one will prepopulate them with some test data
 ```bash
-docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < squishy_db/misc_scripts/Create_pipeline_and_populate.sql
+docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < squishy_db/misc_scripts/Create_pipeline_mysql.sql
+docker exec -i mysql_squishy_db mysql -u root -pyour_root_password < squishy_db/misc_scripts/pipeline_populate.sql
+
 ```
 
 #### Run detached for production
@@ -156,6 +160,7 @@ docker run -d \
   -e PIPELINE_DB_PORT=3306 \
   -e API_SECRET_KEY=squishy_key_12345 \
   -e SITE_NAME=SIT0 \
+  -e CORE_NAME=SIT0 \
   -p 5000:5000 \
   squishy_rest_api:v2.0
 ```

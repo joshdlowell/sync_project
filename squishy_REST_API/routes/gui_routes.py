@@ -47,12 +47,12 @@ def register_gui_routes(app: Flask, db_instance):
                 logger.info(f"Path not found: {file_path}")
                 return render_template('error.html', error=f"Path not found: {file_path}"), 404
             # Reformat data for display
-            for key in ['current_dtg_latest', 'current_dtg_first', 'prev_dtg_latest']:
-                if record.get(key):
-                    record[key] = datetime.fromtimestamp(record[key], tz=timezone.utc)
-                else:
-                    record[key] = None
-            logger.debug(f"Reformatted timestamps")
+            # for key in ['current_dtg_latest', 'current_dtg_first', 'prev_dtg_latest']:
+            #     if record.get(key):
+            #         record[key] = datetime.fromtimestamp(record[key], tz=timezone.utc)
+            #     else:
+            #         record[key] = None
+            # logger.debug(f"Reformatted timestamps")
             # Reformat files dirs and links
             for key in ['files', 'dirs', 'links']:
                 if not record.get(key):
@@ -100,8 +100,8 @@ def register_gui_routes(app: Flask, db_instance):
         requested_site_id = request.args.get('site_id', '').strip()
 
         # Get valid options for dropdowns
-        valid_log_levels = config.VALID_LOG_LEVELS
-        valid_site_ids = db_instance.get_official_sites()
+        valid_log_levels = config.get('valid_log_levels')
+        valid_site_ids = db_instance.get_pipeline_sites()
 
         # Validate and sanitize filters
         log_level_filter = None
@@ -114,14 +114,14 @@ def register_gui_routes(app: Flask, db_instance):
             site_id_filter = requested_site_id
 
         # Get filtered logs
-        logs_data = db_instance.get_logs(log_level=log_level_filter, site_id=site_id_filter)
+        logs_data = db_instance.get_recent_logs(log_level=log_level_filter, site_id=site_id_filter)
 
         # Convert UNIX timestamps to datetime objects for template
-        for log in logs_data:
-            if log.get('timestamp'):
-                log['formatted_timestamp'] = datetime.fromtimestamp(log['timestamp'], tz=timezone.utc)
-            else:
-                log['formatted_timestamp'] = None
+        # for log in logs_data:
+        #     if log.get('timestamp'):
+        #         log['formatted_timestamp'] = datetime.fromtimestamp(log['timestamp'], tz=timezone.utc)
+        #     else:
+        #         log['formatted_timestamp'] = None
 
         return render_template('logs.html',
                                logs=logs_data,

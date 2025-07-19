@@ -172,6 +172,7 @@ class CoreDBConnection(ABC):
     for storing and retrieving hash information.
     """
 
+    @abstractmethod
     def get_dashboard_content(self) -> dict[str, Any]:
         """
         Retrieve dashboard metrics for site monitoring system.
@@ -200,9 +201,14 @@ class CoreDBConnection(ABC):
         """
         pass
 
-    def get_recent_logs(self) -> list:
+    @abstractmethod
+    def get_recent_logs(self, log_level: str = None, site_id: str = None) -> list:
         """
-        Get all logs from the last 30 days.
+        Get all logs from the last 30 days, optionally filtered by log_level and/or site_id.
+
+        Args:
+            log_level: Optional log level to filter by (case-insensitive)
+            site_id: Optional site ID to filter by (case-insensitive)
 
         Returns:
             List of dictionaries containing log records from the last 30 days,
@@ -210,6 +216,7 @@ class CoreDBConnection(ABC):
         """
         pass
 
+    @abstractmethod
     def get_hash_record_count(self) -> int:
         """
         Get the total count of records in the hashtable.
@@ -219,7 +226,7 @@ class CoreDBConnection(ABC):
         """
         pass
 
-
+    @abstractmethod
     def get_log_count_last_24h(self, log_level: str) -> int:
         """
         Get count of log entries for a specific log level in the last 24 hours.

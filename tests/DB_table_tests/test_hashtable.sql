@@ -98,7 +98,7 @@ SELECT 'Test 4: Timestamp auto-generation:' as '';
 -- Verify current_dtg_latest is actually a timestamp
 SELECT
     CASE
-        WHEN current_dtg_latest > UNIX_TIMESTAMP() - 60 THEN 'PASSED'
+        WHEN current_dtg_latest > CURRENT_TIMESTAMP - 60 THEN 'PASSED'
         ELSE 'FAILED'
     END as test_result,
     path,
@@ -122,7 +122,7 @@ INSERT INTO hashtable (
     'b2c3d4e5f6789012345678901234567890abcdef',
     'c3d4e5f6789012345678901234567890abcdef12',
     'd4e5f6789012345678901234567890abcdef123',
-    UNIX_TIMESTAMP('2024-01-15 12:30:00'),
+    TIMESTAMP('2024-01-15 12:30:00'),
     JSON_ARRAY('dir1', 'dir2', 'dir3'),
     JSON_ARRAY(
         JSON_OBJECT('name', 'file1.txt', 'size', 1024),
@@ -142,7 +142,7 @@ SELECT
         AND current_hash ='b2c3d4e5f6789012345678901234567890abcdef'
         AND target_hash ='c3d4e5f6789012345678901234567890abcdef12'
         AND prev_hash ='d4e5f6789012345678901234567890abcdef123'
-        AND prev_dtg_latest =UNIX_TIMESTAMP('2024-01-15 12:30:00')
+        AND prev_dtg_latest =TIMESTAMP('2024-01-15 12:30:00')
         AND JSON_CONTAINS(dirs, '"dir1"')
         AND JSON_CONTAINS(files, JSON_OBJECT('name', 'file1.txt', 'size', 1024))
         AND JSON_CONTAINS(links, JSON_OBJECT('name', 'link1', 'target', 'target1'))
@@ -188,7 +188,7 @@ UPDATE hashtable
 SET prev_hash = current_hash,
     prev_dtg_latest = current_dtg_latest,
     current_hash = 'new_hash_123456789012345678901234567',
-    current_dtg_latest = UNIX_TIMESTAMP('2024-01-15 12:31:00')
+    current_dtg_latest = TIMESTAMP('2024-01-15 12:31:00')
 WHERE path = '/tmp/test';
 
 SELECT
@@ -196,7 +196,7 @@ SELECT
         WHEN prev_hash != current_hash
         AND prev_dtg_latest != current_dtg_latest
         AND current_hash = 'new_hash_123456789012345678901234567'
-        AND current_dtg_latest = UNIX_TIMESTAMP('2024-01-15 12:31:00')
+        AND current_dtg_latest = TIMESTAMP('2024-01-15 12:31:00')
         THEN 'PASSED'
         ELSE 'FAILED'
     END as test_result,

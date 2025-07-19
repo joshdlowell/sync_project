@@ -3,6 +3,7 @@ Tests for the REST API package.
 
 This module contains tests for the REST API endpoints.
 """
+import datetime
 import os
 import json
 import unittest
@@ -784,9 +785,9 @@ class HashtableDetailEndpointTestCase(GUITestCase):
         mock_record = {
             'path': '/test_path',
             'current_hash': 'test_hash',
-            'current_dtg_latest': 123456789,
-            'current_dtg_first': 123456780,
-            'prev_dtg_latest': 123456770,
+            'current_dtg_latest': datetime.datetime.now(),
+            'current_dtg_first': datetime.datetime.now() - datetime.timedelta(days=1),
+            'prev_dtg_latest': datetime.datetime.now() - datetime.timedelta(days=3),
             'files': ['file1', 'file2'],
             'dirs': ['dir1', 'dir2'],
             'links': ['link1', 'link2']

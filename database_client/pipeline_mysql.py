@@ -95,7 +95,7 @@ class PipelineMYSQLConnection(PipelineDBConnection):
             List of dictionaries containing update information with keys:
             - id: Database ID
             - TC_id: TeamCity job number
-            - timestamp: Unix timestamp
+            - timestamp: timestamp object
             - update_path: Path to the update
             - update_size: Size in bytes
             - hash_value: Will be None for unprocessed updates
@@ -228,11 +228,11 @@ class PipelineMYSQLConnection(PipelineDBConnection):
             self.logger.debug("put_pipeline_site_completion missing site parameter")
             raise ValueError("site parameter must be provided")
 
-        # Example implementation - adjust based on your table structure
+        # Example implementation - adjust based on table structure
         query = """
                 UPDATE site_pipeline_status
                 SET completed    = 1, \
-                    completed_at = NOW()
+                    completed_at = CURRENT_TIMESTAMP
                 WHERE site_name = %s
                 """
 

@@ -33,10 +33,7 @@ CREATE TABLE authorized_updates (
     INDEX idx_update_path (update_path(255)),       -- Partial index for long paths
     INDEX idx_timestamp (timestamp),
     INDEX idx_tc_id (TC_id),
-    INDEX idx_unprocessed (hash_value, timestamp),  -- Composite for unprocessed queries
-
-    -- Constraints
-    UNIQUE KEY uk_update_path (update_path(500))     -- Prevent duplicate paths
+    INDEX idx_unprocessed (hash_value, timestamp)  -- Composite for unprocessed queries
 );
 
 -- =====================================================
@@ -65,28 +62,3 @@ CREATE TABLE site_pipeline_status (
         REFERENCES pipeline_site_list(site_name)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
-
--- =====================================================
--- Insert sample data for testing
--- =====================================================
-
--- Sample sites
-INSERT INTO pipeline_site_list (name, site_name, online, description) VALUES
-('SIT1', 'SIT1', 1, 'Primary production site'),
-('SIT2', 'SIT2', 1, 'Secondary production site'),
-('SIT3', 'SIT3', 1, 'Development site'),
-('SIT4', 'SIT4', 0, 'Maintenance site - currently offline');
-
--- Sample authorized updates
-INSERT INTO authorized_updates (TC_id, timestamp, update_path, update_size, hash_value) VALUES
-('12345', UNIX_TIMESTAMP('2024-01-15 10:30:00'), '/updates/release-1.0.0.zip', 1048576, 'abc123def4567890123456789012345678901234'),
-('12346', UNIX_TIMESTAMP('2024-01-15 11:00:00'), '/updates/hotfix-1.0.1.zip', 524288, 'def456abc1234567890123456789012345678901'),
-('12347', UNIX_TIMESTAMP('2024-01-15 12:30:00'), '/updates/release-1.1.0.zip', 2097152, NULL), -- Unprocessed
-('12348', UNIX_TIMESTAMP('2024-01-15 13:00:00'), '/updates/security-patch-1.0.2.zip', 786432, NULL); -- Unprocessed
-
--- Sample pipeline status entries
-INSERT INTO site_pipeline_status (site_name, completed, completed_at, pipeline_run_id) VALUES
-('SIT1', 1, '2024-01-15 10:45:00', '12345'),
-('SIT2', 1, '2024-01-15 10:50:00', '12345'),
-('SIT3', 0, NULL, '12347'),
-('SIT4', 0, NULL, NULL);

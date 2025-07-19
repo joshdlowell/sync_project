@@ -26,7 +26,7 @@ class Config:
         return cls._instance
 
     # Define key requirements as class constants
-    REQUIRED_KEYS = ['rest_api_host', 'rest_api_port', 'core_api_host', 'core_api_port', 'root_path']
+    REQUIRED_KEYS = ['rest_api_host', 'rest_api_port', 'core_api_host', 'core_api_port', 'root_path', 'core_name', 'site_name']
     SENSITIVE_KEYS = []
     NUMERIC_KEYS = ['rest_api_port', 'core_api_port']
     BOOLEAN_KEYS = ['debug']

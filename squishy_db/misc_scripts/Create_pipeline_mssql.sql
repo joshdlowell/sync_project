@@ -52,10 +52,7 @@ CREATE TABLE authorized_updates (
     update_size BIGINT DEFAULT 0,
     hash_value NVARCHAR(64) DEFAULT NULL,
     created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE(),
-
-    -- Unique constraint
-    CONSTRAINT uk_update_path UNIQUE (update_path)
+    updated_at DATETIME2 DEFAULT GETDATE()
 );
 GO
 

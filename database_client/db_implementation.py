@@ -89,10 +89,10 @@ class DBInstance(RemoteDBConnection, CoreDBConnection, PipelineDBConnection):
             raise NotImplementedError("CoreDBConnection implementation not provided")
         return self.core_db.get_dashboard_content()
 
-    def get_recent_logs(self) -> list:
+    def get_recent_logs(self, log_level: str = None, site_id: str = None) -> list:
         if not self.core_db:
             raise NotImplementedError("CoreDBConnection implementation not provided")
-        return self.core_db.get_recent_logs()
+        return self.core_db.get_recent_logs(log_level, site_id)
 
     def get_hash_record_count(self) -> int:
         if not self.core_db:

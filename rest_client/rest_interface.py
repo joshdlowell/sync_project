@@ -180,7 +180,7 @@ class RestProcessorInterface(ABC):
         pass
 
     @abstractmethod
-    def delete_log_entries(self, log_ids: list[int]) -> Tuple[bool, list]:
+    def delete_log_entries(self, log_ids: list[int]) -> Tuple[int, list]:
         """
         Delete multiple log entries by their IDs.
 
@@ -210,5 +210,5 @@ class RestProcessorInterface(ABC):
         pass
 
     @abstractmethod
-    def put_remote_hash_status(self, status_updates: list[dict[str, str]], site_name: str) -> bool:
+    def put_remote_hash_status(self, status_updates: list[dict[str, str]], site_name: str, root_path: str=None) -> bool:
         pass

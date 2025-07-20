@@ -73,13 +73,6 @@ def register_gui_routes(app: Flask, db_instance):
         try:
             # Get all liveness metrics from the database
             liveness_data = db_instance.get_site_liveness()
-            for row in liveness_data:
-                if row['last_updated']:
-                    row['last_updated'] = datetime.fromtimestamp(row['last_updated'], tz=timezone.utc)
-                else:
-                    row['last_updated'] = None
-
-
             return render_template('site_liveness.html', liveness_data=liveness_data)
 
         except Exception as e:
@@ -138,11 +131,11 @@ def register_gui_routes(app: Flask, db_instance):
         try:
             # Get all liveness metrics from the database
             hash_sync_data = db_instance.get_site_sync_status()
-            for row in hash_sync_data:
-                if row.get('last_updated'):
-                    row['last_updated'] = datetime.fromtimestamp(row['last_updated'], tz=timezone.utc)
-                else:
-                    row['last_updated'] = None
+            # for row in hash_sync_data:
+            #     if row.get('last_updated'):
+            #         row['last_updated'] = datetime.fromtimestamp(row['last_updated'], tz=timezone.utc)
+            #     else:
+            #         row['last_updated'] = None
             return render_template('hash_status.html', hash_sync_data=hash_sync_data)
 
         except Exception as e:

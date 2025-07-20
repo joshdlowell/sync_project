@@ -377,7 +377,7 @@ class RestProcessor(RestProcessorInterface):
         logger.debug("Processing official sites request")
         return self._process_response(response)
 
-    def put_remote_hash_status(self, status_updates: list[dict[str, str]], site_name: str) -> bool:
+    def put_remote_hash_status(self, status_updates: list[dict[str, str]], site_name: str, root_path: str=None) -> bool:
         """
         Update the hash status of a remote site.
 
@@ -406,7 +406,8 @@ class RestProcessor(RestProcessorInterface):
                     "action": "remote_updates",
                     "site_name": site_name,
                     "updates": chunk,
-                    "drop_previous": drop_previous
+                    "drop_previous": drop_previous,
+                    "root_path": root_path
                 }
 
                 response = self._db_put(endpoint, request_data)

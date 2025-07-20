@@ -107,7 +107,7 @@ class RemoteDBConnection(ABC):
         pass
 
     @abstractmethod
-    def delete_log_entries(self, log_ids: list[int]) -> tuple[list, list]:
+    def delete_log_entries(self, log_ids: list[int]) -> tuple[int, list]:
         """
         Remove log entry from the database.
 
@@ -273,7 +273,11 @@ class CoreDBConnection(ABC):
         pass
 
     @abstractmethod
-    def put_remote_hash_status(self, update_list: list[dict[str, str]], site_name: str, drop_existing: bool = False) -> list[str]:
+    def put_remote_hash_status(self, update_list: list[dict[str, str]],
+                               site_name: str,
+                               drop_existing: bool = False,
+                               root_path: str = None
+                               ) -> list[str]:
         """
         Update the remote hash status for all out-of-sync hashes at a specific site.
         Args:

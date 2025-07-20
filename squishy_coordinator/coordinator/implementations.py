@@ -67,7 +67,7 @@ class RestClientStorage(RestProcessorInterface):
     def collect_logs_older_than(self, days: int) -> list[dict[str, Any]] | None:
         return self.rest_client.collect_logs_older_than(days)
 
-    def delete_log_entries(self, log_ids: list[int]) -> Tuple[bool, list]:
+    def delete_log_entries(self, log_ids: list[int]) -> Tuple[int, list]:
         return self.rest_client.delete_log_entries(log_ids)
 
     def get_site_liveness(self) -> list:
@@ -82,8 +82,8 @@ class RestClientStorage(RestProcessorInterface):
         """ Not implemented in coordinator """
         pass
 
-    def put_remote_hash_status(self, status_updates: list[dict[str, str]], site_name: str) -> bool:
-        return self.rest_client.put_remote_hash_status(status_updates, site_name)
+    def put_remote_hash_status(self, status_updates: list[dict[str, str]], site_name: str, root_path: str=None) -> bool:
+        return self.rest_client.put_remote_hash_status(status_updates, site_name, root_path)
 
 
 class MerkleTreeImplementation(MerkleTreeInterface):

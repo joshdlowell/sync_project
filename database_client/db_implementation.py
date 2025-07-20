@@ -114,10 +114,14 @@ class DBInstance(RemoteDBConnection, CoreDBConnection, PipelineDBConnection):
             raise NotImplementedError("CoreDBConnection implementation not provided")
         return self.core_db.get_site_sync_status()
 
-    def put_remote_hash_status(self, update_list: list[dict[str,str]], site_name: str, drop_existing: bool=False) -> list[str]:
+    def put_remote_hash_status(self, update_list: list[dict[str, str]],
+                               site_name: str,
+                               drop_existing: bool = False,
+                               root_path: str = None
+                               ) -> list[str]:
         if not self.core_db:
             raise NotImplementedError("CoreDBConnection implementation not provided")
-        return self.core_db.put_remote_hash_status(update_list, site_name, drop_existing)
+        return self.core_db.put_remote_hash_status(update_list, site_name, drop_existing, root_path)
 
     # PipelineDBConnection interface methods
     def get_pipeline_updates(self) -> List[Dict[str, Any]]:

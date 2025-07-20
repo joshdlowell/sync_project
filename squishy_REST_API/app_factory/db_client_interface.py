@@ -57,7 +57,11 @@ class DBInstanceInterface(ABC):
         pass
 
     @abstractmethod
-    def put_remote_site_status(self) -> bool:
+    def put_remote_hash_status(self, update_list: list[dict[str, str]],
+                               site_name: str,
+                               drop_existing: bool = False,
+                               root_path: str = None
+                               ) -> list[str]:
         pass
 
     ########## CoreDBConnection interface methods

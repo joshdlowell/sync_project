@@ -195,8 +195,12 @@ class DBInstance(DBInstanceInterface):
     def health_check(self) -> dict[str, bool]:
         return self.local_db_instance.health_check()
 
-    def put_remote_site_status(self) -> bool:
-        return self.local_db_instance.put_remote_site_status()
+    def put_remote_hash_status(self, update_list: list[dict[str, str]],
+                               site_name: str,
+                               drop_existing: bool = False,
+                               root_path: str = None
+                               ) -> list[str]:
+        return self.local_db_instance.put_remote_hash_status(update_list, site_name, drop_existing, root_path)
 
     ########## Core client core site only implementations
     def get_dashboard_content(self) -> dict[str, Any]:

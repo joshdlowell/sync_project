@@ -69,7 +69,10 @@ def run_remote(coordinator_service):
     # Update targets as needed and build list for core
     core_path_data = coordinator_service.log_and_create_updates(updates)
     # Send updates
-    success = coordinator_service.send_status_to_core(core_path_data)
+    if coordinator_service.send_status_to_core(core_path_data):
+        logger.info(f"Updated core with remote hash status")
+    else:
+        logger.info(f"Failed to update core with remote hash status")
 
 
 def main() -> int:

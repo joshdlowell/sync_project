@@ -203,6 +203,16 @@ class CoordinatorService:
                 core_path_data.append({'path': path, 'current_hash': local_hash})
                 self.update_target_hash(path, local_hash, core_hash)
 
+        # Add correct baseline hash if tree is in sync (would be missing in that case)
+        baseline_found = False
+        for path_data in core_path_data:
+            if path_data['path'] == config.get('root_path'):
+                baseline_found = True
+                break
+        if not baseline_found:
+            baseline_hash = self.rest_storage.get_single_hash(config.get('root_path'))
+            core_path_data.append({'path': '/baseline', 'current_hash': baseline_hash})
+
         return core_path_data
 
     def send_status_to_core(self, updates: list[dict[str, str]]) -> bool:
@@ -213,7 +223,8 @@ class CoordinatorService:
         Returns:
             True if the update was sent, False otherwise
         """
-        return self.core_rest_storage.put_remote_hash_status(updates, config.get('site_name'))
+        logger.debug(f"Sending status update to core {updates}")
+        return self.core_rest_storage.put_remote_hash_status(updates, config.get('site_name'), config.get('root_path'))
 
     def _add_children_to_queue(self, path: str, path_queue: deque, source: str = 'both') -> None:
         """

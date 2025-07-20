@@ -693,7 +693,7 @@ class RemoteMYSQLConnection(RemoteDBConnection):
 
         self.logger.info(f"Finished consolidating session {session_id}")
 
-    def delete_log_entries(self, log_ids: list[int]) -> tuple[list, list]:
+    def delete_log_entries(self, log_ids: list[int]) -> tuple[int, list]:
         """
         Delete log_entries by log_id.
 
@@ -706,7 +706,7 @@ class RemoteMYSQLConnection(RemoteDBConnection):
         # Validate input
         if not log_ids:
             self.logger.warning("Missing 'log_ids' field")
-            raise ValueError("Missing 'log_ids' field")
+            return 0, []
         if isinstance(log_ids, int):
             log_ids = [log_ids]
         if not isinstance(log_ids, list):

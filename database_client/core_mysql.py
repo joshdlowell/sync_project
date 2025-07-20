@@ -98,67 +98,71 @@ class CoreMYSQLConnection(CoreDBConnection):
             Returns dictionary with zero values for all metrics if query fails.
             Only includes sites that exist in the authoritative site_list table.
         """
+        self.logger.debug("!!!!!!!!!!!!!!!!!")
         query = """
                 WITH
-                -- Get the most recent hash (current baseline)
-                    current_baseline AS (SELECT hash_value, created_at, record_count \
-                                         FROM state_history \
+                    -- Get the most recent hash (current baseline)
+                    current_baseline AS (SELECT hash_value, created_at, record_count
+                                         FROM state_history
                                          ORDER BY created_at DESC
-                    LIMIT 1
-                    ) \
-                   ,
-                -- Get the second most recent hash (1 behind baseline)
-                    previous_baseline AS (
-                SELECT hash_value, created_at
-                FROM state_history
-                ORDER BY created_at DESC
-                    LIMIT 1 \
-                OFFSET 1 ),
+                                         LIMIT 1),
+                    -- Get the second most recent hash (1 behind baseline)
+                    previous_baseline AS (SELECT hash_value, created_at
+                                          FROM state_history
+                                          ORDER BY created_at DESC
+                                          LIMIT 1 OFFSET 1),
                     -- Time boundaries
-                    time_bounds AS (
-                SELECT
-                    NOW() - INTERVAL 35 MINUTE as live_threshold, NOW() - INTERVAL 24 HOUR as day_threshold
-                    ),
-                    -- Site categorization - NOW INCLUDES ALL SITES FROM AUTHORITATIVE LIST
-                    site_stats AS (
-                SELECT
-                    sl.site_name, s.current_hash, s.last_updated, sh.created_at as hash_created_at, cb.hash_value as current_baseline_hash, pb.hash_value as previous_baseline_hash, cb.record_count as baseline_record_count,
+                    time_bounds AS (SELECT NOW() - INTERVAL 35 MINUTE as live_threshold,
+                                           NOW() - INTERVAL 24 HOUR   as day_threshold),
+                    -- Site categorization - INCLUDES ALL SITES FROM AUTHORITATIVE LIST
+                    site_stats AS (SELECT sl.site_name,
+                                          rhs.current_hash,
+                                          rhs.last_updated,
+                                          sh.created_at                 as hash_created_at,
+                                          current_baseline.hash_value   as current_baseline_hash,
+                                          previous_baseline.hash_value  as previous_baseline_hash,
+                                          current_baseline.record_count as baseline_record_count,
 
-                    -- Sync status categorization
-                    CASE
-                    WHEN s.current_hash IS NULL THEN 'sync_unknown'  -- Site exists but no operational data
-                    WHEN s.current_hash = cb.hash_value THEN 'sync_current'
-                    WHEN s.current_hash = pb.hash_value THEN 'sync_1_behind'
-                    WHEN sh.created_at >= tb.day_threshold THEN 'sync_l24_behind'
-                    WHEN sh.created_at < tb.day_threshold THEN 'sync_g24_behind'
-                    ELSE 'sync_unknown'
-                    END as sync_status,
+                                          -- Sync status categorization
+                                          CASE
+                                              WHEN rhs.current_hash IS NULL
+                                                  THEN 'sync_unknown' -- Site exists but no operational data
+                                              WHEN rhs.current_hash = current_baseline.hash_value THEN 'sync_current'
+                                              WHEN rhs.current_hash = previous_baseline.hash_value THEN 'sync_1_behind'
+                                              WHEN sh.created_at >= time_bounds.day_threshold THEN 'sync_l24_behind'
+                                              WHEN sh.created_at < time_bounds.day_threshold THEN 'sync_g24_behind'
+                                              ELSE 'sync_unknown' \
+                                              END                       as sync_status,
 
-                    -- Live status categorization
-                    CASE
-                    WHEN s.last_updated IS NULL THEN 'live_inactive' -- Site exists but no operational data
-                    WHEN s.last_updated >= tb.live_threshold THEN 'live_current'
-                    WHEN s.last_updated >= tb.day_threshold AND s.last_updated < tb.live_threshold THEN 'live_1_behind'
-                    WHEN s.last_updated >= tb.day_threshold THEN 'live_l24_behind'
-                    ELSE 'live_inactive'
-                    END as live_status
+                                          -- Live status categorization
+                                          CASE
+                                              WHEN rhs.last_updated IS NULL
+                                                  THEN 'live_inactive' -- Site exists but no operational data
+                                              WHEN rhs.last_updated >= time_bounds.live_threshold THEN 'live_current'
+                                              WHEN rhs.last_updated >= time_bounds.day_threshold AND
+                                                   rhs.last_updated < time_bounds.live_threshold THEN 'live_1_behind'
+                                              WHEN rhs.last_updated >= time_bounds.day_threshold THEN 'live_l24_behind'
+                                              ELSE 'live_inactive'
+                                              END                       as live_status
 
-                FROM site_list sl -- Start with authoritative list
-                    LEFT JOIN sites s \
-                ON sl.site_name = s.site_name -- Left join to include all sites
-                    CROSS JOIN current_baseline cb
-                    CROSS JOIN previous_baseline pb
-                    CROSS JOIN time_bounds tb
-                    LEFT JOIN state_history sh ON s.current_hash = sh.hash_value
+                                   FROM site_list sl -- Start with authoritative list
+                                            LEFT JOIN remotes_hash_status rhs
+                                                      ON sl.site_name = rhs.site_name -- Left join to include all sites
+                                            CROSS JOIN current_baseline
+                                            CROSS JOIN previous_baseline
+                                            CROSS JOIN time_bounds
+                                            LEFT JOIN state_history sh ON rhs.current_hash = sh.hash_value
+                                   WHERE sl.online = 1 -- Only include online sites
                     )
 
                 SELECT
                     -- Critical errors in last 24h (only for sites that exist in site_list)
-                    COALESCE((SELECT COUNT(*) \
-                              FROM logs el \
-                                       INNER JOIN site_list sl ON el.site_id = sl.site_name \
-                              WHERE el.log_level = 'CRITICAL' \
-                                AND el.timestamp >= NOW() - INTERVAL 24 HOUR ), 0)  as crit_error_count,
+                    COALESCE((SELECT COUNT(*)
+                              FROM logs l
+                                       INNER JOIN site_list sl ON l.site_id = sl.site_name
+                              WHERE l.log_level = 'CRITICAL'
+                                AND l.timestamp >= NOW() - INTERVAL 24 HOUR
+                                AND sl.online = 1), 0)                               as crit_error_count,
 
                     -- Record count from current baseline
                     MAX(baseline_record_count)                                       as hash_record_count,
@@ -200,7 +204,6 @@ class CoreMYSQLConnection(CoreDBConnection):
                 with conn.cursor() as cursor:
                     cursor.execute(query)
                     result = cursor.fetchone()  # Use fetchone() since query returns single row
-
                     if result:
                         # Update context with actual values from query result
                         context.update({
@@ -217,7 +220,7 @@ class CoreMYSQLConnection(CoreDBConnection):
                             'live_inactive': result[10] or 0,
                         })
                     self.logger.debug(f"Dashboard query result: {result}")
-        except Error as e:
+        except Exception as e:
             self.logger.error(f"Error collecting dashboard information: {e}")
             # Context remains with default values (0s) on error
 
@@ -233,19 +236,11 @@ class CoreMYSQLConnection(CoreDBConnection):
             Each dictionary contains: site_name, last_updated, status_category
         """
         # Calculate timestamps for different time thresholds
-        # current_time = int(time())
-        # thirty_five_minutes_ago = current_time - (35 * 60)  # 35 minutes
-        # twenty_four_hours_ago = current_time - (24 * 60 * 60)  # 24 hours
-
-
-
-        # Calculate 24 hours ago as a datetime object
-
         current_time = datetime.now()
         thirty_five_minutes_ago = datetime.now() - timedelta(minutes=35)
         twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
 
-
+        params = [thirty_five_minutes_ago, twenty_four_hours_ago]
 
         query = """
                 SELECT sl.site_name,
@@ -255,16 +250,13 @@ class CoreMYSQLConnection(CoreDBConnection):
                            WHEN sl.online = 0 THEN 'marked_inactive'
                            WHEN s.last_updated IS NULL THEN 'live_inactive'
                            WHEN s.last_updated >= %s THEN 'live_current'
-                           WHEN s.last_updated >= %s THEN 'live_1_behind'
-                           WHEN s.last_updated >= %s THEN 'live_l24_behind'
+                           WHEN s.last_updated >= %s THEN 'live_behind'
                            ELSE 'live_inactive'
                            END as status_category
                 FROM site_list sl
-                         LEFT JOIN sites s ON sl.site_name = s.site_name
+                         LEFT JOIN squishy_db.remotes_hash_status s ON sl.site_name = s.site_name
                 ORDER BY sl.site_name
                 """
-
-        params = [thirty_five_minutes_ago, thirty_five_minutes_ago, twenty_four_hours_ago]
 
         try:
             with self._get_connection() as conn:
@@ -272,12 +264,17 @@ class CoreMYSQLConnection(CoreDBConnection):
                     cursor.execute(query, params)
                     results = cursor.fetchall()
 
-                    # Clean up the results to only include needed fields
                     cleaned_results = []
                     for row in results:
+                        # Convert datetime to timestamp for JavaScript
+                        timestamp = None
+                        if row['last_updated']:
+                            timestamp = int(row['last_updated'].timestamp())
+
                         cleaned_results.append({
                             'site_name': row['site_name'],
-                            'last_updated': row['last_updated'],
+                            'last_updated': row['last_updated'],  # Keep original for moment.js
+                            'last_updated_timestamp': timestamp,  # Add timestamp for sorting
                             'status_category': row['status_category']
                         })
 
@@ -304,7 +301,7 @@ class CoreMYSQLConnection(CoreDBConnection):
         """
         # Calculate timestamp for 24 hours ago
         # twenty_four_hours_ago = int(time()) - (24 * 60 * 60)
-        from datetime import datetime, timedelta
+        # from datetime import datetime, timedelta
 
         # Calculate 24 hours ago as a datetime object
         twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
@@ -335,7 +332,7 @@ class CoreMYSQLConnection(CoreDBConnection):
                            ELSE 'sync_unknown' \
                            END as sync_category
                 FROM site_list sl
-                         INNER JOIN sites s ON sl.site_name = s.site_name
+                         INNER JOIN squishy_db.remotes_hash_status s ON sl.site_name = s.site_name
                 WHERE sl.online = 1
                 ORDER BY sl.site_name
                 """
@@ -554,8 +551,11 @@ class CoreMYSQLConnection(CoreDBConnection):
             self.logger.error(f"Unexpected error counting log records: {e}")
             return 0
 
-    def put_remote_hash_status(self, update_list: list[dict[str, str]], site_name: str, drop_existing: bool = False) -> \
-    list[str]:
+    def put_remote_hash_status(self, update_list: list[dict[str, str]],
+                               site_name: str,
+                               drop_existing: bool = False,
+                               root_path: str = None
+                               ) -> list[str]:
         """
         Update the remote hash status for all out-of-sync hashes at a specific site.
         Args:
@@ -570,6 +570,12 @@ class CoreMYSQLConnection(CoreDBConnection):
         if not update_list or not site_name:
             self.logger.debug(f"put_remote_hash_status missing update_list or site_name")
             raise ValueError("update_list and site_name must be provided")
+
+        # If site is in sync, the only status update we get is baseline itself
+        baseline_hash_only = False
+        if len(update_list) == 1:
+            if update_list[0]['path'] == root_path:
+                baseline_hash_only = True
 
         # Validate each item in update_list has required keys
         for item in update_list:
@@ -593,6 +599,35 @@ class CoreMYSQLConnection(CoreDBConnection):
                     for item in update_list:
                         path = item['path']
                         current_hash = item['current_hash']
+
+                        # Update sites table if the item is baseline.
+                        if path == root_path:
+                            # First try to update existing records for this site/path combination
+                            update_query = """
+                                           UPDATE remotes_hash_status
+                                           SET current_hash = %s
+                                           WHERE site_name = %s
+                                           """
+                            cursor.execute(update_query, (current_hash, site_name))
+
+                            if cursor.rowcount > 0:
+                                # Successfully updated existing record(s)
+                                self.logger.debug(f"Updated {site_name} existing record in sites table")
+                            else:
+                                # No existing records found, insert new one
+                                insert_query = """
+                                               INSERT INTO squishy_db.remotes_hash_status (site_name, current_hash)
+                                               VALUES (%s, %s) \
+                                               """
+                                cursor.execute(insert_query, (site_name, current_hash))
+
+                                if cursor.rowcount > 0:
+                                    updated_paths.append(path)
+                                    self.logger.debug(f"Inserted new record for site: {site_name} into sites table")
+
+                        # If the update contained only the baseline hash, then we are done.
+                        if baseline_hash_only:
+                            continue
 
                         if not drop_existing:
                             # First try to update existing records for this site/path combination

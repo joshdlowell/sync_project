@@ -1,4 +1,4 @@
-__version__ = "2.7.0"
+__version__ = "2.7.3"
 
 from .configuration import config, logger
 from .app_factory import RESTAPIFactory

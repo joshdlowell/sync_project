@@ -156,11 +156,12 @@ def register_core_routes(app: Flask, db_instance):
                     drop_previous = request.json.get('drop_previous', True)
                     site_name = request.json.get('site_name')
                     updates = request.json.get('updates')
+                    root_path = request.json.get('root_path', None)
 
                     if not site_name or not updates or len(updates) == 0:
-                        raise ValueError("site_name and updates required for site status updates", status_code=400)
+                        raise ValueError("site_name and updates required for site status updates")
 
-                    updates_completed = db_instance.put_remote_site_status(updates, site_name, drop_previous)
+                    updates_completed = db_instance.put_remote_hash_status(updates, site_name, drop_previous, root_path)
 
                     return create_success_response(data=updates_completed)
 

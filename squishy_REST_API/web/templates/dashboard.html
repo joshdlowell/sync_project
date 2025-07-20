@@ -70,123 +70,216 @@
         <!-- Live Status Distribution Chart -->
         <div class="chart-container bg-white p-6 rounded-xl shadow-lg cursor-pointer" onclick="window.location.href='{{ url_for('hash_status') }}'">
             <h3 class="text-xl font-semibold text-gray-800 mb-4">Site Live Status Distribution</h3>
-            <div class="relative h-64">
-                <canvas id="liveStatusDistribution" width="726" height="256"></canvas>
+            <div class="chart-wrapper">
+                <canvas id="liveStatusDistribution"></canvas>
+                <!-- Remove this line: <div id="liveStatusLegend" class="chart-legend"></div> -->
             </div>
         </div>
 
         <!-- Sync Status Chart -->
         <div class="chart-container bg-white p-6 rounded-xl shadow-lg cursor-pointer" onclick="window.location.href='{{ url_for('hash_status') }}'">
             <h3 class="text-xl font-semibold text-gray-800 mb-4">Baseline Sync Status Overview</h3>
-            <div class="relative h-64">
-                <canvas id="syncStatusChart" width="726" height="256"></canvas>
+            <div class="chart-wrapper">
+                <canvas id="syncStatusChart"></canvas>
+                <!-- Remove this line: <div id="syncStatusLegend" class="chart-legend"></div> -->
             </div>
         </div>
     </div>
 
-    <!-- Additional Metrics Section -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
-        <div class="bg-white p-4 rounded-lg shadow">
-            <div class="text-center">
-                <p class="text-sm text-gray-600">Live Current</p>
-                <p class="text-2xl font-bold text-green-600">{{ dashboard_data.live_current }}</p>
-            </div>
-        </div>
+<!--    &lt;!&ndash; Additional Metrics Section &ndash;&gt;-->
+<!--    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-8">-->
+<!--        <div class="bg-white p-4 rounded-lg shadow">-->
+<!--            <div class="text-center">-->
+<!--                <p class="text-sm text-gray-600">Live Current</p>-->
+<!--                <p class="text-2xl font-bold text-green-600">{{ dashboard_data.live_current }}</p>-->
+<!--            </div>-->
+<!--        </div>-->
 
-        <div class="bg-white p-4 rounded-lg shadow">
-            <div class="text-center">
-                <p class="text-sm text-gray-600">1 Behind</p>
-                <p class="text-2xl font-bold text-yellow-600">{{ dashboard_data.sync_1_behind }}</p>
-            </div>
-        </div>
+<!--        <div class="bg-white p-4 rounded-lg shadow">-->
+<!--            <div class="text-center">-->
+<!--                <p class="text-sm text-gray-600">1 Behind</p>-->
+<!--                <p class="text-2xl font-bold text-yellow-600">{{ dashboard_data.sync_1_behind }}</p>-->
+<!--            </div>-->
+<!--        </div>-->
 
-        <div class="bg-white p-4 rounded-lg shadow">
-            <div class="text-center">
-                <p class="text-sm text-gray-600">&lt;24h Behind</p>
-                <p class="text-2xl font-bold text-orange-600">{{ dashboard_data.sync_l24_behind }}</p>
-            </div>
-        </div>
+<!--        <div class="bg-white p-4 rounded-lg shadow">-->
+<!--            <div class="text-center">-->
+<!--                <p class="text-sm text-gray-600">&lt;24h Behind</p>-->
+<!--                <p class="text-2xl font-bold text-orange-600">{{ dashboard_data.sync_l24_behind }}</p>-->
+<!--            </div>-->
+<!--        </div>-->
 
-        <div class="bg-white p-4 rounded-lg shadow">
-            <div class="text-center">
-                <p class="text-sm text-gray-600">&gt;24h Behind</p>
-                <p class="text-2xl font-bold text-red-600">{{ dashboard_data.sync_g24_behind }}</p>
-            </div>
-        </div>
+<!--        <div class="bg-white p-4 rounded-lg shadow">-->
+<!--            <div class="text-center">-->
+<!--                <p class="text-sm text-gray-600">&gt;24h Behind</p>-->
+<!--                <p class="text-2xl font-bold text-red-600">{{ dashboard_data.sync_g24_behind }}</p>-->
+<!--            </div>-->
+<!--        </div>-->
 
-        <div class="bg-white p-4 rounded-lg shadow">
-            <div class="text-center">
-                <p class="text-sm text-gray-600">Unknown Status</p>
-                <p class="text-2xl font-bold text-gray-600">{{ dashboard_data.sync_unknown }}</p>
-            </div>
-        </div>
-    </div>
+<!--        <div class="bg-white p-4 rounded-lg shadow">-->
+<!--            <div class="text-center">-->
+<!--                <p class="text-sm text-gray-600">Unknown Status</p>-->
+<!--                <p class="text-2xl font-bold text-gray-600">{{ dashboard_data.sync_unknown }}</p>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
 </div>
 
 <!-- Chart Scripts -->
-<script src="{{ url_for('static', filename='js/minimal-chart.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
     // Live Status Distribution Chart
-    const liveStatusCtx = document.getElementById('liveStatusDistribution').getContext('2d');
-    const liveStatusChart = new Chart(liveStatusCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Current', 'Recently Active', 'Last 24h', 'Inactive'],
-            datasets: [{
-                data: [
-                    {{ dashboard_data.live_current }},
-                    {{ dashboard_data.live_1_behind }},
-                    {{ dashboard_data.live_l24_behind }},
-                    {{ dashboard_data.live_inactive }}
-                ],
-                backgroundColor: ['#10B981', '#F59E0B', '#F97316', '#EF4444']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
-
-    // Sync Status Chart
-    const syncStatusCtx = document.getElementById('syncStatusChart').getContext('2d');
-    const syncStatusChart = new Chart(syncStatusCtx, {
-        type: 'bar',
-        data: {
-            labels: ['Current', '1 Behind', '<24h Behind', '>24h Behind', 'Unknown'],
-            datasets: [{
-                data: [
-                    {{ dashboard_data.sync_current }},
-                    {{ dashboard_data.sync_1_behind }},
-                    {{ dashboard_data.sync_l24_behind }},
-                    {{ dashboard_data.sync_g24_behind }},
-                    {{ dashboard_data.sync_unknown }}
-                ],
-                backgroundColor: ['#10B981', '#F59E0B', '#F97316', '#EF4444', '#6B7280']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
+    const liveStatusCtx = document.getElementById('liveStatusDistribution');
+    if (liveStatusCtx) {
+        const liveStatusChart = new Chart(liveStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Current', 'Recently Active', 'Last 24h', 'Inactive'],
+                datasets: [{
+                    label: 'Sites',
+                    data: [
+                        {{ dashboard_data.live_current }},
+                        {{ dashboard_data.live_1_behind }},
+                        {{ dashboard_data.live_l24_behind }},
+                        {{ dashboard_data.live_inactive }}
+                    ],
+                    backgroundColor: [
+                        '#10B981', // Current - Green
+                        '#F59E0B', // Recently Active - Yellow
+                        '#F97316', // Last 24h - Orange
+                        '#EF4444'  // Inactive - Red
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            font: {
+                                size: 12,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#ffffff',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
                     }
                 }
+            }
+        });
+    }
+
+    // Sync Status Chart
+    const syncStatusCtx = document.getElementById('syncStatusChart');
+    if (syncStatusCtx) {
+        const syncStatusChart = new Chart(syncStatusCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Current', '1 Behind', '<24h Behind', '>24h Behind', 'Unknown'],
+                datasets: [{
+                    label: 'Sites',
+                    data: [
+                        {{ dashboard_data.sync_current }},
+                        {{ dashboard_data.sync_1_behind }},
+                        {{ dashboard_data.sync_l24_behind }},
+                        {{ dashboard_data.sync_g24_behind }},
+                        {{ dashboard_data.sync_unknown }}
+                    ],
+                    backgroundColor: [
+                        '#10B981', // Current - Green
+                        '#F59E0B', // 1 Behind - Yellow
+                        '#F97316', // <24h Behind - Orange
+                        '#EF4444', // >24h Behind - Red
+                        '#6B7280'  // Unknown - Gray
+                    ],
+                    borderWidth: 1,
+                    borderColor: '#ffffff',
+                    hoverBackgroundColor: [
+                        '#059669',
+                        '#D97706',
+                        '#EA580C',
+                        '#DC2626',
+                        '#4B5563'
+                    ]
+                }]
             },
-            plugins: {
-                legend: {
-                    display: false
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            font: {
+                                size: 11,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#ffffff',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y}`;
+                            }
+                        }
+                    }
                 }
             }
-        }
-    });
+        });
+    }
+});
 </script>
 {% endblock %}

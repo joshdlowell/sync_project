@@ -46,24 +46,16 @@
                 <thead>
                     <tr>
                         <th data-sort="name">Site Name</th>
-                        <th data-sort="hash">Current Hash</th>
                         <th data-sort="timestamp">Last Updated</th>
                         <th data-sort="sync-status">Sync Status</th>
+                        <th data-sort="hash">Current Hash</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for site in hash_sync_data %}
-                        <tr class="hash-status-row sync-{{ site.sync_category.replace('_', '-') }}">
+                        <tr class="hash-status-row">
                             <td class="site-cell">{{ site.site_name }}</td>
-                            <td class="hash-cell">
-                                {% if site.current_hash %}
-                                    <span class="hash-value" title="{{ site.current_hash }}">
-                                        {{ site.current_hash[:8] }}...
-                                    </span>
-                                {% else %}
-                                    <span class="no-hash">No Hash</span>
-                                {% endif %}
-                            </td>
+
                             <td class="timestamp-cell" data-timestamp="{{ site.last_updated or 0 }}">
                                 {% if site.last_updated %}
                                     {{ moment(site.last_updated).format('YYYY-MM-DD HH:mm:ss') }}
@@ -89,6 +81,15 @@
                                     {% endif %}
                                 </span>
                             </td>
+                            <td class="hash-cell">
+                                {% if site.current_hash %}
+                                    <span class="hash-value" title="{{ site.current_hash }}">
+                                        {{ site.current_hash[:8] }}...
+                                    </span>
+                                {% else %}
+                                    <span class="no-hash">No Hash</span>
+                                {% endif %}
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -100,69 +101,4 @@
         </div>
     {% endif %}
 </div>
-
-<script>
-function sortTable(sortBy) {
-    const table = document.getElementById('hash-status-table');
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-
-    rows.sort((a, b) => {
-        let aValue, bValue;
-
-        switch(sortBy) {
-            case 'name':
-                aValue = a.querySelector('.site-cell').textContent.toLowerCase();
-                bValue = b.querySelector('.site-cell').textContent.toLowerCase();
-                return aValue.localeCompare(bValue);
-
-            case 'name-desc':
-                aValue = a.querySelector('.site-cell').textContent.toLowerCase();
-                bValue = b.querySelector('.site-cell').textContent.toLowerCase();
-                return bValue.localeCompare(aValue);
-
-            case 'hash':
-                aValue = a.querySelector('.hash-cell').textContent.toLowerCase();
-                bValue = b.querySelector('.hash-cell').textContent.toLowerCase();
-                return aValue.localeCompare(bValue);
-
-            case 'timestamp':
-                aValue = parseInt(a.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
-                bValue = parseInt(b.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
-                return bValue - aValue; // Newest first
-
-            case 'timestamp-desc':
-                aValue = parseInt(a.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
-                bValue = parseInt(b.querySelector('.timestamp-cell').getAttribute('data-timestamp'));
-                return aValue - bValue; // Oldest first
-
-            case 'sync-status':
-                // Define sync status priority order (best to worst)
-                const syncOrder = {
-                    'sync-current': 0,
-                    'sync-1-behind': 1,
-                    'sync-l24-behind': 2,
-                    'sync-g24-behind': 3,
-                    'sync-unknown': 4
-                };
-
-                aValue = a.className.match(/sync-([^\s]+)/)?.[1] || 'unknown';
-                bValue = b.className.match(/sync-([^\s]+)/)?.[1] || 'unknown';
-
-                return (syncOrder[aValue] || 999) - (syncOrder[bValue] || 999);
-
-            default:
-                return 0;
-        }
-    });
-
-    // Re-append sorted rows
-    rows.forEach(row => tbody.appendChild(row));
-}
-
-// Set default sort on page load
-document.addEventListener('DOMContentLoaded', function() {
-    sortTable('name');
-});
-</script>
 {% endblock %}

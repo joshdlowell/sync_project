@@ -3,7 +3,8 @@
 {% block title %}Site Liveness - Squishy webgui{% endblock %}
 
 {% block content %}
-<div class="liveness-container">
+<div class="hash-status-container">
+
     <h1>Site Liveness Status</h1>
 
     <!-- Sort controls -->
@@ -39,6 +40,7 @@
         </div>
     </div>
 
+
     <!-- Display site liveness -->
     {% if liveness_data %}
         <div class="table-container">
@@ -54,10 +56,13 @@
                     {% for site in liveness_data %}
                         <tr class="liveness-row status-{{ site.status_category.replace('_', '-') }}">
                             <td class="site-cell">{{ site.site_name }}</td>
-                            <td class="timestamp-cell" data-timestamp="{{ site.last_updated or 0 }}">
+                            <td class="timestamp-cell" data-timestamp="{{ site.last_updated_timestamp or 0 }}">
                                 {% if site.last_updated %}
-                                    {{ moment(site.last_updated).format('YYYY-MM-DD HH:mm:ss') }}
-                                    <span class="time-ago">({{ moment(site.last_updated).fromNow() }})</span>
+                                    <span class="timestamp">{{ site.last_updated.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                                    <br>
+                                    <span class="time-ago" data-timestamp="{{ site.last_updated_timestamp }}">
+                                        <!-- JavaScript will populate this -->
+                                    </span>
                                 {% else %}
                                     <span class="never-updated">Never</span>
                                 {% endif %}
@@ -92,6 +97,35 @@
 </div>
 
 <script>
+// Function to format relative time
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return '';
+
+    const now = Math.floor(Date.now() / 1000);
+    const diff = now - timestamp;
+
+    if (diff < 60) {
+        return '(just now)';
+    } else if (diff < 3600) {
+        const minutes = Math.floor(diff / 60);
+        return `(${minutes} min ago)`;
+    } else if (diff < 86400) {
+        const hours = Math.floor(diff / 3600);
+        return `(${hours}h ago)`;
+    } else {
+        const days = Math.floor(diff / 86400);
+        return `(${days}d ago)`;
+    }
+}
+
+// Update time-ago spans
+function updateTimeAgo() {
+    document.querySelectorAll('.time-ago[data-timestamp]').forEach(span => {
+        const timestamp = parseInt(span.getAttribute('data-timestamp'));
+        span.textContent = formatTimeAgo(timestamp);
+    });
+}
+
 function sortTable(sortBy) {
     const table = document.getElementById('liveness-table');
     const tbody = table.querySelector('tbody');
@@ -145,9 +179,13 @@ function sortTable(sortBy) {
     rows.forEach(row => tbody.appendChild(row));
 }
 
-// Set default sort on page load
+// Set default sort and update time displays on page load
 document.addEventListener('DOMContentLoaded', function() {
+    updateTimeAgo();
     sortTable('name');
+
+    // Update time-ago every minute
+    setInterval(updateTimeAgo, 60000);
 });
 </script>
 {% endblock %}

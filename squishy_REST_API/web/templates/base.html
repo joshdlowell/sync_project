@@ -18,7 +18,9 @@
                 <!-- Logo -->
                 <div class="flex items-center space-x-3">
                     <div class="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-md">
-                        <img src="{{ url_for('static', filename='images/badger_tupperware.svg') }}" alt="Badger in tupperware container">
+                        <img src="{{ url_for('static', filename='images/badger_tupperware.svg') }}"
+                             alt="Badger in tupperware container"
+                             class="w-10 h-10">
                     </div>
                     <div>
                         <h1 class="text-xl font-bold text-gray-800">DataBadger</h1>
@@ -28,16 +30,16 @@
 
                 <!-- Navigation Items -->
                 <div class="flex space-x-1">
-                    <a href="{{ url_for('dashboard') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'dashboard' %}text-white bg-blue-600{% else %}text-gray-700 hover: bg-blue-400{% endif %} transition-all duration-200 font-medium shadow-md">
+                    <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
                         Dashboard
                     </a>
-                    <a href="{{ url_for('hash_status') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'hash_status' %}text-white bg-blue-600{% else %}text-gray-700 hover: bg-blue-400{% endif %} transition-all duration-200 font-medium shadow-md">
+                    <a href="{{ url_for('hash_status') }}" class="nav-item {% if request.endpoint == 'hash_status' %}active{% endif %}">
                         Site Hash Status
                     </a>
-                    <a href="{{ url_for('site_liveness') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'site_liveness' %}text-white bg-blue-600{% else %}text-gray-700 hover: bg-blue-400{% endif %} transition-all duration-200 font-medium shadow-md">
+                    <a href="{{ url_for('site_liveness') }}" class="nav-item {% if request.endpoint == 'site_liveness' %}active{% endif %}">
                         Site Liveness
                     </a>
-                    <a href="{{ url_for('logs') }}" class="nav-item px-4 py-2 rounded-lg {% if request.endpoint == 'logs' %}text-white bg-blue-600{% else %}text-gray-700 hover: bg-blue-400{% endif %} transition-all duration-200 font-medium shadow-md">
+                    <a href="{{ url_for('logs') }}" class="nav-item {% if request.endpoint == 'logs' %}active{% endif %}">
                         Logs
                     </a>
                 </div>
@@ -46,7 +48,7 @@
     </nav>
 
     <!-- Path Navigation Form -->
-    <div class="bg-gray-200 border-b border-gray-300 shadow-sm">
+    <div class="bg-gray-400 border-b border-gray-300 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 py-3">
             <form id="path-navigation-form" class="flex items-center space-x-3">
                 <label for="path-input" class="text-sm font-medium text-gray-700 whitespace-nowrap">
@@ -58,10 +60,9 @@
                            name="path"
                            value="/baseline"
                            placeholder="/baseline/product..."
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono">
+                           class="w-full font-mono">
                 </div>
-                <button type="submit"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 text-sm font-medium shadow-sm">
+                <button type="submit">
                     Go
                 </button>
             </form>

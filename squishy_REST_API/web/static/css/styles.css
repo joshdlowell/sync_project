@@ -15,6 +15,21 @@ body {
     min-height: 100vh;
 }
 
+:root {
+    --color-danger: #dc3545;
+    --color-warning: #ffc107;
+    --color-info: #17a2b8;
+    --color-secondary: #6c757d;
+    --gray-900: #1f2937;
+    --radius-sm: 0.375rem;
+    --status-current: #10b981;
+    --status-warning: #f59e0b;
+    --status-critical: #ef4444;
+    --status-inactive: #6b7280;
+    --status-unknown: #9ca3af;
+    --status-1-behind: #3b82f6;
+}
+
 /* Utility Classes */
 .max-w-7xl {
     max-width: 80rem;
@@ -142,50 +157,30 @@ body {
     color: #4b5563;
 }
 
-.text-gray-400 {
-    color: #9ca3af;
-}
+.text-gray-400 { color: #9ca3af; }
 
-.text-gray-500 {
-    color: #6b7280;
-}
+.text-gray-500 { color: #6b7280; }
 
-.text-white {
-    color: white;
-}
+.text-white { color: white; }
 
-.text-3xl {
-    font-size: 1.875rem;
-}
+.text-3xl { font-size: 1.875rem; }
 
-.text-xl {
-    font-size: 1.25rem;
-}
+.text-xl { font-size: 1.25rem; }
 
-.text-sm {
-    font-size: 0.875rem;
-}
+.text-sm { font-size: 0.875rem; }
 
 .text-xs {
     font-size: 0.75rem;
     line-height: 1rem;
 }
 
-.text-2xl {
-    font-size: 1.5rem;
-}
+.text-2xl { font-size: 1.5rem; }
 
-.font-bold {
-    font-weight: 700;
-}
+.font-bold { font-weight: 700; }
 
-.font-semibold {
-    font-weight: 600;
-}
+.font-semibold { font-weight: 600; }
 
-.font-medium {
-    font-weight: 500;
-}
+.font-medium { font-weight: 500; }
 
 .font-mono {
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
@@ -416,15 +411,25 @@ nav {
 }
 
 .nav-item {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(75deg, #899ae6 0%, #77638a 100%);
+    border: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    color: #1f2937; /* text-gray-800 equivalent */
+    font-weight: 600;
+    cursor: pointer;
     backdrop-filter: blur(10px);
 }
 
+.nav-item.active {
+    color: #106008;
+}
+
 .nav-item:hover {
-    background: rgba(255, 255, 255, 0.2);
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Form Styles */
@@ -574,6 +579,59 @@ button:hover {
     background: #721c24;
     color: white;
 }
+
+/* Status Badges */
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-live-current { background-color: var(--status-current); color: white; }
+.status-live-1-behind { background-color: var(--status-warning); color: var(--gray-900); }
+.status-live-l24-behind { background-color: var(--status-critical); color: white; }
+.status-live-inactive { background-color: var(--status-inactive); color: white; }
+.status-marked-inactive { background-color: var(--status-unknown); color: white; }
+
+/* Sync Status Badges */
+.sync-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+/* Hash Status Table Specific Styles */
+.table-container, .hash-status-container {
+    background: white;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+.hash-status-table td {
+    background-color: white !important;
+}
+
+.hash-status-table tr:hover td {
+    background-color: #f9fafb !important;
+}
+
+/* Only allow sync badges to have colors */
+.hash-status-table .sync-badge {
+    /* Badge colors remain as defined in sync-badge classes */
+}
+
+.sync-current { background-color: var(--status-current); color: white; }
+.sync-1-behind { background-color: var(--status-1-behind); color: white; }
+.sync-l24-behind { background-color: var(--status-warning); color: var(--gray-900); }
+.sync-g24-behind { background-color: var(--status-critical); color: white; }
+.sync-unknown { background-color: var(--status-unknown); color: white; }
 
 /* Log Table Column Specific Styles */
 .site-cell {
@@ -774,17 +832,74 @@ button:hover {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* Chart Container */
+/* Chart Container Styles */
 .chart-container {
     background: white;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
     transition: all 0.3s ease;
+    position: relative;
+    min-height: 400px;
 }
 
 .chart-container:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 350px; /* Fixed height for better consistency */
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-wrapper canvas {
+    max-height: 300px !important;
+}
+
+/* Remove the old legend styles since Chart.js handles this */
+.chart-legend {
+    /* This will be handled by Chart.js built-in legend */
+}
+
+.legend-item {
+    /* This will be handled by Chart.js built-in legend */
+}
+
+.legend-color {
+    /* This will be handled by Chart.js built-in legend */
+}
+
+/* Responsive chart adjustments */
+@media (max-width: 768px) {
+    .chart-container {
+        min-height: 350px;
+    }
+
+    .chart-wrapper {
+        height: 300px;
+    }
+
+    .chart-wrapper canvas {
+        max-height: 250px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-container {
+        min-height: 300px;
+    }
+
+    .chart-wrapper {
+        height: 250px;
+    }
+
+    .chart-wrapper canvas {
+        max-height: 200px !important;
+    }
 }
 
 /* Hashtable Detail Styles */
@@ -1184,3 +1299,16 @@ button:hover {
     25% { transform: rotate(-2deg); }
     75% { transform: rotate(2deg); }
 }
+
+/*.header-section {*/
+/*    text-align: center;*/
+/*    margin-bottom: 2rem;*/
+/*}*/
+
+/*.header-section h1 {*/
+/*    margin-bottom: 1rem;*/
+/*}*/
+
+/*.header-section .sort-controls {*/
+/*    margin-bottom: 1rem;*/
+/*}*/

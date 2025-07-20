@@ -3,16 +3,6 @@
 {% block title %}Hashtable Detail - {{ file_path }} - Squishy webgui{% endblock %}
 
 {% block content %}
-<!-- Live Clock Display -->
-<!--<div class="clock-container">-->
-<!--    <div class="clock-section">-->
-<!--        <span class="clock-label">UTC:</span>-->
-<!--        <span id="utc-clock" class="clock-display"></span>-->
-<!--        <span class="clock-separator">|</span>-->
-<!--        <span class="clock-label">Local:</span>-->
-<!--        <span id="local-clock" class="clock-display"></span>-->
-<!--    </div>-->
-<!--</div>-->
 <div class="hashtable-detail-container">
     <!-- Breadcrumb navigation -->
     <div class="breadcrumb-nav">
@@ -39,12 +29,6 @@
                         <label>Current Hash:</label>
                         <span class="hash-value" title="{{ record.current_hash }}">{{ record.current_hash }}</span>
                     </div>
-<!--                    <div class="metadata-item">-->
-<!--                        <label>Target Hash:</label>-->
-<!--                        <span class="hash-value" title="{{ record.target_hash or 'None' }}">-->
-<!--                            {{ record.target_hash or 'None' }}-->
-<!--                        </span>-->
-<!--                    </div>-->
                     <div class="metadata-item">
                         <label>Matches Target Hash:</label>
                         <span class="hash-value" title="{{ record.target_hash or 'None' }}">

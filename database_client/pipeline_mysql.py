@@ -177,30 +177,35 @@ class PipelineMYSQLConnection(PipelineDBConnection):
             self.logger.error(f"Unexpected error updating pipeline hash: {e}")
             return False
 
-    def get_official_sites(self) -> List[str]:
+    def get_official_sites(self) -> List[Dict[str, Any]]:
         """
-        Get the current authoritative sites list from the MySQL table.
+        Get all site records from the MSSQL pipeline_site_list table.
 
         Returns:
-            List of site names (strings)
+            List of dictionaries containing site data, or empty list if error occurred
         """
         query = """
-                SELECT name
+                SELECT id, name, site_name, online, description, created_at, updated_at
                 FROM pipeline_site_list
-                ORDER BY name
+                ORDER BY site_name
                 """
 
         try:
             with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(query)
-                    results = cursor.fetchall()
+                cursor = conn.cursor()
+                cursor.execute(query)
 
-                    # Extract site names from the result tuples
-                    sites = [row[0] for row in results]
+                # Get column names from cursor description
+                columns = [column[0] for column in cursor.description]
 
-                    self.logger.debug(f"Retrieved {len(sites)} official sites")
-                    return sites
+                # Convert rows to dictionaries
+                sites = []
+                for row in cursor.fetchall():
+                    site_dict = dict(zip(columns, row))
+                    sites.append(site_dict)
+
+                self.logger.debug(f"Retrieved {len(sites)} official sites")
+                return sites
 
         except Error as e:
             self.logger.error(f"Error fetching official sites: {e}")

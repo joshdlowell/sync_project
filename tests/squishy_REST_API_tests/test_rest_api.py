@@ -83,6 +83,7 @@ class BaseTestCase(unittest.TestCase):
             self.mock_db_instance.put_pipeline_hash = MagicMock()
             self.mock_db_instance.get_pipeline_sites = MagicMock()
             self.mock_db_instance.put_pipeline_site_completion = MagicMock()
+            self.mock_db_instance.sync_sites_from_mssql_upsert = MagicMock()
 
         # Create test configuration
         test_config = {
@@ -603,6 +604,7 @@ class PipelineEndpointTestCase(CoreAPITestCase):
         # Configure mock to return sites
         mock_sites = ['SITE1', 'SITE2', 'SITE3']
         self.mock_db_instance.get_pipeline_sites.return_value = mock_sites
+        self.mock_db_instance.sync_sites_from_mssql_upsert.return_value = True
 
         # Make request to endpoint
         response = self.client.get('/api/pipeline?action=sites')
@@ -611,7 +613,7 @@ class PipelineEndpointTestCase(CoreAPITestCase):
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
         self.assertEqual(data['message'], 'Success')
-        self.assertEqual(data['data'], mock_sites)
+        self.assertEqual(data['data'], True)
 
         # Verify mock was called correctly
         self.mock_db_instance.get_pipeline_sites.assert_called_once()
@@ -826,9 +828,15 @@ class LivenessEndpointTestCase(GUITestCase):
     def test_liveness_success(self):
         """Test GET /web/liveness endpoint."""
         mock_liveness_data = [
-            {'site_name': 'SITE1', 'status_category': 'live_current', 'last_updated': 123456789},
-            {'site_name': 'SITE2', 'status_category': 'live_1_behind', 'last_updated': 123456790}
-        ]
+            {'site_name': 'SITE0',
+             'last_updated': datetime.datetime.now(),  # Keep original for moment.js
+             'last_updated_timestamp': datetime.datetime.now().timestamp(),  # Add timestamp for sorting
+             'status_category': "live_current"
+            },{'site_name': 'SITE1',
+             'last_updated': datetime.datetime.now(),  # Keep original for moment.js
+             'last_updated_timestamp': datetime.datetime.now().timestamp(),  # Add timestamp for sorting
+             'status_category': "live_behind"
+            }]
         self.mock_db_instance.get_site_liveness.return_value = mock_liveness_data
 
         # Make request to endpoint
@@ -849,8 +857,8 @@ class HashStatusEndpointTestCase(GUITestCase):
         """Test GET /web/status endpoint."""
         # Configure mock to return hash sync status data
         mock_sync_data = [
-            {'site_name': 'SITE1', 'current_hash': 'hash1', 'last_updated': 123456789, 'sync_category': 'sync_current'},
-            {'site_name': 'SITE2', 'current_hash': 'hash2', 'last_updated': 123456790, 'sync_category': 'sync_1_behind'}
+            {'site_name': 'SITE1', 'current_hash': 'hash1', 'last_updated': datetime.datetime.now(), 'sync_category': 'sync_current'},
+            {'site_name': 'SITE2', 'current_hash': 'hash2', 'last_updated': datetime.datetime.now(), 'sync_category': 'sync_1_behind'}
         ]
         self.mock_db_instance.get_site_sync_status.return_value = mock_sync_data
 

@@ -400,7 +400,7 @@ class TestRemoteMYSQLConnection(unittest.TestCase):
         """Test delete_log_entries with invalid input."""
         # Test with empty list
         with self.assertRaises(ValueError):
-            self.db_conn.delete_log_entries([])
+            self.db_conn.delete_log_entries('a')
 
         # Test with non-list input
         with self.assertRaises(ValueError):

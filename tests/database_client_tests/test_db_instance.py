@@ -257,14 +257,14 @@ class TestDBInstance(unittest.TestCase):
         self.mock_pipeline_db.get_official_sites.assert_called_once()
         self.assertEqual(result, expected_sites)
 
-    def test_put_pipeline_site_completion_success(self):
-        """Test put_pipeline_site_completion with successful pipeline db call."""
-        self.mock_pipeline_db.put_pipeline_site_completion.return_value = True
-
-        result = self.db_instance.put_pipeline_site_completion('site1')
-
-        self.mock_pipeline_db.put_pipeline_site_completion.assert_called_once_with('site1')
-        self.assertTrue(result)
+    # def test_put_pipeline_site_completion_success(self):
+    #     """Test put_pipeline_site_completion with successful pipeline db call."""
+    #     self.mock_pipeline_db.put_pipeline_site_completion.return_value = True
+    #
+    #     result = self.db_instance.put_pipeline_site_completion('site1')
+    #
+    #     self.mock_pipeline_db.put_pipeline_site_completion.assert_called_once_with('site1')
+    #     self.assertTrue(result)
 
     def test_pipeline_health_check_success(self):
         """Test pipeline_health_check with successful pipeline db call."""

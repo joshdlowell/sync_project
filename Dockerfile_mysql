@@ -1,0 +1,19 @@
+FROM mysql:9.0
+LABEL authors="jdlowel"
+
+# Set environment variables (This is a bad idea, but right now the alternative
+# is storing them directly in puppet)
+ENV MYSQL_ROOT_PASSWORD=your_root_password
+ENV MYSQL_DATABASE=squishy_db
+ENV MYSQL_USER=your_app_user
+ENV MYSQL_PASSWORD=your_user_password
+
+# Copy initialzation scripts
+COPY squishy_db/init_scripts /docker-entrypoint-initdb.d
+
+# Expose port
+EXPOSE 3306
+# EXPOSE 3306 33060
+
+## Start the application
+CMD ["mysqld"]

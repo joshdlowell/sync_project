@@ -89,6 +89,10 @@ class DBInstanceInterface(ABC):
     def get_site_sync_status(self) -> list:
         pass
 
+    @abstractmethod
+    def sync_sites_from_mssql_upsert(self, mssql_sites: List[Dict[str, Any]]) -> bool:
+        pass
+
     # PipelineDBConnection interface methods
     @abstractmethod
     def get_pipeline_updates(self) -> List[Dict[str, Any]]:
@@ -102,8 +106,8 @@ class DBInstanceInterface(ABC):
     def get_pipeline_sites(self) -> List[str]:
         pass
 
-    @abstractmethod
-    def put_pipeline_site_completion(self, site: str) -> bool:
-        pass
+    # @abstractmethod
+    # def put_pipeline_site_completion(self, site: str) -> bool:
+    #     pass
 
 

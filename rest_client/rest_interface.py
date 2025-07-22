@@ -206,7 +206,11 @@ class RestProcessorInterface(ABC):
         pass
 
     @abstractmethod
-    def get_official_sites(self) -> list[str]:
+    def sync_official_sites(self) -> bool:
+        pass
+
+    @abstractmethod
+    def put_pipeline_update(self, update_path: str, hash_value: str) -> bool:
         pass
 
     @abstractmethod

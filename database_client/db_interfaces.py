@@ -290,6 +290,10 @@ class CoreDBConnection(ABC):
         """
         pass
 
+    @abstractmethod
+    def sync_sites_from_mssql_upsert(self, mssql_sites: List[Dict[str, Any]]) -> bool:
+        pass
+
 
 class PipelineDBConnection(ABC):
     """
@@ -308,7 +312,7 @@ class PipelineDBConnection(ABC):
         pass
 
     @abstractmethod
-    def get_official_sites(self) -> List[str]:
+    def get_official_sites(self) -> List[Dict[str, Any]]:
         pass
 
     @abstractmethod

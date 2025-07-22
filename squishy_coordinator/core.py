@@ -38,6 +38,10 @@ def performance_monitor(coordinator_service, operation_name: str):
 
 def run_core(coordinator_service):
     """Run core site tasks."""
+    # Update sites list from core
+    if not coordinator_service.sync_official_sites():
+        logger.error(f"Failed to synchronize official sites list")
+
     # get priority updates from local (updates where target hash doesn't match current)
     change_list = coordinator_service.get_priority_updates()
 
@@ -58,8 +62,12 @@ def run_core(coordinator_service):
     for path, new_hash in updates:
         log_list.append(path)
         coordinator_service.update_target_hash(path, new_hash, new_hash)
+        coordinator_service.put_pipeline_update(path, new_hash)
     logger.info(f"Authorized hash updates complete: {log_list}")
     coordinator_service.put_log_entry("Authorized hash updates complete.", json.dumps({'authorized_updates': log_list}))
+
+    # Need to figure out how to handle unauthorized updates.
+    # Allow? No way to go back to old files currently.
 
 
 def run_remote(coordinator_service):

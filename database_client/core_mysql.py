@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List, Dict
 from datetime import datetime, timedelta
 import mysql.connector
 from mysql.connector import Error
@@ -98,7 +98,6 @@ class CoreMYSQLConnection(CoreDBConnection):
             Returns dictionary with zero values for all metrics if query fails.
             Only includes sites that exist in the authoritative site_list table.
         """
-        self.logger.debug("!!!!!!!!!!!!!!!!!")
         query = """
                 WITH
                     -- Get the most recent hash (current baseline)
@@ -465,6 +464,86 @@ class CoreMYSQLConnection(CoreDBConnection):
         except Error as e:
             self.logger.error(f"Error fetching valid site IDs: {e}")
             return []
+
+    def sync_sites_from_mssql_upsert(self, mssql_sites: List[Dict[str, Any]]) -> bool:
+        """
+        Synchronize the MySQL site_list table with data from MSSQL using upsert approach.
+
+        Args:
+            mssql_sites: List of site dictionaries from MSSQL
+
+        Returns:
+            True if sync was successful, False otherwise
+        """
+        if not mssql_sites:
+            self.logger.warning("No MSSQL sites data provided for sync")
+            return False
+
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    # Start transaction
+                    conn.start_transaction()
+
+                    try:
+                        # Get existing site_names from MySQL
+                        cursor.execute("SELECT site_name FROM site_list")
+                        existing_sites = {row[0] for row in cursor.fetchall()}
+
+                        # Prepare sets for comparison
+                        mssql_site_names = {site['site_name'] for site in mssql_sites if site.get('site_name')}
+
+                        # Delete sites that no longer exist in MSSQL
+                        sites_to_delete = existing_sites - mssql_site_names
+                        if sites_to_delete:
+                            delete_query = "DELETE FROM site_list WHERE site_name IN ({})".format(
+                                ','.join(['%s'] * len(sites_to_delete))
+                            )
+                            cursor.execute(delete_query, list(sites_to_delete))
+                            self.logger.debug(f"Deleted {len(sites_to_delete)} obsolete sites")
+
+                        # Upsert sites from MSSQL
+                        upsert_query = """
+                                       INSERT INTO site_list (name, site_name, online, description)
+                                       VALUES (%(name)s, %(site_name)s, %(online)s, %(description)s)
+                                       ON DUPLICATE KEY UPDATE name        = VALUES(name),
+                                                               online      = VALUES(online),
+                                                               description = VALUES(description),
+                                                               updated_at  = CURRENT_TIMESTAMP
+                                       """
+
+                        # Prepare data for upsert
+                        upsert_data = []
+                        for site in mssql_sites:
+                            if site.get('site_name'):  # Only process sites with valid site_name
+                                upsert_data.append({
+                                    'name': site.get('name'),
+                                    'site_name': site.get('site_name'),
+                                    'online': bool(site.get('online', True)),
+                                    'description': site.get('description')
+                                })
+
+                        # Execute batch upsert
+                        if upsert_data:
+                            cursor.executemany(upsert_query, upsert_data)
+
+                        # Commit transaction
+                        conn.commit()
+
+                        self.logger.info(f"Successfully synced {len(upsert_data)} sites from MSSQL to MySQL")
+                        return True
+
+                    except Exception as e:
+                        # Rollback on error
+                        conn.rollback()
+                        raise e
+
+        except Error as e:
+            self.logger.error(f"Error syncing sites from MSSQL: {e}")
+            return False
+        except Exception as e:
+            self.logger.error(f"Unexpected error syncing sites from MSSQL: {e}")
+            return False
 
     def get_hash_record_count(self) -> int:
         """

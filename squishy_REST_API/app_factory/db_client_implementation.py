@@ -221,6 +221,9 @@ class DBInstance(DBInstanceInterface):
     def get_site_sync_status(self) -> list:
         return self.local_db_instance.get_site_sync_status()
 
+    def sync_sites_from_mssql_upsert(self, mssql_sites: List[Dict[str, Any]]) -> bool:
+        return self.local_db_instance.sync_sites_from_mssql_upsert(mssql_sites)
+
     ########## Pipeline client core site only implementations
     def get_pipeline_updates(self) -> List[Dict[str, Any]]:
         """Get TeamCity updates that haven't been processed yet."""
@@ -234,5 +237,5 @@ class DBInstance(DBInstanceInterface):
         """Get the current authoritative sites list from the MSSQL table."""
         return self.local_db_instance.get_official_sites()
 
-    def put_pipeline_site_completion(self, site: str) -> bool:
-        return self.local_db_instance.put_pipeline_site_completion()
+    # def put_pipeline_site_completion(self, site: str) -> bool:
+    #     return self.local_db_instance.put_pipeline_site_completion()

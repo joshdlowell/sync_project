@@ -52,7 +52,7 @@ class DBInstance(RemoteDBConnection, CoreDBConnection, PipelineDBConnection):
                                        older_than_days=older_than_days
                                        )
 
-    def delete_log_entries(self, log_ids: list[int]) -> tuple[list, list]:
+    def delete_log_entries(self, log_ids: list[int]) -> tuple[int, list]:
         if not self.remote_db:
             raise NotImplementedError("RemoteDBConnection implementation not provided")
         return self.remote_db.delete_log_entries(log_ids)
@@ -123,6 +123,11 @@ class DBInstance(RemoteDBConnection, CoreDBConnection, PipelineDBConnection):
             raise NotImplementedError("CoreDBConnection implementation not provided")
         return self.core_db.put_remote_hash_status(update_list, site_name, drop_existing, root_path)
 
+    def sync_sites_from_mssql_upsert(self, mssql_sites: List[Dict[str, Any]]) -> bool:
+        if not self.core_db:
+            raise NotImplementedError("CoreDBConnection implementation not provided")
+        return self.core_db.sync_sites_from_mssql_upsert(mssql_sites)
+
     # PipelineDBConnection interface methods
     def get_pipeline_updates(self) -> List[Dict[str, Any]]:
         if not self.pipeline_db:
@@ -134,15 +139,15 @@ class DBInstance(RemoteDBConnection, CoreDBConnection, PipelineDBConnection):
             raise NotImplementedError("PipelineDBConnection implementation not provided")
         return self.pipeline_db.put_pipeline_hash(update_path, hash_value)
 
-    def get_official_sites(self) -> List[str]:
+    def get_official_sites(self) -> List[Dict[str, Any]]:
         if not self.pipeline_db:
             raise NotImplementedError("PipelineDBConnection implementation not provided")
         return self.pipeline_db.get_official_sites()
 
-    def put_pipeline_site_completion(self, site: str) -> bool:
-        if not self.pipeline_db:
-            raise NotImplementedError("PipelineDBConnection implementation not provided")
-        return self.pipeline_db.put_pipeline_site_completion(site)
+    # def put_pipeline_site_completion(self, site: str) -> bool:
+    #     if not self.pipeline_db:
+    #         raise NotImplementedError("PipelineDBConnection implementation not provided")
+    #     return self.pipeline_db.put_pipeline_site_completion(site)
 
     def pipeline_health_check(self) -> Dict[str, bool] | None:
         if not self.pipeline_db:

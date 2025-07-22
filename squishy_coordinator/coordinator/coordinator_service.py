@@ -287,6 +287,12 @@ class CoordinatorService:
             update_paths.append(update['path'])
         return update_paths
 
+    def put_pipeline_update(self, update_path: str, hash_value: str) -> bool:
+        return self.rest_storage.put_pipeline_update(update_path, hash_value)
+
+    def sync_official_sites(self) -> bool:
+        return self.rest_storage.sync_official_sites()
+
     def recompute_hashes(self, path_list: list[str]) -> list[tuple[str, str]]:
 
         recomputed = []

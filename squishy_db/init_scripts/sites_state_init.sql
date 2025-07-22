@@ -1,10 +1,15 @@
 -- Authoritative list of sites
 CREATE TABLE site_list (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
     site_name VARCHAR(5) NOT NULL UNIQUE,
     online BOOLEAN DEFAULT 1,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    INDEX idx_site_name (site_name)
+    INDEX idx_SITE_name (name),
+    INDEX idx_online (online)
 );
 
 -- History of hash states

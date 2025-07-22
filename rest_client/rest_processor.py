@@ -264,6 +264,21 @@ class RestProcessor(RestProcessorInterface):
         logger.debug("Processing database pipeline updates list request")
         return self._process_response(response)
 
+    def put_pipeline_update(self, update_path: str, hash_value: str) -> bool:
+        """Get the list of updates from the pipeline that haven't been processed yet.
+
+        Returns:
+            A list containing paths in the database that have been updated by the CD pipeline, or None if not found or error
+        """
+        request_data = {
+            "action": "sites",
+            "update_path": update_path,
+            "hash_value": hash_value
+            }
+        response = self._db_put('api/pipeline', request_data)
+        logger.debug("Processing database pipeline updates list request")
+        return self._process_response(response)
+
     def get_site_liveness(self) -> list:
         """
         Get all sites from site_list with their last_updated timestamps and status categories.
@@ -363,7 +378,7 @@ class RestProcessor(RestProcessorInterface):
         else:
             return False, []
 
-    def get_official_sites(self) -> list[str]:
+    def sync_official_sites(self) -> bool:
         """
         Get the current authoritative sites list from the MSSQL table.
 
@@ -374,7 +389,7 @@ class RestProcessor(RestProcessorInterface):
         params = {"action": "sites"}
 
         response = self._db_get(endpoint, params)
-        logger.debug("Processing official sites request")
+        logger.debug("Processing official sites sync request")
         return self._process_response(response)
 
     def put_remote_hash_status(self, status_updates: list[dict[str, str]], site_name: str, root_path: str=None) -> bool:

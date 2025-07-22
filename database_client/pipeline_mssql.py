@@ -33,7 +33,7 @@ class PipelineMSSQLConnection(PipelineDBConnection):
         self.database = database
         self.username = username
         self.password = password
-        self.driver = driver or "ODBC Driver 17 for SQL Server"
+        self.driver = driver or "ODBC Driver 18 for SQL Server"
         self.port = port
         self.connection_timeout = connection_timeout
         self.command_timeout = command_timeout
@@ -182,17 +182,17 @@ class PipelineMSSQLConnection(PipelineDBConnection):
             self.logger.error(f"Unexpected error updating pipeline hash: {e}")
             return False
 
-    def get_official_sites(self) -> List[str]:
+    def get_official_sites(self) -> List[Dict[str, Any]]:
         """
-        Get the current authoritative sites list from the MSSQL table.
+        Get all site records from the MSSQL pipeline_site_list table.
 
         Returns:
-            List of site names (strings)
+            List of dictionaries containing site data, or empty list if error occurred
         """
         query = """
-                SELECT name
-                FROM site_list
-                ORDER BY name \
+                SELECT id, name, site_name, online, description, created_at, updated_at
+                FROM pipeline_site_list
+                ORDER BY site_name
                 """
 
         try:
@@ -200,8 +200,14 @@ class PipelineMSSQLConnection(PipelineDBConnection):
                 cursor = conn.cursor()
                 cursor.execute(query)
 
-                # Extract site names from the result tuples
-                sites = [row[0] for row in cursor.fetchall()]
+                # Get column names from cursor description
+                columns = [column[0] for column in cursor.description]
+
+                # Convert rows to dictionaries
+                sites = []
+                for row in cursor.fetchall():
+                    site_dict = dict(zip(columns, row))
+                    sites.append(site_dict)
 
                 self.logger.debug(f"Retrieved {len(sites)} official sites")
                 return sites

@@ -41,9 +41,9 @@ def register_core_routes(app: Flask, db_instance):
             elif action == 'sites':
                 logger.debug(f"GET /api/pipeline?action=sites")
                 try:
-                    official_sites = db_instance.get_pipeline_sites()
-                    logger.info(f"Retrieved {len(official_sites)} official sites")
-                    return create_success_response(data=official_sites)
+                    success = db_instance.sync_sites_from_mssql_upsert(db_instance.get_pipeline_sites())
+                    logger.info(f"{'Success synchronizing' if success else 'Failed to sync'} sites table")
+                    return create_success_response(data=success)
                 except Exception as e:
                     logger.error(f"Error getting official sites: {e}")
                     return create_error_response(e)

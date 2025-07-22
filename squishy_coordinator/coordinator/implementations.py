@@ -78,9 +78,11 @@ class RestClientStorage(RestProcessorInterface):
         """ Not implemented in coordinator """
         pass
 
-    def get_official_sites(self) -> list[str]:
-        """ Not implemented in coordinator """
-        pass
+    def sync_official_sites(self) -> bool:
+        return self.rest_client.get_official_sites()
+
+    def put_pipeline_update(self, update_path: str, hash_value: str) -> bool:
+        return self.rest_client.put_pipeline_update(update_path, hash_value)
 
     def put_remote_hash_status(self, status_updates: list[dict[str, str]], site_name: str, root_path: str=None) -> bool:
         return self.rest_client.put_remote_hash_status(status_updates, site_name, root_path)

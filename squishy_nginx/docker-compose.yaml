@@ -6,7 +6,6 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # Mount existing config and certs
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./conf.d:/etc/nginx/conf.d:ro
       - ./certs:/etc/nginx/certs:ro
@@ -14,7 +13,10 @@ services:
     restart: unless-stopped
     networks:
       - proxy-network
+      - squishy_db_default
 
 networks:
   proxy-network:
     driver: bridge
+  squishy_db_default:
+    external: true

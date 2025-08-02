@@ -430,12 +430,12 @@ else:
 ### Custom Implementation
 
 ```python
-from integrity_check.implementations import StandardFileSystem, SHA1HashFunction
+from integrity_check.implementations import StandardFileSystem, SHA256HashFunction
 from integrity_check.file_hasher import FileHasher
 
 # Create custom file hasher
 fs = StandardFileSystem()
-hash_func = SHA1HashFunction()
+hash_func = SHA256HashFunction()
 hasher = FileHasher(fs, hash_func)
 
 # Hash a file

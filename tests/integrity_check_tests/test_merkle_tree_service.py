@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch, MagicMock
 from integrity_check.merkle_tree_service import MerkleTreeService
-from integrity_check.implementations import SHA1HashFunction
+from integrity_check.implementations import SHA256HashFunction
 
 
 class TestMerkleTreeService(unittest.TestCase):
@@ -301,7 +301,7 @@ class TestMerkleTreeService(unittest.TestCase):
 class TestFileHasher(unittest.TestCase):
     def setUp(self):
         self.mock_file_system = Mock()
-        self.hash_function = SHA1HashFunction()
+        self.hash_function = SHA256HashFunction()
 
         from integrity_check.file_hasher import FileHasher
         self.file_hasher = FileHasher(

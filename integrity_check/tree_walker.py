@@ -3,6 +3,7 @@ from typing import Dict, List
 from .interfaces import FileSystemInterface
 from .configuration import config
 
+
 class DirectoryTreeWalker:
     """Handles directory tree traversal and categorization"""
 
@@ -28,25 +29,36 @@ class DirectoryTreeWalker:
 
         tree_dict = {}
         for dir_path, item_dirs, item_files in walk_results:
-            # Separate files from links
-            clean_files, clean_links = self._categorize_files(dir_path, item_files)
+            # Categorize all items found in item_files
+            categorized = self._categorize_files(dir_path, item_files)
 
             tree_dict[str(dir_path)] = {
                 "dirs": sorted([str(item) for item in item_dirs]),
-                "files": sorted(clean_files),
-                "links": sorted(clean_links)
+                "files": sorted(categorized["files"]),
+                "links": sorted(categorized["links"]),
+                "special": sorted(categorized["special"])
             }
         config.logger.debug("Collected and sorted local baseline file tree")
         return tree_dict
 
     def _categorize_files(self, dir_path, item_files):
-        """Separate regular files from links"""
-        clean_files, clean_links = [], []
+        """Categorize items into files, links, and special files"""
+        categorized = {
+            "files": [],
+            "links": [],
+            "special": []
+        }
 
         for item in item_files:
             full_path = f"{str(dir_path)}/{item}"
-            if self.file_system.is_file(full_path):
-                clean_files.append(item)
+
+            if self.file_system.is_link(full_path):
+                categorized["links"].append(item)
+            elif self.file_system.is_readable_file(full_path):
+                categorized["files"].append(item)
             else:
-                clean_links.append(item)
-        return clean_files, clean_links
+                # Socket files, FIFOs, device files, etc.
+                categorized["special"].append(item)
+                config.logger.debug(f"Categorized {full_path} as special file")
+
+        return categorized

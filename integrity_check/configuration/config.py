@@ -16,7 +16,7 @@ class ConfigError(Exception):
 
 
 class Config:
-    """Configuration class for integrity package."""
+    """Singleton configuration class for integrity package."""
     _instance = None
     _config = None
     _session_id = None
@@ -40,11 +40,7 @@ class Config:
         'rest_api_port': 5000,
         'root_path': '/baseline',  # REQUIRED
         'debug': False,
-        'log_level': 'INFO',
-        # 'max_retries': 3,
-        # 'retry_delay': 5,
-        # 'long_delay': 30,
-        # 'max_runtime_min': 10
+        'log_level': 'INFO'
     }
 
     # Environment variable mapping
@@ -61,13 +57,12 @@ class Config:
 
     def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
         """
-        Initialize configuration with optional dictionary.
+        Initialize configuration with an optional dictionary.
 
         Args:
             config_dict: Optional dictionary with configuration values
-
         Raises:
-            ConfigError: If required configuration is missing
+            ConfigError: If required configuration elements are missing
         """
         self.logger = None  # Create variable to allow for initial or update config creation
         self._config: Dict[str, Any] = self.DEFAULTS.copy()
@@ -106,10 +101,8 @@ class Config:
         Args:
             key: Configuration key
             value: String value to convert
-
         Returns:
             Converted value
-
         Raises:
             ConfigError: If conversion fails
         """
@@ -127,7 +120,7 @@ class Config:
         Validate that all required configuration is present.
 
         Raises:
-            ConfigError: If required configuration is missing
+            ConfigError: If required configuration elements are missing
         """
         missing_keys = [
             key for key in self.REQUIRED_KEYS
@@ -147,7 +140,6 @@ class Config:
             if key == 'debug' and value == True:
                 self.logger = configure_logging('DEBUG')
 
-
     def get(self, key: str, default: Any = None) -> Any:
         """
         Get configuration value by key.
@@ -155,7 +147,6 @@ class Config:
         Args:
             key: Configuration key
             default: Default value if key is not found
-
         Returns:
             Configuration value or default
         """
@@ -163,12 +154,11 @@ class Config:
 
     def _set(self, key: str, value: Any = None) -> None:
         """
-        Set configuration value by key (used for running tests).
+        Set a configuration value by key (used mostly for running tests).
 
         Args:
             key: Configuration key
             value: The value to set
-
         Raises:
             ConfigError: If the new configuration is invalid
         """
@@ -188,7 +178,7 @@ class Config:
                 self._config[key] = original_value
             else:
                 del self._config[key]
-            # Re-raise the error
+            # Re-raise the error after restoring the original value
             raise ConfigError(f"Invalid configuration key: {key}")
 
     def is_debug_mode(self) -> bool:
@@ -215,5 +205,5 @@ class Config:
         return f"Config({safe_config})"
 
 
-# Default configuration instance
+# Default configuration instance (by lazy instantiation)
 config = Config()

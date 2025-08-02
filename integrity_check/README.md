@@ -22,6 +22,7 @@ A Python package for file system integrity verification using cryptographic Merk
 - [Development](#development)
 - [Testing](#testing)
 - [Version](#version)
+- [Change Log](#changelog)
 - [Support](#support)
 
 ## Overview
@@ -91,12 +92,13 @@ Main factory class for creating integrity check components.
 
 #### Methods
 
-##### `create_service(new_config=None) -> MerkleTreeService`
+##### `create_service(new_config=None, rest_storage=None) -> MerkleTreeService`
 
 Creates a fully configured `MerkleTreeService` with default implementations.
 
 **Parameters:**
 - `new_config` (dict, optional): Configuration overrides
+- `rest_storage` (RestHashStorage, optional): Pre-configured RestHashStorage object
 
 **Returns:**
 - `MerkleTreeService`: Configured service instance
@@ -110,7 +112,14 @@ service = IntegrityCheckFactory.create_service()
 
 # Custom configuration
 custom_config = {'debug': True, 'log_level': 'DEBUG'}
-service = IntegrityCheckFactory.create_service(custom_config)
+service = IntegrityCheckFactory.create_service(new_config=custom_config)
+
+# Pre-configured RestHashStorage object
+from rest_client import RestClient
+from integrity_check.implementations import RestHashStorage
+rest_client = RestClient().create_rest_connector("http://some_rest_api:8080")
+rest_storage = RestHashStorage(rest_client)
+service = IntegrityCheckFactory.create_service(rest_storage=rest_storage)
 ```
 
 ---
@@ -168,16 +177,17 @@ clean_paths = service.remove_redundant_paths_with_priority(
 )
 ```
 
-##### `put_log_w_session(message: str, detailed_message: str=None) -> int`
+##### `put_log_w_session(message: str, detailed_message: str=None, log_level: str=None) -> int`
 
 Logs a message with the current session ID.
 
 **Parameters:**
 - `message` (str): Log message
 - `detailed_message` (str, optional): Detailed log message
+- `log_level` (str, optional): Log message level, INFO if omitted
 
 **Returns:**
-- `int`: Status code from storage operation
+- `int`: Number of entries successfully added
 
 ---
 
@@ -195,7 +205,8 @@ FileHasher(file_system: FileSystemInterface, hash_function: HashFunction)
 
 ##### `hash_file(file_path: str) -> str`
 
-Hashes a regular file by reading its contents in chunks.
+Hashes a regular file by reading its contents in chunks, or a special file
+by creating a unique identifier.
 
 **Parameters:**
 - `file_path` (str): Path to the file to hash
@@ -209,6 +220,16 @@ Hashes a symbolic link by its path and target.
 
 **Parameters:**
 - `link_path` (str): Path to the symbolic link
+
+**Returns:**
+- `str`: Hexadecimal hash string
+
+##### `hash_special_file(self, file_path: str) -> str`
+
+Hashes a special file (socket, FIFO, device file, etc.) by its metadata.
+
+**Parameters:**
+- `file_path` (str): Path to the file to hash
 
 **Returns:**
 - `str`: Hexadecimal hash string
@@ -276,7 +297,8 @@ Recursively traverses directory tree and categorizes items.
     "/path/to/dir": {
         "dirs": ["subdir1", "subdir2"],
         "files": ["file1.txt", "file2.txt"],
-        "links": ["symlink1", "symlink2"]
+        "links": ["symlink1", "symlink2"],
+        "special": ["FIFO1", "Socket2"]
     }
 }
 ```
@@ -326,6 +348,9 @@ Abstract interface for file system operations.
 - `walk(path: str) -> List[Tuple[str | None, list[str] | None, list[str] | None]]`: Walk directory tree
 - `read_file_chunks(path: str, chunk_size: int = 65536)`: Read file in chunks
 - `readlink(path: str) -> str`: Read symbolic link target
+- `is_link(self, path: str) -> bool`: Check if path is a symbolic link
+- `is_readable_file(self, path: str) -> bool`: Check if path is a readable regular file
+- `get_file_metadata(self, path: str) -> Dict[str, Any]`: Get file metadata including type, mode, size, etc.
 
 ### HashStorageInterface
 
@@ -381,6 +406,17 @@ RestHashStorage(rest_processor)
 - Automatic retry logic
 - Session-based logging
 
+### SHA256HashFunction
+
+SHA-256 hash function implementation.
+
+**Implements:** `HashFunction`
+
+**Features:**
+- Consistent hash computation
+- Memory-efficient streaming for large files
+- Standard cryptographic implementation
+
 ### SHA1HashFunction
 
 SHA-1 hash function implementation.
@@ -425,7 +461,8 @@ The package includes comprehensive error handling:
 
 ### Error Logging
 
-All errors are logged using the configured logging system:
+All errors are logged locally using the configured logging system:
+Some (more significant errors) are also stored in the database for issue awareness
 
 - **DEBUG**: Detailed operation information
 - **INFO**: General status updates
@@ -468,27 +505,26 @@ else:
 
 ```python
 # Custom configuration
-config = {
-    'rest_api_host': 'localhost',
-    'rest_api_port': 8080,
-    'root_path': '/custom/baseline',
-    'debug': True,
-    'log_level': 'DEBUG'
-}
+custom_config = {'debug': True, 'log_level': 'DEBUG'}
+service = IntegrityCheckFactory.create_service(new_config=custom_config)
 
-service = IntegrityCheckFactory.create_service(config)
-result = service.compute_merkle_tree("/custom/baseline/documents")
+# Pre-configured RestHashStorage object
+from rest_client import RestClient
+from integrity_check.implementations import RestHashStorage
+rest_client = RestClient().create_rest_connector("http://some_rest_api:8080")
+rest_storage = RestHashStorage(rest_client)
+service = IntegrityCheckFactory.create_service(rest_storage=rest_storage)
 ```
 
 ### Custom Implementation
 
 ```python
-from integrity_check.implementations import StandardFileSystem, SHA1HashFunction
+from integrity_check.implementations import StandardFileSystem, SHA256HashFunction
 from integrity_check.file_hasher import FileHasher
 
 # Create custom file hasher
 fs = StandardFileSystem()
-hash_func = SHA1HashFunction()
+hash_func = SHA256HashFunction()
 hasher = FileHasher(fs, hash_func)
 
 # Hash individual files
@@ -618,9 +654,12 @@ python -m coverage report
 
 ## Version
 
-Current version: 1.2.0
+Current version: 2.1.0
 
 ### Changelog
+
+**v2.1.0**
+- Added handling for special files, i.e. socket, FIFO
 
 **v1.2.0**
 - Refactored into standalone package
@@ -638,19 +677,18 @@ Current version: 1.2.0
 
 ### Roadmap
 
-- [ ] Support for additional hash functions (SHA-256, MD5)
+- [ ] Improved database logging for better issue awareness
 - [ ] Parallel processing for large directory trees
-- [ ] Incremental hash updates
 - [ ] File system monitoring integration
 - [ ] Performance optimization for large files
-- [ ] Extended storage backend support
 
 ## Support
 
 - **Documentation**: Complete API reference and examples provided
-- **Issues**: Report bugs and feature requests through proper channels
+- **Issues**: Report bugs and request features by contacting the development team
 - **Logging**: Comprehensive logging available for debugging
 
 ---
 
-**Built for reliable file system integrity verification**
+**Made with 😠 by the SquishyBadger Team**  
+Feel free to bring us a coffee from the cafeteria!

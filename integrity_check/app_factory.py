@@ -2,7 +2,7 @@ from rest_client import RestClient
 
 from .configuration import config
 from .merkle_tree_service import MerkleTreeService
-from .implementations import StandardFileSystem, RestHashStorage, SHA1HashFunction
+from .implementations import StandardFileSystem, RestHashStorage, SHA256HashFunction
 from .validators import PathValidator
 from .tree_walker import DirectoryTreeWalker
 from .file_hasher import FileHasher
@@ -23,7 +23,7 @@ class IntegrityCheckFactory:
             rest_client = RestClient().create_rest_connector(config.rest_api_url)
             rest_storage = RestHashStorage(rest_client)
         file_system = StandardFileSystem()
-        hash_function = SHA1HashFunction()
+        hash_function = SHA256HashFunction()
 
         # Create components
         path_validator = PathValidator()

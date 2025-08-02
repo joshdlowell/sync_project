@@ -29,6 +29,21 @@ class FileSystemInterface(ABC):
     def readlink(self, path: str) -> str:
         pass
 
+    @abstractmethod
+    def is_link(self, path: str) -> bool:
+        """Check if path is a symbolic link"""
+        pass
+
+    @abstractmethod
+    def is_readable_file(self, path: str) -> bool:
+        """Check if path is a readable regular file"""
+        pass
+
+    @abstractmethod
+    def get_file_metadata(self, path: str) -> Dict[str, Any]:
+        """Get file metadata including type, mode, size, etc."""
+        pass
+
 
 class HashStorageInterface(ABC):
     """Abstract interface for hash storage operations"""

@@ -84,8 +84,8 @@ class MerkleTreeService(MerkleTreeInterface):
         }
         hash_info_list.append(dir_hash_info)
 
-        # Add current directory structure to hash info
-        for category in ['dirs', 'files', 'links']:
+        # Add current directory structure to hash info (including special files)
+        for category in ['dirs', 'files', 'links', 'special']:
             dir_hash_info[category] = tree_dict[dir_path][category]
 
         # Hash subdirectories recursively
@@ -103,10 +103,20 @@ class MerkleTreeService(MerkleTreeInterface):
                 'session_id': config.session_id
             })
 
-        # Hash files
+        # Hash regular files
         for item in tree_dict[dir_path]['files']:
             item_path = f"{dir_path}/{item}"
             dir_hash_info["current_content_hashes"][item] = self.file_hasher.hash_file(item_path)
+            hash_info_list.append({
+                'path': item_path,
+                'current_hash': dir_hash_info["current_content_hashes"][item],
+                'session_id': config.session_id
+            })
+
+        # Hash special files (sockets, FIFOs, etc.)
+        for item in tree_dict[dir_path]['special']:
+            item_path = f"{dir_path}/{item}"
+            dir_hash_info["current_content_hashes"][item] = self.file_hasher.hash_special_file(item_path)
             hash_info_list.append({
                 'path': item_path,
                 'current_hash': dir_hash_info["current_content_hashes"][item],
@@ -173,7 +183,7 @@ class MerkleTreeService(MerkleTreeInterface):
 
     def _is_directory_empty(self, tree_dict: Dict[str, Dict[str, List[str]]], dir_path: str) -> bool:
         """
-        Check if a directory is empty (no files, dirs, or links)
+        Check if a directory is empty (no files, dirs, links, or special files)
 
         Args:
             tree_dict: Tree structure dictionary
@@ -188,7 +198,8 @@ class MerkleTreeService(MerkleTreeInterface):
         dir_contents = tree_dict[dir_path]
         return (len(dir_contents.get('dirs', [])) == 0 and
                 len(dir_contents.get('files', [])) == 0 and
-                len(dir_contents.get('links', [])) == 0)
+                len(dir_contents.get('links', [])) == 0 and
+                len(dir_contents.get('special', [])) == 0)
 
     def _check_liveness(self):
         repeats = 5
@@ -314,7 +325,7 @@ class MerkleTreeService(MerkleTreeInterface):
 
             # Collect and recompute parent hash information
             dir_hash_info = {'path': current_path, 'current_content_hashes': {}, 'session_id': config.session_id}
-            for category in ['dirs', 'files', 'links']:
+            for category in ['dirs', 'files', 'links', 'special']:
                 items = parent_info.get(category)
                 if not items:
                     continue
@@ -340,7 +351,8 @@ class MerkleTreeService(MerkleTreeInterface):
                     'current_hash': item['current_hash'],
                     'dirs': item.get('dirs', []),
                     'files': item.get('files', []),
-                    'links': item.get('links', [])
+                    'links': item.get('links', []),
+                    'special': item.get('special', [])  # Add special files to database entry
                 }
             }
             config.logger.debug(f"Sending hashtable entry for {item['path']}")

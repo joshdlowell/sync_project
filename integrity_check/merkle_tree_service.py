@@ -344,15 +344,18 @@ class MerkleTreeService(MerkleTreeInterface):
             hash_info = [hash_info]
 
         for item in hash_info:
+            files = item.get('files', [])
+            files.extend(item.get('special', []))
             db_entry = {
                 item['path']: {
                     'path': item['path'],
                     'session_id': item.get('session_id', None),
                     'current_hash': item['current_hash'],
                     'dirs': item.get('dirs', []),
-                    'files': item.get('files', []),
+                    # 'files': item.get('files', []),
+                    'files': files,
                     'links': item.get('links', []),
-                    'special': item.get('special', [])  # Add special files to database entry
+                    # 'special': item.get('special', [])  # Add special files to database entry
                 }
             }
             config.logger.debug(f"Sending hashtable entry for {item['path']}")

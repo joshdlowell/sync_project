@@ -780,53 +780,117 @@ class RemoteMYSQLConnection(RemoteDBConnection):
         # Extract just the path strings from the tuples
         return [row[0] for row in result]
 
+    # def find_untracked_children(self) -> list[Any]:
+    #     """
+    #     Find children listed by parents but don't exist as entries.
+    #
+    #     Returns:
+    #         List of dictionaries with keys: untracked_path, parent_path, child_name, child_type
+    #     """
+    #     query = """
+    #             SELECT DISTINCT CONCAT(
+    #                             parent.path, '/', child_name.name)  as untracked_path,
+    #                             parent.path                         as parent_path,
+    #                             child_name.name                     as child_name,
+    #                             child_types.child_type              as child_type
+    #             FROM hashtable parent
+    #                      CROSS JOIN JSON_TABLE(
+    #                     JSON_ARRAY(
+    #                             JSON_OBJECT('names', parent.dirs, 'type', 'dirs'),
+    #                             JSON_OBJECT('names', parent.files, 'type', 'files'),
+    #                             JSON_OBJECT('names', parent.links, 'type', 'links')
+    #                     ),
+    #                     '$[*]' COLUMNS (
+    #                         child_list JSON PATH '$.names',
+    #                         child_type VARCHAR(10) PATH '$.type'
+    #                         )
+    #                                 ) as child_types
+    #                      CROSS JOIN JSON_TABLE(
+    #                     child_types.child_list,
+    #                     '$[*]' COLUMNS (
+    #                         name VARCHAR(255) PATH '$'
+    #                         )
+    #                                 ) as child_name
+    #                      LEFT JOIN hashtable existing
+    #                                ON CONCAT(parent.path, '/', child_name.name) = existing.path
+    #             WHERE existing.path IS NULL
+    #               AND child_types.child_list IS NOT NULL
+    #             ORDER BY parent.path, child_name.name
+    #             """
+    #     try:
+    #         with self._get_connection() as conn:
+    #             with conn.cursor() as cursor:
+    #                 cursor.execute(query)
+    #                 result = cursor.fetchall()
+    #     except Error as e:
+    #         self.logger.error(f"Error fetching untracked children: {e}")
+    #         raise Exception(e)
+    #
+    #     return [row[0] for row in result]  # Just the untracked paths
+
     def find_untracked_children(self) -> list[Any]:
         """
-        Find children listed by parents but don't exist as entries.
+        Ultra memory-efficient version that checks existence on-demand.
 
         Returns:
-            List of dictionaries with keys: untracked_path, parent_path, child_name, child_type
+            List of untracked paths
         """
-        query = """
-                SELECT DISTINCT CONCAT(
-                                parent.path, '/', child_name.name)  as untracked_path,
-                                parent.path                         as parent_path,
-                                child_name.name                     as child_name,
-                                child_types.child_type              as child_type
-                FROM hashtable parent
-                         CROSS JOIN JSON_TABLE(
-                        JSON_ARRAY(
-                                JSON_OBJECT('names', parent.dirs, 'type', 'dirs'),
-                                JSON_OBJECT('names', parent.files, 'type', 'files'),
-                                JSON_OBJECT('names', parent.links, 'type', 'links')
-                        ),
-                        '$[*]' COLUMNS (
-                            child_list JSON PATH '$.names',
-                            child_type VARCHAR(10) PATH '$.type'
-                            )
-                                    ) as child_types
-                         CROSS JOIN JSON_TABLE(
-                        child_types.child_list,
-                        '$[*]' COLUMNS (
-                            name VARCHAR(255) PATH '$'
-                            )
-                                    ) as child_name
-                         LEFT JOIN hashtable existing
-                                   ON CONCAT(parent.path, '/', child_name.name) = existing.path
-                WHERE existing.path IS NULL
-                  AND child_types.child_list IS NOT NULL
-                ORDER BY parent.path, child_name.name
-                """
+        untracked_children = []
+
+        parent_query = "SELECT path, dirs, files, links FROM hashtable ORDER BY path"
+
         try:
             with self._get_connection() as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute(query)
-                    result = cursor.fetchall()
+                    cursor.execute(parent_query)
+
+                    while True:
+                        batch = cursor.fetchmany(50)  # Smaller batches for this approach
+                        if not batch:
+                            break
+
+                        for row in batch:
+                            path, dirs, files, links = row
+                            untracked = self._find_untracked_for_parent_with_db_check(
+                                path, dirs, files, links, conn
+                            )
+                            untracked_children.extend(untracked)
+
         except Error as e:
             self.logger.error(f"Error fetching untracked children: {e}")
             raise Exception(e)
 
-        return [row[0] for row in result]  # Just the untracked paths
+        return untracked_children
+
+    def _find_untracked_for_parent_with_db_check(self, parent_path: str, dirs: str,
+                                                 files: str, links: str, conn) -> list[str]:
+        """Find untracked children for a single parent with database existence checks."""
+        untracked = []
+
+        child_types = [(dirs, 'dirs'), (files, 'files'), (links, 'links')]
+
+        for child_list_json, child_type in child_types:
+            if child_list_json:
+                try:
+                    child_names = json.loads(child_list_json)
+                    if isinstance(child_names, list):
+                        for child_name in child_names:
+                            if child_name:
+                                untracked_path = f"{parent_path}/{child_name}"
+                                if not self._path_exists(untracked_path, conn):
+                                    untracked.append(untracked_path)
+                except (json.JSONDecodeError, TypeError) as e:
+                    self.logger.warning(f"Error parsing JSON for parent {parent_path}: {e}")
+                    continue
+
+        return untracked
+
+    def _path_exists(self, path: str, conn) -> bool:
+        """Check if a path exists in the database."""
+        query = "SELECT 1 FROM hashtable WHERE path = %s LIMIT 1"
+        with conn.cursor() as cursor:
+            cursor.execute(query, (path,))
+            return cursor.fetchone() is not None
 
 
     def health_check(self) -> dict[str, bool]:

@@ -51,9 +51,10 @@ class MerkleTreeService(MerkleTreeInterface):
             return None
 
         # Check if root is empty (only if we ended up at root)
-        if self._is_directory_empty(tree_dict, root_path):
-            config.logger.warning(f"Root path ({root_path}) is empty, check that baseline is available and mounted.")
-            return None
+        if root_path == target_dir:
+            if self._is_directory_empty(tree_dict, root_path):
+                config.logger.warning(f"Root path ({root_path}) is empty, check that baseline is available and mounted.")
+                return None
 
         # Check if database and API are reachable before starting
         if not self._check_liveness():

@@ -25,7 +25,7 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
         log_level = 'INFO'
 
     # Create logger
-    logger = logging.getLogger('integrity')
+    logger = logging.getLogger('Squishy_integrity')
 
     # Set log level
     numeric_level = getattr(logging, log_level, None)
@@ -39,7 +39,7 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
 
     # Create formatter
     formatter = logging.Formatter(
-        '[%(asctime)s +0000] [%(process)d] [%(levelname)s] [%(name)s] %(message)s',
+        '[%(asctime)s] [%(process)d] [%(levelname)s] [%(name)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     console_handler.setFormatter(formatter)

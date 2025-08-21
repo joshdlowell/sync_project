@@ -52,7 +52,7 @@ class Config:
     DEFAULTS.update({
         'workers': 4,
         'worker_class': 'sync',
-        'timeout': 30,
+        'timeout': 60,
         'keepalive': 2,
         'max_requests': 1000,
         'max_requests_jitter': 100,

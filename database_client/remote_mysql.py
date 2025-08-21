@@ -837,28 +837,28 @@ class RemoteMYSQLConnection(RemoteDBConnection):
         """
         untracked_children = []
 
-        parent_query = "SELECT path, dirs, files, links FROM hashtable ORDER BY path"
-
-        try:
-            with self._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(parent_query)
-
-                    while True:
-                        batch = cursor.fetchmany(50)  # Smaller batches for this approach
-                        if not batch:
-                            break
-
-                        for row in batch:
-                            path, dirs, files, links = row
-                            untracked = self._find_untracked_for_parent_with_db_check(
-                                path, dirs, files, links, conn
-                            )
-                            untracked_children.extend(untracked)
-
-        except Error as e:
-            self.logger.error(f"Error fetching untracked children: {e}")
-            raise Exception(e)
+        # parent_query = "SELECT path, dirs, files, links FROM hashtable ORDER BY path"
+        #
+        # try:
+        #     with self._get_connection() as conn:
+        #         with conn.cursor() as cursor:
+        #             cursor.execute(parent_query)
+        #
+        #             while True:
+        #                 batch = cursor.fetchmany(50)  # Smaller batches for this approach
+        #                 if not batch:
+        #                     break
+        #
+        #                 for row in batch:
+        #                     path, dirs, files, links = row
+        #                     untracked = self._find_untracked_for_parent_with_db_check(
+        #                         path, dirs, files, links, conn
+        #                     )
+        #                     untracked_children.extend(untracked)
+        #
+        # except Error as e:
+        #     self.logger.error(f"Error fetching untracked children: {e}")
+        #     raise Exception(e)
 
         return untracked_children
 

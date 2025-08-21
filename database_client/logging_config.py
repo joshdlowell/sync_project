@@ -35,10 +35,10 @@ def configure_logging(log_level: Optional[str] = None) -> logging.Logger:
     logger.setLevel(numeric_level)
 
     # Only add handler if none exist (prevents duplicates)
-    # if not logger.handlers:
-    #     # Create a console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(numeric_level)
+    if not logger.handlers:
+        # Create a console handler
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(numeric_level)
 
     # Create formatter
     formatter = logging.Formatter(
